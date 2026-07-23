@@ -4,12 +4,18 @@
  *
  * Every render function accepts an optional 3rd `colors` argument so the
  * caller can override the colour scheme (e.g. for photo‑overlay use).
+ *
+ * Architecture: shared helpers live in ./templates/shared/ and individual
+ * template files can be extracted into ./templates/templates/ incrementally.
  */
 
 import React from "react";
 import { Text, View } from "react-native";
 import { Activity, formatDuration } from "./app-data";
 import { alpha, BRIGHT_WHITE, type TemplateColors } from "./color-presets";
+import { analyseFields, heroField, type AvailableField } from "./templates/shared/analyse-fields";
+import { ts, ff, typeEmoji, typeLabel } from "./templates/shared/styling";
+import { fmtDateShort, fmtDateFull, fmtTime12, fmtWeekday, paceStr, timeStr } from "./templates/shared/helpers";
 
 // ── Types ──
 
@@ -21,7 +27,6 @@ export interface WeekTotals {
   items: { day: string; km: number; type: string }[];
 }
 
-/** Template type definition — a pure function of activity + week data. */
 export interface TemplateDef {
   id: string;
   name: string;
@@ -36,119 +41,9 @@ export interface TemplateDef {
 /** @deprecated Use TemplateDef instead */
 export type { TemplateDef as DynamicTemplateDef };
 
-interface AvailableField {
-  key: string;
-  label: string;
-  value: string;
-  salience: number; // 0..1
-}
-
-// ── Shared styling tokens ──
-
+// ── Inline style tokens (used by template renders) ──
 const serif = { fontFamily: "Georgia" as const };
 const mono = { fontFamily: "Courier" as const };
-
-// ── Helpers ──
-
-function paceStr(a: Activity): string {
-  if (a.pace == null) return "--";
-  const min = Math.floor(a.pace);
-  const sec = Math.round((a.pace - min) * 60);
-  return `${min}:${sec.toString().padStart(2, "0")}/km`;
-}
-
-function timeStr(a: Activity): string {
-  return formatDuration(a.duration).toUpperCase();
-}
-
-const MONTHS_SHORT = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
-const MONTHS_LONG = ["JANUARY","FEBRUARY","MARCH","APRIL","MAY","JUNE","JULY","AUGUST","SEPTEMBER","OCTOBER","NOVEMBER","DECEMBER"];
-const DAYS = ["SUNDAY","MONDAY","TUESDAY","WEDNESDAY","THURSDAY","FRIDAY","SATURDAY"];
-
-function fmtDateShort(iso?: string): string {
-  if (!iso) return "JUL 22";
-  const d = new Date(iso);
-  return `${MONTHS_SHORT[d.getMonth()]} ${d.getDate()}`;
-}
-
-function fmtDateFull(iso?: string): string {
-  if (!iso) return "JULY 22, 2026";
-  const d = new Date(iso);
-  return `${MONTHS_LONG[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
-}
-
-function fmtTime12(iso?: string): string {
-  if (!iso) return "6:41 PM";
-  const d = new Date(iso);
-  const h = d.getHours();
-  const m = d.getMinutes();
-  const ampm = h >= 12 ? "PM" : "AM";
-  return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${ampm}`;
-}
-
-function fmtWeekday(iso?: string): string {
-  if (!iso) return "WEDNESDAY";
-  return DAYS[new Date(iso).getDay()];
-}
-
-// ── Activity data analysis ──
-
-function analyseFields(a: Activity): AvailableField[] {
-  const fields: AvailableField[] = [];
-
-  fields.push({ key: "distance", label: "DISTANCE", value: `${a.distance.toFixed(2)} km`, salience: 0.8 });
-  fields.push({ key: "duration", label: "DURATION", value: formatDuration(a.duration), salience: 0.6 });
-
-  if (a.pace != null) {
-    const paceMin = Math.floor(a.pace);
-    const paceSec = Math.round((a.pace - paceMin) * 60);
-    const paceSalience = Math.min(1, Math.max(0.3, 1 - (a.pace / 12)));
-    fields.push({ key: "pace", label: "PACE", value: `${paceMin}:${String(paceSec).padStart(2, "0")}/km`, salience: paceSalience });
-  }
-
-  if (a.speed != null) {
-    fields.push({ key: "speed", label: "SPEED", value: `${a.speed.toFixed(1)} km/h`, salience: Math.min(1, Math.max(0.3, a.speed / 30)) });
-  }
-
-  if (a.elevation != null && a.elevation > 0) {
-    fields.push({ key: "elevation", label: "ELEVATION", value: `${a.elevation} m`, salience: Math.min(1, Math.max(0.2, a.elevation / 500)) });
-  }
-
-  if (a.hasHeartrate && a.heartRate != null && a.heartRate > 0) {
-    fields.push({ key: "heartRate", label: "AVG HR", value: `${a.heartRate} bpm`, salience: Math.min(1, Math.max(0.3, (a.heartRate - 80) / 100)) });
-  }
-
-  if (a.calories != null && a.calories > 0) {
-    fields.push({ key: "calories", label: "CALORIES", value: `${a.calories} cal`, salience: Math.min(1, Math.max(0.2, a.calories / 1000)) });
-  }
-
-  fields.sort((x, y) => y.salience - x.salience);
-  return fields;
-}
-
-function heroField(fields: AvailableField[]): AvailableField | null {
-  return fields.length > 0 ? fields[0] : null;
-}
-
-function typeEmoji(type: string): string {
-  switch (type) { case "run": return "🏃"; case "ride": return "🚴"; case "swim": return "🏊"; default: return "💪"; }
-}
-
-function typeLabel(type: string): string {
-  switch (type) { case "run": return "RUN"; case "ride": return "RIDE"; case "swim": return "SWIM"; default: return "WORKOUT"; }
-}
-
-// ── Text shadow helper (for photo legibility) ──
-
-function ts(shadowColor: string, fontFamily?: string) {
-  const out: Record<string, any> = { textShadowColor: shadowColor, textShadowOffset: { width: 0, height: 1 } as const, textShadowRadius: 2 as const };
-  if (fontFamily) out.fontFamily = fontFamily;
-  return out;
-}
-
-function ff(fontFamily?: string): Record<string, string> | {} {
-  return fontFamily ? { fontFamily } : {};
-}
 
 // ── Dynamic template definitions ──
 

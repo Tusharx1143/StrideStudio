@@ -31,6 +31,7 @@ import { useColors } from "@/hooks/use-colors";
 import { StrideButton } from "@/components/stride-button";
 import { AnimatedToast } from "@/components/animated-toast";
 import { ActivityListSkeleton } from "@/components/skeleton";
+import { SegmentedControl } from "@/components/segmented-control";
 
 const SCREEN_W = Dimensions.get("window").width;
 const DELETE_ZONE_SIZE = 60;
