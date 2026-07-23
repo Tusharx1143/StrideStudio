@@ -3,8 +3,10 @@ import express from "express";
 import { createServer } from "http";
 import net from "net";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
+import { ENV } from "./env";
 import { registerOAuthRoutes } from "./oauth";
 import { registerStorageProxy } from "./storageProxy";
+import { registerStravaOAuthRoutes } from "./strava-oauth";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 
@@ -57,6 +59,15 @@ async function startServer() {
 
   registerStorageProxy(app);
   registerOAuthRoutes(app);
+
+  if (ENV.stravaClientId && ENV.stravaClientSecret) {
+    registerStravaOAuthRoutes(app);
+    console.log("[Strava] OAuth routes registered");
+  } else {
+    console.warn(
+      "[Strava] Skipping OAuth routes — set STRAVA_CLIENT_ID and STRAVA_CLIENT_SECRET in .env"
+    );
+  }
 
   app.get("/api/health", (_req, res) => {
     res.json({ ok: true, timestamp: Date.now() });

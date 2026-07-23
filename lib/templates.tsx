@@ -44,6 +44,77 @@ function timeStr(a: Activity): string {
   return h > 0 ? `${h}h ${m}m` : `${m}m`;
 }
 
+// ── Date/time helpers derived from activity.startDate ──
+
+function fmtDateShort(iso?: string): string {
+  if (!iso) return "JUL 22";
+  const d = new Date(iso);
+  const months = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
+  return `${months[d.getMonth()]} ${d.getDate()}`;
+}
+
+function fmtDateFull(iso?: string): string {
+  if (!iso) return "JUL 22, 2026";
+  const d = new Date(iso);
+  const months = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
+  return `${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+}
+
+function fmtDateDots(iso?: string): string {
+  if (!iso) return "07.22.26";
+  const d = new Date(iso);
+  return `${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}.${String(d.getFullYear()).slice(2)}`;
+}
+
+function fmtDateDotsEU(iso?: string): string {
+  if (!iso) return "22.07.26";
+  const d = new Date(iso);
+  return `${String(d.getDate()).padStart(2, "0")}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getFullYear()).slice(2)}`;
+}
+
+function fmtDateLED(iso?: string): string {
+  if (!iso) return "07 22 2026";
+  const d = new Date(iso);
+  return `${String(d.getMonth() + 1).padStart(2, "0")} ${String(d.getDate()).padStart(2, "0")} ${d.getFullYear()}`;
+}
+
+function fmtDateOrdinal(iso?: string): string {
+  if (!iso) return "JULY 22ND";
+  const d = new Date(iso);
+  const months = ["JANUARY","FEBRUARY","MARCH","APRIL","MAY","JUNE","JULY","AUGUST","SEPTEMBER","OCTOBER","NOVEMBER","DECEMBER"];
+  const day = d.getDate();
+  const suffix = day % 10 === 1 && day !== 11 ? "ST" : day % 10 === 2 && day !== 12 ? "ND" : day % 10 === 3 && day !== 13 ? "RD" : "TH";
+  return `${months[d.getMonth()]} ${day}${suffix}`;
+}
+
+function fmtTime12(iso?: string): string {
+  if (!iso) return "6:41 PM";
+  const d = new Date(iso);
+  const h = d.getHours();
+  const m = d.getMinutes();
+  const ampm = h >= 12 ? "PM" : "AM";
+  return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${ampm}`;
+}
+
+function fmtTime24(iso?: string): string {
+  if (!iso) return "18:41:14";
+  const d = new Date(iso);
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}:${String(d.getSeconds()).padStart(2, "0")}`;
+}
+
+function fmtWeekday(iso?: string): string {
+  if (!iso) return "WEDNESDAY";
+  const days = ["SUNDAY","MONDAY","TUESDAY","WEDNESDAY","THURSDAY","FRIDAY","SATURDAY"];
+  return days[new Date(iso).getDay()];
+}
+
+function fmtSeconds(totalSec: number): string {
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+}
+
 function SerifStat({ label, value, size = 15 }: { label: string; value: string; size?: number }) {
   return (
     <View style={{ alignItems: "center", marginHorizontal: 8, marginVertical: 4 }}>
@@ -155,7 +226,7 @@ export const TEMPLATE_DEFS: TemplateDef[] = [
     tab: "activity",
     render: (a) => (
       <View style={{ alignItems: "center", justifyContent: "center", flex: 1, paddingHorizontal: 8 }}>
-        <Text style={{ color: "#BBBBBB", fontSize: 9, marginBottom: 4 }}>{a.date} at 6:41 PM</Text>
+        <Text style={{ color: "#BBBBBB", fontSize: 9, marginBottom: 4 }}>{a.date} at {fmtTime12(a.startDate)}</Text>
         <Text style={[serif, { color: "#FFFFFF", fontSize: 16, marginBottom: 8 }]}>{a.title}</Text>
         <View style={{ flexDirection: "row" }}>
           <SerifStat label="Distance" value={`${a.distance.toFixed(1)} km`} size={11} />
@@ -174,7 +245,7 @@ export const TEMPLATE_DEFS: TemplateDef[] = [
       <View style={{ alignItems: "center", justifyContent: "center", flex: 1 }}>
         <Bubble>{`${a.type === "ride" ? "Rode" : "Ran"} ${a.distance.toFixed(1)} km, ${paceStr(a)}`}</Bubble>
         <Text style={{ color: "#8E8E93", fontSize: 9, marginTop: 4 }}>
-          {a.type === "ride" ? "Rode" : "Ran"} 6:41 PM
+          {a.type === "ride" ? "Rode" : "Ran"} {fmtTime12(a.startDate)}
         </Text>
       </View>
     ),
@@ -227,8 +298,8 @@ export const TEMPLATE_DEFS: TemplateDef[] = [
         </View>
         <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
           <View>
-            <Text style={[mono, { color: "#FFFFFF", fontSize: 9 }]}>PM 6:41</Text>
-            <Text style={[mono, { color: "#FFFFFF", fontSize: 9 }]}>JUL. 22 2026</Text>
+            <Text style={[mono, { color: "#FFFFFF", fontSize: 9 }]}>{fmtTime12(a.startDate)}</Text>
+            <Text style={[mono, { color: "#FFFFFF", fontSize: 9 }]}>{fmtDateShort(a.startDate).replace(" ", ". ")} {new Date(a.startDate).getFullYear()}</Text>
           </View>
           <View style={{ alignItems: "flex-end" }}>
             <Text style={[mono, { color: "#FFFFFF", fontSize: 9 }]}>{paceStr(a).replace("/km", " / KM")}</Text>
@@ -245,7 +316,7 @@ export const TEMPLATE_DEFS: TemplateDef[] = [
     render: (a) => (
       <View style={{ flex: 1, justifyContent: "center", padding: 4 }}>
         <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 6 }}>
-          <Text style={[mono, { color: "#FFFFFF", fontSize: 8 }]}>07.22.26</Text>
+          <Text style={[mono, { color: "#FFFFFF", fontSize: 8 }]}>{fmtDateDots(a.startDate)}</Text>
           <Text style={[mono, { color: "#FFFFFF", fontSize: 8 }]}>{a.distance.toFixed(1)} KILOMETERS</Text>
         </View>
         <Barcode />
@@ -268,8 +339,8 @@ export const TEMPLATE_DEFS: TemplateDef[] = [
         <View style={{ borderWidth: 1, borderColor: "#555555", padding: 8 }}>
           {[
             ["ACTV:", a.type.toUpperCase()],
-            ["DATE:", "22.07.26"],
-            ["TIME:", "18:41:14"],
+            ["DATE:", fmtDateDotsEU(a.startDate)],
+            ["TIME:", fmtTime24(a.startDate)],
             ["DIST:", `${a.distance.toFixed(1)} km`],
             ["PACE:", paceStr(a)],
             ["TIME:", timeStr(a)],
@@ -313,7 +384,7 @@ export const TEMPLATE_DEFS: TemplateDef[] = [
     tab: "activity",
     render: (a) => (
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-        <Text style={[mono, { color: "#FFA500", fontSize: 17, fontWeight: "700", letterSpacing: 3 }]}>07 22 2026</Text>
+        <Text style={[mono, { color: "#FFA500", fontSize: 17, fontWeight: "700", letterSpacing: 3 }]}>{fmtDateLED(a.startDate)}</Text>
         <Text style={[mono, { color: "#FFA500", fontSize: 17, fontWeight: "700", letterSpacing: 3, marginTop: 4 }]}>
           {a.distance.toFixed(2).padStart(5, "0")} KM
         </Text>
@@ -388,7 +459,7 @@ export const TEMPLATE_DEFS: TemplateDef[] = [
     tab: "activity",
     render: (a) => (
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-        <Text style={{ color: "#FFFFFF", fontSize: 13, fontWeight: "700", letterSpacing: 3 }}>WEDNESDAY</Text>
+        <Text style={{ color: "#FFFFFF", fontSize: 13, fontWeight: "700", letterSpacing: 3 }}>{fmtWeekday(a.startDate)}</Text>
         <Text style={{ fontSize: 14, marginVertical: 3 }}>🏃</Text>
         <Text style={{ color: "#E11D48", fontSize: 22, fontWeight: "900", letterSpacing: 1 }}>
           {a.distance.toFixed(2)} KM
@@ -401,9 +472,9 @@ export const TEMPLATE_DEFS: TemplateDef[] = [
     name: "Weekday Knockout",
     tab: "activity",
     badge: "New",
-    render: () => (
+    render: (a) => (
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-        <Text style={{ color: "#FFFFFF", fontSize: 26, fontWeight: "900", letterSpacing: -1 }}>WEDNESDAY</Text>
+        <Text style={{ color: "#FFFFFF", fontSize: 26, fontWeight: "900", letterSpacing: -1 }}>{fmtWeekday(a.startDate)}</Text>
       </View>
     ),
   },
@@ -413,12 +484,14 @@ export const TEMPLATE_DEFS: TemplateDef[] = [
     tab: "activity",
     badge: "New",
     render: (a) => {
-      const h = Math.floor(a.duration / 60);
-      const m = (a.duration % 60).toString().padStart(2, "0");
+      const totalSec = Math.round(a.duration * 60);
+      const h = Math.floor(totalSec / 3600);
+      const m = Math.floor((totalSec % 3600) / 60);
+      const s = totalSec % 60;
       return (
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
           <Text style={{ color: "#FFFFFF", fontSize: 36, fontWeight: "900", letterSpacing: -2 }}>
-            {h}:{m}:36
+            {h}:{String(m).padStart(2, "0")}:{String(s).padStart(2, "0")}
           </Text>
         </View>
       );
@@ -467,7 +540,7 @@ export const TEMPLATE_DEFS: TemplateDef[] = [
     tab: "activity",
     render: (a) => (
       <View style={{ flex: 1, justifyContent: "center", paddingLeft: 10 }}>
-        {["JUL 22, 2026", "6:41 PM", `${a.distance.toFixed(1)} KM`, paceStr(a).toUpperCase(), timeStr(a).toUpperCase(), `${a.elevation ?? 0} M`, `${a.calories ?? 0} CAL`].map(
+        {[fmtDateFull(a.startDate), fmtTime12(a.startDate), `${a.distance.toFixed(1)} KM`, paceStr(a).toUpperCase(), timeStr(a).toUpperCase(), `${a.elevation ?? 0} M`, `${a.calories ?? 0} CAL`].map(
           (line, i) => (
             <Text key={i} style={[mono, { color: "#FFFFFF", fontSize: 10, fontWeight: "700", lineHeight: 15 }]}>
               {line}
@@ -516,8 +589,8 @@ export const TEMPLATE_DEFS: TemplateDef[] = [
           <View style={{ backgroundColor: "#4A90D9", height: 80, width: "100%" }} />
           <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 6 }}>
             <View>
-              <Text style={[mono, { color: "#111111", fontSize: 7 }]}>JUL 22</Text>
-              <Text style={[mono, { color: "#111111", fontSize: 7 }]}>6:41 PM</Text>
+              <Text style={[mono, { color: "#111111", fontSize: 7 }]}>{fmtDateShort(a.startDate)}</Text>
+              <Text style={[mono, { color: "#111111", fontSize: 7 }]}>{fmtTime12(a.startDate)}</Text>
             </View>
             <View style={{ alignItems: "flex-end" }}>
               <Text style={[mono, { color: "#111111", fontSize: 7 }]}>{a.distance.toFixed(1)} KM</Text>
@@ -541,8 +614,8 @@ export const TEMPLATE_DEFS: TemplateDef[] = [
             {a.title.toUpperCase()}
           </Text>
           <View style={{ alignItems: "flex-end" }}>
-            <Text style={{ color: "#FFFFFF", fontSize: 7, fontWeight: "800", letterSpacing: 1 }}>JULY 22ND</Text>
-            <Text style={{ color: "#888888", fontSize: 6 }}>6:41 PM</Text>
+            <Text style={{ color: "#FFFFFF", fontSize: 7, fontWeight: "800", letterSpacing: 1 }}>{fmtDateOrdinal(a.startDate)}</Text>
+            <Text style={{ color: "#888888", fontSize: 6 }}>{fmtTime12(a.startDate)}</Text>
           </View>
         </View>
         <View>
@@ -568,9 +641,9 @@ export const TEMPLATE_DEFS: TemplateDef[] = [
     tab: "activity",
     render: (a) => (
       <View style={{ flex: 1, justifyContent: "center", paddingLeft: 8 }}>
-        <Text style={{ color: "#FFFFFF", fontSize: 15, fontWeight: "800", marginBottom: 8 }}>JUL 22, 2026</Text>
-        <Text style={{ color: "#BBBBBB", fontSize: 8, fontWeight: "700" }}>WALK</Text>
-        <Text style={{ color: "#FFFFFF", fontSize: 14, fontWeight: "900", marginBottom: 6 }}>7.42 KM</Text>
+        <Text style={{ color: "#FFFFFF", fontSize: 15, fontWeight: "800", marginBottom: 8 }}>{fmtDateFull(a.startDate)}</Text>
+        <Text style={{ color: "#BBBBBB", fontSize: 8, fontWeight: "700" }}>{a.type === "run" ? "RUN" : a.type === "ride" ? "RIDE" : "WORKOUT"}</Text>
+        <Text style={{ color: "#FFFFFF", fontSize: 14, fontWeight: "900", marginBottom: 6 }}>{a.distance.toFixed(2)} KM</Text>
         <View style={{ flexDirection: "row", alignItems: "center" }}>
           <Text style={{ fontSize: 9, marginRight: 3 }}>🏃</Text>
           <Text style={{ color: "#BBBBBB", fontSize: 7, fontWeight: "700" }}>{a.title.toUpperCase()}</Text>
@@ -591,8 +664,8 @@ export const TEMPLATE_DEFS: TemplateDef[] = [
           {paceStr(a).replace("/km", '"')}  {formatDuration(a.duration)}
         </Text>
         <Text style={{ fontSize: 16 }}>🏃</Text>
-        <Text style={{ color: "#FFFFFF", fontSize: 16, fontWeight: "900" }}>2.56 KM</Text>
-        <Text style={{ color: "#888888", fontSize: 7, fontWeight: "700" }}>14'13"  36:31</Text>
+        <Text style={{ color: "#FFFFFF", fontSize: 16, fontWeight: "900" }}>{a.distance.toFixed(2)} KM</Text>
+        <Text style={{ color: "#888888", fontSize: 7, fontWeight: "700" }}>{paceStr(a).replace("/km", '"')}  {formatDuration(a.duration)}</Text>
       </View>
     ),
   },
@@ -600,12 +673,14 @@ export const TEMPLATE_DEFS: TemplateDef[] = [
     id: "temperature",
     name: "Temperature",
     tab: "activity",
-    render: () => (
+    render: (a) => (
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
         <Text style={[serif, { color: "#FFFFFF", fontSize: 12, fontStyle: "italic", marginBottom: 4 }]}>
           Temperature
         </Text>
-        <Text style={[serif, { color: "#FFFFFF", fontSize: 22 }]}>—°C</Text>
+        <Text style={[serif, { color: "#FFFFFF", fontSize: 22 }]}>
+          {a.averageTemp != null ? `${a.averageTemp}°C` : "—°C"}
+        </Text>
       </View>
     ),
   },

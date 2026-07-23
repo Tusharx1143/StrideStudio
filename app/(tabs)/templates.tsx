@@ -1,4 +1,4 @@
-import { ScrollView, Text, View, TouchableOpacity, Platform } from "react-native";
+import { ScrollView, Text, View, TouchableOpacity, Platform, ActivityIndicator } from "react-native";
 import { useState } from "react";
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
@@ -6,13 +6,9 @@ import { ScreenContainer } from "@/components/screen-container";
 import { useApp } from "@/lib/app-context";
 import { TEMPLATE_DEFS, computeWeekTotals } from "@/lib/templates";
 
-/**
- * Templates gallery — live-rendered previews of every template using the
- * currently selected activity, filterable by Activity/Totals group.
- */
 export default function TemplatesScreen() {
   const router = useRouter();
-  const { activities, getSelectedActivity } = useApp();
+  const { activities, loading, stravaConnected, getSelectedActivity } = useApp();
   const [filter, setFilter] = useState<"all" | "activity" | "totals">("all");
 
   const activity = getSelectedActivity();
@@ -23,6 +19,51 @@ export default function TemplatesScreen() {
     if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.push("/(tabs)/editor");
   };
+
+  // ── Loading state ──
+  if (loading && activities.length === 0) {
+    return (
+      <ScreenContainer className="p-0" containerClassName="bg-black">
+        <View style={{ flex: 1, backgroundColor: "#000000", justifyContent: "center", alignItems: "center" }}>
+          <ActivityIndicator size="large" color="#FFFFFF" />
+          <Text style={{ color: "#8E8E93", fontSize: 14, marginTop: 16 }}>Loading templates…</Text>
+        </View>
+      </ScreenContainer>
+    );
+  }
+
+  // ── Empty state ──
+  if (activities.length === 0) {
+    return (
+      <ScreenContainer className="p-0" containerClassName="bg-black">
+        <View style={{ flex: 1, backgroundColor: "#000000", justifyContent: "center", alignItems: "center", padding: 32 }}>
+          <Text style={{ fontSize: 48, marginBottom: 16 }}>🖼️</Text>
+          <Text style={{ color: "#FFFFFF", fontSize: 20, fontWeight: "700", textAlign: "center" }}>
+            Templates
+          </Text>
+          <Text style={{ color: "#8E8E93", fontSize: 14, marginTop: 8, textAlign: "center", lineHeight: 20 }}>
+            {stravaConnected
+              ? "No activities to preview. Sync your Strava to see how templates look with your data."
+              : "Connect Strava to see live template previews with your activities."}
+          </Text>
+          {!stravaConnected && (
+            <TouchableOpacity
+              onPress={() => router.push("/(tabs)/profile")}
+              style={{
+                marginTop: 20,
+                backgroundColor: "#FF6B35",
+                borderRadius: 24,
+                paddingHorizontal: 28,
+                paddingVertical: 14,
+              }}
+            >
+              <Text style={{ color: "#FFFFFF", fontSize: 15, fontWeight: "700" }}>Connect Strava</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      </ScreenContainer>
+    );
+  }
 
   return (
     <ScreenContainer className="p-0" containerClassName="bg-black">
@@ -77,7 +118,7 @@ export default function TemplatesScreen() {
                     padding: 8,
                   }}
                 >
-                  {t.render(activity, totals)}
+                  {activity && t.render(activity, totals)}
                 </TouchableOpacity>
                 <Text style={{ color: "#8E8E93", fontSize: 10, textAlign: "center", marginTop: 4 }}>{t.name}</Text>
               </View>
