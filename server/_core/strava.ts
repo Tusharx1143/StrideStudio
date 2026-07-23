@@ -1,4 +1,5 @@
 import { ENV } from "./env";
+import type { Activity } from "../../shared/types";
 
 // ─── Types ───────────────────────────────────────────────────────────────
 
@@ -81,31 +82,6 @@ interface StravaApiActivity {
   device_name?: string;
   has_heartrate: boolean;
   suffer_score?: number;
-}
-
-export interface Activity {
-  id: string;
-  stravaId: number;
-  type: "run" | "ride" | "workout";
-  title: string;
-  distance: number; // km
-  duration: number; // minutes (moving time)
-  elapsedTime: number; // minutes (total elapsed)
-  date: string;
-  startDate: string; // ISO date
-  pace?: number; // min/km
-  speed?: number; // km/h
-  maxSpeed?: number; // km/h
-  elevation?: number; // meters
-  heartRate?: number; // avg bpm
-  maxHeartRate?: number;
-  calories?: number;
-  averageTemp?: number;
-  hasHeartrate: boolean;
-  sufferScore?: number;
-  startLatlng?: [number, number];
-  summaryPolyline?: string;
-  deviceName?: string;
 }
 
 // ─── In-memory token store (fallback when no DB) ────────────────────────
