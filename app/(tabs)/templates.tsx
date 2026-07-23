@@ -5,11 +5,8 @@ import * as Haptics from "expo-haptics";
 import { ScreenContainer } from "@/components/screen-container";
 import { useApp } from "@/lib/app-context";
 import { TEMPLATE_DEFS, computeWeekTotals } from "@/lib/templates";
+import { FadeIn, TOUCH_MIN } from "@/lib/animations";
 
-/**
- * Templates gallery — live-rendered previews of every template using the
- * currently selected activity, filterable by Activity/Totals group.
- */
 export default function TemplatesScreen() {
   const router = useRouter();
   const { activities, getSelectedActivity } = useApp();
@@ -29,8 +26,8 @@ export default function TemplatesScreen() {
       <View style={{ flex: 1, backgroundColor: "#000000" }}>
         <View style={{ paddingHorizontal: 16, paddingTop: 8 }}>
           <Text style={{ color: "#FFFFFF", fontSize: 30, fontWeight: "800" }}>Templates</Text>
-          <Text style={{ color: "#8E8E93", fontSize: 13, marginTop: 2, marginBottom: 12 }}>
-            {TEMPLATE_DEFS.length} designs · tap one to open it in the share screen
+          <Text style={{ color: "#8E8E93", fontSize: 14, marginTop: 2, marginBottom: 12 }}>
+            {TEMPLATE_DEFS.length} adaptive designs · tap to customize
           </Text>
         </View>
 
@@ -42,18 +39,18 @@ export default function TemplatesScreen() {
               style={{
                 backgroundColor: filter === f ? "#FFFFFF" : "#1C1C1E",
                 borderRadius: 18,
-                paddingHorizontal: 16,
-                paddingVertical: 8,
+                paddingHorizontal: 18,
+                paddingVertical: 10,
+                minHeight: 44,
+                justifyContent: "center",
               }}
             >
-              <Text
-                style={{
-                  color: filter === f ? "#000000" : "#FFFFFF",
-                  fontSize: 13,
-                  fontWeight: "600",
-                  textTransform: "capitalize",
-                }}
-              >
+              <Text style={{
+                color: filter === f ? "#000000" : "#FFFFFF",
+                fontSize: 14,
+                fontWeight: "600",
+                textTransform: "capitalize",
+              }}>
                 {f}
               </Text>
             </TouchableOpacity>
@@ -62,25 +59,27 @@ export default function TemplatesScreen() {
 
         <ScrollView contentContainerStyle={{ padding: 10, paddingBottom: 40 }}>
           <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
-            {templates.map((t) => (
-              <View key={t.id} style={{ width: t.fullWidth ? "100%" : "50%", padding: 5 }}>
-                <TouchableOpacity
-                  onPress={useTemplate}
-                  activeOpacity={0.75}
-                  style={{
-                    backgroundColor: t.lightCard ? "#FFFFFF" : "#0E0E10",
-                    borderRadius: 14,
-                    minHeight: t.fullWidth ? 120 : 130,
-                    overflow: "hidden",
-                    borderWidth: 1,
-                    borderColor: "#1C1C1E",
-                    padding: 8,
-                  }}
-                >
-                  {t.render(activity, totals)}
-                </TouchableOpacity>
-                <Text style={{ color: "#8E8E93", fontSize: 10, textAlign: "center", marginTop: 4 }}>{t.name}</Text>
-              </View>
+            {templates.map((t, i) => (
+              <FadeIn key={t.id} delay={i * 40}>
+                <View style={{ width: t.fullWidth ? "100%" : "50%", padding: 5 }}>
+                  <TouchableOpacity
+                    onPress={useTemplate}
+                    activeOpacity={0.85}
+                    style={{
+                      backgroundColor: t.lightCard ? "#FFFFFF" : "#0E0E10",
+                      borderRadius: 14,
+                      minHeight: t.fullWidth ? 120 : 130,
+                      overflow: "hidden",
+                      borderWidth: 1,
+                      borderColor: "#1C1C1E",
+                      padding: 8,
+                    }}
+                  >
+                    {activity && t.render(activity, totals)}
+                  </TouchableOpacity>
+                  <Text style={{ color: "#8E8E93", fontSize: 11, textAlign: "center", marginTop: 4 }}>{t.name}</Text>
+                </View>
+              </FadeIn>
             ))}
           </View>
         </ScrollView>
