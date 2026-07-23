@@ -10,11 +10,13 @@ export interface Activity {
   type: "run" | "ride" | "workout";
   title: string;
   distance: number; // km
-  duration: number; // minutes
+  duration: number; // minutes (moving time)
+  elapsedTime: number; // minutes (total elapsed)
   date: string;
   startDate: string; // ISO 8601
   pace?: number; // min/km
   speed?: number; // km/h
+  maxSpeed?: number; // km/h
   elevation?: number; // meters
   heartRate?: number; // avg bpm
   maxHeartRate?: number;
@@ -24,6 +26,7 @@ export interface Activity {
   sufferScore?: number;
   startLatlng?: [number, number];
   summaryPolyline?: string;
+  deviceName?: string;
 }
 
 export interface StatToggles {

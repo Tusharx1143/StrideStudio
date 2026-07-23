@@ -13,13 +13,28 @@ import { alpha, BRIGHT_WHITE, type TemplateColors } from "./color-presets";
 
 // ── Types ──
 
-interface WeekTotals {
+export interface WeekTotals {
   runKm: number;
   walkKm: number;
   totalKm: number;
   totalMinutes: number;
   items: { day: string; km: number; type: string }[];
 }
+
+/** Template type definition — a pure function of activity + week data. */
+export interface TemplateDef {
+  id: string;
+  name: string;
+  tab: "activity" | "totals";
+  fullWidth?: boolean;
+  badge?: "New" | "Dynamic" | "Auto" | "Customize";
+  lightCard?: boolean;
+  description: string;
+  render: (a: Activity, totals: WeekTotals, colors?: TemplateColors) => React.ReactNode;
+}
+
+/** @deprecated Use TemplateDef instead */
+export type { TemplateDef as DynamicTemplateDef };
 
 interface AvailableField {
   key: string;
@@ -137,18 +152,7 @@ function ff(fontFamily?: string): Record<string, string> | {} {
 
 // ── Dynamic template definitions ──
 
-export interface DynamicTemplateDef {
-  id: string;
-  name: string;
-  tab: "activity" | "totals";
-  fullWidth?: boolean;
-  badge?: "New" | "Dynamic" | "Auto";
-  lightCard?: boolean;
-  description: string;
-  render: (a: Activity, totals: WeekTotals, colors?: TemplateColors) => React.ReactNode;
-}
-
-export const DYNAMIC_TEMPLATES: DynamicTemplateDef[] = [
+export const DYNAMIC_TEMPLATES: TemplateDef[] = [
   // ─── 1. AUTO ADAPT ───
   {
     id: "auto-adapt",
@@ -1728,3 +1732,20 @@ export const DYNAMIC_TEMPLATES: DynamicTemplateDef[] = [
     },
   },
 ];
+
+/**
+ * Compute weekly totals from an array of activities.
+ * Used across the editor and template gallery screens.
+ */
+export function computeWeekTotals(activities: Activity[]): WeekTotals {
+  const runKm = activities.filter((a) => a.type === "run").reduce((s, a) => s + a.distance, 0);
+  const walkKm = activities.filter((a) => a.type !== "run").reduce((s, a) => s + a.distance, 0);
+  const totalMinutes = activities.reduce((s, a) => s + a.duration, 0);
+  return {
+    runKm,
+    walkKm,
+    totalKm: runKm + walkKm,
+    totalMinutes,
+    items: activities.map((a) => ({ day: a.date, km: a.distance, type: a.type === "ride" ? "ride" : a.type })),
+  };
+}
