@@ -1,5 +1,5 @@
-import { useCallback } from "react";
-import { Text, TouchableOpacity, View } from "react-native";
+import { useCallback, useState } from "react";
+import { Text, TouchableOpacity, View, LayoutChangeEvent } from "react-native";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -30,49 +30,58 @@ export function SegmentedControl<T extends string>({
   onSelect,
 }: SegmentedControlProps<T>) {
   const colors = useColors();
+  const [containerWidth, setContainerWidth] = useState(0);
+  const segWidth = containerWidth / segments.length;
 
   const selectedIndex = segments.findIndex((s) => s.id === selected);
-  const translateX = useSharedValue(selectedIndex >= 0 ? selectedIndex : 0);
+  const left = useSharedValue(selectedIndex >= 0 ? selectedIndex * segWidth : 0);
 
   const indicatorStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: translateX.value * 100 }],
-    width: `${100 / segments.length}%`,
+    left: left.value,
+    width: segWidth,
   }));
 
   const handleSelect = useCallback(
     (id: T, index: number) => {
-      translateX.value = withSpring(index, SPRING_CONFIG);
+      left.value = withSpring(index * segWidth, SPRING_CONFIG);
       onSelect(id);
     },
-    [onSelect, translateX],
+    [onSelect, left, segWidth],
   );
+
+  const onLayout = useCallback((e: LayoutChangeEvent) => {
+    const w = e.nativeEvent.layout.width;
+    setContainerWidth(w);
+    left.value = selectedIndex * (w / segments.length);
+  }, [selectedIndex, segments.length, left]);
 
   return (
     <View
+      onLayout={onLayout}
       style={{
         backgroundColor: colors.surface,
         borderRadius: 10,
         padding: 2,
         flexDirection: "row",
-        position: "relative",
         borderWidth: 1,
         borderColor: colors.border,
       }}
     >
-      {/* Animated background indicator */}
-      <Animated.View
-        style={[
-          {
-            position: "absolute",
-            top: 2,
-            left: `0%`,
-            height: "calc(100% - 4px)",
-            borderRadius: 8,
-            backgroundColor: colors.foreground,
-          },
-          indicatorStyle,
-        ]}
-      />
+      {/* Animated indicator */}
+      {containerWidth > 0 && (
+        <Animated.View
+          style={[
+            {
+              position: "absolute",
+              top: 3,
+              bottom: 3,
+              borderRadius: 8,
+              backgroundColor: colors.foreground,
+            },
+            indicatorStyle,
+          ]}
+        />
+      )}
 
       {segments.map((seg, i) => (
         <TouchableOpacity

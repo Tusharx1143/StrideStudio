@@ -26,6 +26,9 @@ import { useColors } from "@/hooks/use-colors";
 import { StrideButton } from "@/components/stride-button";
 import { AnimatedToast } from "@/components/animated-toast";
 import { ActivityListSkeleton } from "@/components/skeleton";
+import { SegmentedControl } from "@/components/segmented-control";
+import { getSportConfig } from "@/lib/sport-theme";
+import { IconSymbol } from "@/components/ui/icon-symbol";
 
 const SCREEN_W = Dimensions.get("window").width;
 const CANVAS_H = 400;
@@ -327,21 +330,12 @@ export default function EditorScreen() {
         )}
 
         {/* ── Tabs ── */}
-        <View style={{ flexDirection: "row", marginTop: 4 }}>
-          {(["activity", "totals"] as const).map((t) => (
-            <TouchableOpacity
-              key={t}
-              onPress={() => setTab(t)}
-              accessibilityRole="tab"
-              accessibilityLabel={`${t} templates`}
-              accessibilityState={{ selected: tab === t }}
-              style={{ flex: 1, alignItems: "center", paddingBottom: 8, borderBottomWidth: 2, borderBottomColor: tab === t ? colors.foreground : colors.border }}
-            >
-              <Text style={{ color: tab === t ? colors.foreground : colors.muted, fontSize: 14, fontWeight: tab === t ? "700" : "500", textTransform: "capitalize" }}>
-                {t}
-              </Text>
-            </TouchableOpacity>
-          ))}
+        <View style={{ marginTop: 4, paddingHorizontal: 16 }}>
+          <SegmentedControl
+            segments={[{ id: "activity", label: "Activity" }, { id: "totals", label: "Weekly Totals" }]}
+            selected={tab}
+            onSelect={(id) => setTab(id as "activity" | "totals")}
+          />
         </View>
 
         {/* ── Template tray ── */}
