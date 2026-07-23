@@ -1,20 +1,52 @@
-import { ScrollView, Text, View, TouchableOpacity, Platform } from "react-native";
+import { ScrollView, Text, View, TouchableOpacity, Platform, ActivityIndicator } from "react-native";
 import { useLocalSearchParams, useRouter, Stack } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { ScreenContainer } from "@/components/screen-container";
 import { useApp } from "@/lib/app-context";
 import { formatDuration } from "@/lib/app-data";
 
-/**
- * Activity details — dark monochrome layout matching the reference app:
- * large day heading, mono stat rows, share button opening the template picker.
- */
 export default function ActivityDetailsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { activities, selectActivity } = useApp();
+  const { activities, loading, selectActivity } = useApp();
 
-  const activity = activities.find((a) => a.id === id) ?? activities[0];
+  const activity = activities.find((a) => a.id === id);
+
+  // ── Loading ──
+  if (loading && activities.length === 0) {
+    return (
+      <ScreenContainer className="p-0" containerClassName="bg-black" edges={["top", "left", "right", "bottom"]}>
+        <Stack.Screen options={{ headerShown: false }} />
+        <View style={{ flex: 1, backgroundColor: "#000000", justifyContent: "center", alignItems: "center" }}>
+          <ActivityIndicator size="large" color="#FFFFFF" />
+        </View>
+      </ScreenContainer>
+    );
+  }
+
+  // ── Not found ──
+  if (!activity) {
+    return (
+      <ScreenContainer className="p-0" containerClassName="bg-black" edges={["top", "left", "right", "bottom"]}>
+        <Stack.Screen options={{ headerShown: false }} />
+        <View style={{ flex: 1, backgroundColor: "#000000", justifyContent: "center", alignItems: "center", padding: 32 }}>
+          <Text style={{ color: "#FFFFFF", fontSize: 18, fontWeight: "600" }}>Activity not found</Text>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={{
+              marginTop: 16,
+              backgroundColor: "#1C1C1E",
+              borderRadius: 20,
+              paddingHorizontal: 24,
+              paddingVertical: 12,
+            }}
+          >
+            <Text style={{ color: "#FFFFFF", fontSize: 14, fontWeight: "600" }}>Go Back</Text>
+          </TouchableOpacity>
+        </View>
+      </ScreenContainer>
+    );
+  }
 
   const paceStr =
     activity.pace != null
@@ -36,7 +68,7 @@ export default function ActivityDetailsScreen() {
     ["Duration", formatDuration(activity.duration)],
     ["Avg Pace", paceStr],
     ["Elevation Gain", `${activity.elevation ?? 0} m`],
-    ["Avg Heart Rate", `${activity.heartRate ?? 0} bpm`],
+    ["Avg Heart Rate", activity.hasHeartrate ? `${activity.heartRate ?? 0} bpm` : "--"],
     ["Calories", `${activity.calories ?? 0} cal`],
   ];
 

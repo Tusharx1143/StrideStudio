@@ -1,31 +1,60 @@
-import { ScrollView, Text, View, TouchableOpacity, Switch } from "react-native";
-import { useState } from "react";
+import { ScrollView, Text, View, TouchableOpacity, Switch, Platform, Linking, ActivityIndicator } from "react-native";
+import { useState, useEffect } from "react";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useApp } from "@/lib/app-context";
 
-interface ConnectedDevice {
-  id: string;
-  name: string;
-  icon: string;
-  connected: boolean;
-}
+const API_BASE = "http://localhost:3000";
 
 export default function ProfileScreen() {
   const colors = useColors();
-  const { activities, savedPostsCount } = useApp();
+  const { activities, savedPostsCount, stravaConnected, athlete, loading, refresh } = useApp();
   const totalDistance = activities.reduce((sum, a) => sum + a.distance, 0);
-  const [devices, setDevices] = useState<ConnectedDevice[]>([
-    { id: "1", name: "Garmin", icon: "⌚", connected: true },
-    { id: "2", name: "Strava", icon: "🏃", connected: true },
-    { id: "3", name: "Apple Health", icon: "❤️", connected: false },
-    { id: "4", name: "Fitbit", icon: "📱", connected: false },
-  ]);
   const [notifications, setNotifications] = useState(true);
+  const [connecting, setConnecting] = useState(false);
 
-  const toggleDevice = (id: string) => {
-    setDevices((prev) => prev.map((d) => (d.id === id ? { ...d, connected: !d.connected } : d)));
+  // Check if we just returned from Strava OAuth (via URL params on web)
+  useEffect(() => {
+    if (Platform.OS === "web" && typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("strava") === "connected") {
+        refresh();
+        // Clean URL
+        window.history.replaceState({}, "", window.location.pathname);
+      }
+    }
+  }, [refresh]);
+
+  const connectStrava = async () => {
+    setConnecting(true);
+    try {
+      if (Platform.OS === "web") {
+        // Web: direct redirect to the backend auth endpoint
+        window.location.href = `${API_BASE}/api/strava/auth`;
+      } else {
+        // Mobile: open in browser
+        const supported = await Linking.canOpenURL(`${API_BASE}/api/strava/auth`);
+        if (supported) {
+          await Linking.openURL(`${API_BASE}/api/strava/auth`);
+        }
+      }
+    } catch (error) {
+      console.error("[Strava] Failed to connect:", error);
+    } finally {
+      setConnecting(false);
+    }
+  };
+
+  const disconnectStrava = async () => {
+    try {
+      const resp = await fetch(`${API_BASE}/api/strava/disconnect`, { method: "POST" });
+      if (resp.ok) {
+        refresh();
+      }
+    } catch (error) {
+      console.error("[Strava] Disconnect failed:", error);
+    }
   };
 
   return (
@@ -41,75 +70,114 @@ export default function ProfileScreen() {
               borderBottomColor: colors.border,
             }}
           >
-            <View
-              style={{
-                width: 80,
-                height: 80,
-                borderRadius: 40,
-                backgroundColor: colors.primary,
-                justifyContent: "center",
-                alignItems: "center",
-                marginBottom: 12,
-              }}
-            >
-              <Text style={{ fontSize: 36 }}>🏃</Text>
-            </View>
-            <Text style={{ color: colors.foreground, fontSize: 22, fontWeight: "bold" }}>Athlete</Text>
-            <Text style={{ color: colors.muted, fontSize: 14, marginTop: 4 }}>Training is an art</Text>
+            {athlete?.profile ? (
+              <View
+                style={{
+                  width: 80,
+                  height: 80,
+                  borderRadius: 40,
+                  marginBottom: 12,
+                  overflow: "hidden",
+                  backgroundColor: colors.surface,
+                }}
+              >
+                <img
+                  src={athlete.profile}
+                  alt=""
+                  style={{ width: 80, height: 80, borderRadius: 40 }}
+                  onError={(e: any) => {
+                    e.target.style.display = "none";
+                  }}
+                />
+              </View>
+            ) : (
+              <View
+                style={{
+                  width: 80,
+                  height: 80,
+                  borderRadius: 40,
+                  backgroundColor: colors.primary,
+                  justifyContent: "center",
+                  alignItems: "center",
+                  marginBottom: 12,
+                }}
+              >
+                <Text style={{ fontSize: 36 }}>🏃</Text>
+              </View>
+            )}
+            <Text style={{ color: colors.foreground, fontSize: 22, fontWeight: "bold" }}>
+              {athlete
+                ? `${athlete.firstname} ${athlete.lastname}`
+                : stravaConnected
+                  ? "Athlete"
+                  : "StrideStudio"}
+            </Text>
+            {athlete?.city && (
+              <Text style={{ color: colors.muted, fontSize: 14, marginTop: 4 }}>
+                {athlete.city}{athlete.country ? `, ${athlete.country}` : ""}
+              </Text>
+            )}
+            {!athlete && (
+              <Text style={{ color: colors.muted, fontSize: 14, marginTop: 4 }}>
+                {stravaConnected ? "Training is an art" : "Connect Strava to get started"}
+              </Text>
+            )}
           </View>
 
           {/* Stats Summary */}
-          <View style={{ flexDirection: "row", paddingHorizontal: 16, paddingVertical: 16, gap: 12 }}>
-            <View
-              style={{
-                flex: 1,
-                backgroundColor: colors.surface,
-                borderRadius: 12,
-                padding: 16,
-                alignItems: "center",
-                borderWidth: 1,
-                borderColor: colors.border,
-              }}
-            >
-              <Text style={{ color: colors.primary, fontSize: 22, fontWeight: "bold" }}>{activities.length}</Text>
-              <Text style={{ color: colors.muted, fontSize: 12, marginTop: 4 }}>Activities</Text>
+          {activities.length > 0 && (
+            <View style={{ flexDirection: "row", paddingHorizontal: 16, paddingVertical: 16, gap: 12 }}>
+              <View
+                style={{
+                  flex: 1,
+                  backgroundColor: colors.surface,
+                  borderRadius: 12,
+                  padding: 16,
+                  alignItems: "center",
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                }}
+              >
+                <Text style={{ color: colors.primary, fontSize: 22, fontWeight: "bold" }}>{activities.length}</Text>
+                <Text style={{ color: colors.muted, fontSize: 12, marginTop: 4 }}>Activities</Text>
+              </View>
+              <View
+                style={{
+                  flex: 1,
+                  backgroundColor: colors.surface,
+                  borderRadius: 12,
+                  padding: 16,
+                  alignItems: "center",
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                }}
+              >
+                <Text style={{ color: colors.primary, fontSize: 22, fontWeight: "bold" }}>
+                  {totalDistance.toFixed(0)} km
+                </Text>
+                <Text style={{ color: colors.muted, fontSize: 12, marginTop: 4 }}>Total Distance</Text>
+              </View>
+              <View
+                style={{
+                  flex: 1,
+                  backgroundColor: colors.surface,
+                  borderRadius: 12,
+                  padding: 16,
+                  alignItems: "center",
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                }}
+              >
+                <Text style={{ color: colors.primary, fontSize: 22, fontWeight: "bold" }}>{savedPostsCount}</Text>
+                <Text style={{ color: colors.muted, fontSize: 12, marginTop: 4 }}>Posts Created</Text>
+              </View>
             </View>
-            <View
-              style={{
-                flex: 1,
-                backgroundColor: colors.surface,
-                borderRadius: 12,
-                padding: 16,
-                alignItems: "center",
-                borderWidth: 1,
-                borderColor: colors.border,
-              }}
-            >
-              <Text style={{ color: colors.primary, fontSize: 22, fontWeight: "bold" }}>
-                {totalDistance.toFixed(0)} km
-              </Text>
-              <Text style={{ color: colors.muted, fontSize: 12, marginTop: 4 }}>Total Distance</Text>
-            </View>
-            <View
-              style={{
-                flex: 1,
-                backgroundColor: colors.surface,
-                borderRadius: 12,
-                padding: 16,
-                alignItems: "center",
-                borderWidth: 1,
-                borderColor: colors.border,
-              }}
-            >
-              <Text style={{ color: colors.primary, fontSize: 22, fontWeight: "bold" }}>{savedPostsCount}</Text>
-              <Text style={{ color: colors.muted, fontSize: 12, marginTop: 4 }}>Posts Created</Text>
-            </View>
-          </View>
+          )}
 
-          {/* Connected Devices */}
+          {/* Strava Connection */}
           <View style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
             <Text style={{ color: colors.foreground, fontSize: 16, fontWeight: "600", marginBottom: 12 }}>
-              Connected Devices
+              Data Source
             </Text>
             <View
               style={{
@@ -120,34 +188,63 @@ export default function ProfileScreen() {
                 overflow: "hidden",
               }}
             >
-              {devices.map((device, index) => (
-                <View
-                  key={device.id}
-                  style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    padding: 16,
-                    borderBottomWidth: index < devices.length - 1 ? 1 : 0,
-                    borderBottomColor: colors.border,
-                  }}
-                >
-                  <View style={{ flexDirection: "row", alignItems: "center" }}>
-                    <Text style={{ fontSize: 24, marginRight: 12 }}>{device.icon}</Text>
-                    <View>
-                      <Text style={{ color: colors.foreground, fontSize: 14, fontWeight: "600" }}>{device.name}</Text>
-                      <Text style={{ color: device.connected ? colors.success : colors.muted, fontSize: 12, marginTop: 2 }}>
-                        {device.connected ? "Connected" : "Not connected"}
-                      </Text>
-                    </View>
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  padding: 16,
+                }}
+              >
+                <View style={{ flexDirection: "row", alignItems: "center" }}>
+                  <Text style={{ fontSize: 24, marginRight: 12 }}>🏃</Text>
+                  <View>
+                    <Text style={{ color: colors.foreground, fontSize: 14, fontWeight: "600" }}>Strava</Text>
+                    <Text style={{ color: colors.muted, fontSize: 12, marginTop: 2 }}>
+                      {loading
+                        ? "Checking..."
+                        : stravaConnected
+                          ? athlete
+                            ? `Connected as ${athlete.firstname}`
+                            : "Connected"
+                          : "Not connected"}
+                    </Text>
                   </View>
-                  <Switch
-                    value={device.connected}
-                    onValueChange={() => toggleDevice(device.id)}
-                    trackColor={{ false: colors.border, true: colors.primary }}
-                  />
                 </View>
-              ))}
+                {stravaConnected ? (
+                  <TouchableOpacity
+                    onPress={disconnectStrava}
+                    style={{
+                      backgroundColor: "#EF4444" + "20",
+                      borderRadius: 16,
+                      paddingHorizontal: 14,
+                      paddingVertical: 7,
+                    }}
+                  >
+                    <Text style={{ color: "#EF4444", fontSize: 12, fontWeight: "600" }}>Disconnect</Text>
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity
+                    onPress={connectStrava}
+                    disabled={connecting}
+                    style={{
+                      backgroundColor: colors.primary,
+                      borderRadius: 16,
+                      paddingHorizontal: 14,
+                      paddingVertical: 7,
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 6,
+                    }}
+                  >
+                    {connecting ? (
+                      <ActivityIndicator size="small" color="#FFFFFF" />
+                    ) : (
+                      <Text style={{ color: "#FFFFFF", fontSize: 12, fontWeight: "600" }}>Connect</Text>
+                    )}
+                  </TouchableOpacity>
+                )}
+              </View>
             </View>
           </View>
 
@@ -209,19 +306,22 @@ export default function ProfileScreen() {
             </View>
           </View>
 
-          {/* Logout */}
-          <View style={{ paddingHorizontal: 16, paddingVertical: 24 }}>
+          {/* Refresh Data */}
+          <View style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
             <TouchableOpacity
+              onPress={refresh}
               style={{
                 backgroundColor: colors.surface,
                 borderRadius: 12,
                 paddingVertical: 14,
                 alignItems: "center",
                 borderWidth: 1,
-                borderColor: colors.error,
+                borderColor: colors.border,
               }}
             >
-              <Text style={{ color: colors.error, fontSize: 16, fontWeight: "600" }}>Log Out</Text>
+              <Text style={{ color: colors.foreground, fontSize: 14, fontWeight: "600" }}>
+                {loading ? "Refreshing…" : "Refresh from Strava"}
+              </Text>
             </TouchableOpacity>
           </View>
         </ScrollView>

@@ -1,18 +1,14 @@
-import { ScrollView, Text, View, TouchableOpacity, Platform, Modal, Pressable } from "react-native";
+import { ScrollView, Text, View, TouchableOpacity, Platform, Modal, Pressable, ActivityIndicator } from "react-native";
 import { useState } from "react";
+import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { ScreenContainer } from "@/components/screen-container";
 import { useApp } from "@/lib/app-context";
 import { TEMPLATE_DEFS, computeWeekTotals, TemplateDef } from "@/lib/templates";
 
-/**
- * Share screen — replica of the original app's template picker:
- * top bar (back, activity dropdown pill, color + Aa buttons),
- * "TAP TO COPY" / "PRESS + HOLD TO SAVE" header, Activity|Totals tabs,
- * and a 2-column grid of live-rendered template cards.
- */
 export default function EditorScreen() {
-  const { activities, selectedActivityId, selectActivity, getSelectedActivity, incrementSavedPosts } = useApp();
+  const router = useRouter();
+  const { activities, loading, stravaConnected, selectedActivityId, selectActivity, getSelectedActivity, incrementSavedPosts } = useApp();
   const [tab, setTab] = useState<"activity" | "totals">("activity");
   const [pickerOpen, setPickerOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -35,6 +31,51 @@ export default function EditorScreen() {
     setTimeout(() => setToast(null), 1800);
   };
 
+  // ── Loading state ──
+  if (loading && activities.length === 0) {
+    return (
+      <ScreenContainer className="p-0" containerClassName="bg-black">
+        <View style={{ flex: 1, backgroundColor: "#000000", justifyContent: "center", alignItems: "center" }}>
+          <ActivityIndicator size="large" color="#FFFFFF" />
+          <Text style={{ color: "#8E8E93", fontSize: 14, marginTop: 16 }}>Loading…</Text>
+        </View>
+      </ScreenContainer>
+    );
+  }
+
+  // ── Empty state ──
+  if (activities.length === 0) {
+    return (
+      <ScreenContainer className="p-0" containerClassName="bg-black">
+        <View style={{ flex: 1, backgroundColor: "#000000", justifyContent: "center", alignItems: "center", padding: 32 }}>
+          <Text style={{ fontSize: 48, marginBottom: 16 }}>🎨</Text>
+          <Text style={{ color: "#FFFFFF", fontSize: 20, fontWeight: "700", textAlign: "center" }}>
+            {stravaConnected ? "No activities yet" : "No data to share"}
+          </Text>
+          <Text style={{ color: "#8E8E93", fontSize: 14, marginTop: 8, textAlign: "center", lineHeight: 20 }}>
+            {stravaConnected
+              ? "Connect with Strava and sync your activities to start creating beautiful cards."
+              : "Link your Strava account first, then come here to create shareable workout graphics."}
+          </Text>
+          {!stravaConnected && (
+            <TouchableOpacity
+              onPress={() => router.push("/(tabs)/profile")}
+              style={{
+                marginTop: 20,
+                backgroundColor: "#FF6B35",
+                borderRadius: 24,
+                paddingHorizontal: 28,
+                paddingVertical: 14,
+              }}
+            >
+              <Text style={{ color: "#FFFFFF", fontSize: 15, fontWeight: "700" }}>Connect Strava</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      </ScreenContainer>
+    );
+  }
+
   return (
     <ScreenContainer className="p-0" containerClassName="bg-black">
       <View style={{ flex: 1, backgroundColor: "#000000" }}>
@@ -48,7 +89,8 @@ export default function EditorScreen() {
             paddingVertical: 8,
           }}
         >
-          <View
+          <TouchableOpacity
+            onPress={() => router.back()}
             style={{
               width: 40,
               height: 40,
@@ -59,24 +101,26 @@ export default function EditorScreen() {
             }}
           >
             <Text style={{ color: "#FFFFFF", fontSize: 18 }}>‹</Text>
-          </View>
-
-          <TouchableOpacity
-            onPress={() => setPickerOpen(true)}
-            style={{
-              backgroundColor: "#1C1C1E",
-              borderRadius: 20,
-              paddingHorizontal: 16,
-              paddingVertical: 10,
-              flexDirection: "row",
-              alignItems: "center",
-            }}
-          >
-            <Text style={{ color: "#FFFFFF", fontSize: 14, fontWeight: "600" }}>
-              {activity.distance.toFixed(1)} km {activity.type}
-            </Text>
-            <Text style={{ color: "#8E8E93", fontSize: 11, marginLeft: 4 }}>⌄</Text>
           </TouchableOpacity>
+
+          {activity && (
+            <TouchableOpacity
+              onPress={() => setPickerOpen(true)}
+              style={{
+                backgroundColor: "#1C1C1E",
+                borderRadius: 20,
+                paddingHorizontal: 16,
+                paddingVertical: 10,
+                flexDirection: "row",
+                alignItems: "center",
+              }}
+            >
+              <Text style={{ color: "#FFFFFF", fontSize: 14, fontWeight: "600" }}>
+                {activity.distance.toFixed(1)} km {activity.type}
+              </Text>
+              <Text style={{ color: "#8E8E93", fontSize: 11, marginLeft: 4 }}>⌄</Text>
+            </TouchableOpacity>
+          )}
 
           <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: "#FFFFFF", borderRadius: 20, paddingHorizontal: 10, paddingVertical: 6 }}>
             <View
@@ -150,7 +194,7 @@ export default function EditorScreen() {
                     padding: 8,
                   }}
                 >
-                  {t.render(activity, totals)}
+                  {activity && t.render(activity, totals)}
                   {t.badge && (
                     <View
                       style={{
