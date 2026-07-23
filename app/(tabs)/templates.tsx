@@ -4,16 +4,23 @@ import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { ScreenContainer } from "@/components/screen-container";
 import { useApp } from "@/lib/app-context";
-import { TEMPLATE_DEFS, computeWeekTotals } from "@/lib/templates";
+import { ALL_TEMPLATES, DYNAMIC_TEMPLATES, computeWeekTotals } from "@/lib/templates";
 
 export default function TemplatesScreen() {
   const router = useRouter();
   const { activities, loading, stravaConnected, getSelectedActivity } = useApp();
-  const [filter, setFilter] = useState<"all" | "activity" | "totals">("all");
+  const [filter, setFilter] = useState<"all" | "activity" | "totals" | "dynamic">("all");
 
   const activity = getSelectedActivity();
   const totals = computeWeekTotals(activities);
-  const templates = TEMPLATE_DEFS.filter((t) => filter === "all" || t.tab === filter);
+
+  // Dynamic templates are those from the DYNAMIC_TEMPLATES module
+  const dynamicIds = new Set(DYNAMIC_TEMPLATES.map((dt) => dt.id));
+  const isDynamic = (t: typeof ALL_TEMPLATES[number]) => dynamicIds.has(t.id);
+
+  const templates = filter === "dynamic"
+    ? ALL_TEMPLATES.filter(isDynamic)
+    : ALL_TEMPLATES.filter((t) => filter === "all" || t.tab === filter);
 
   const useTemplate = () => {
     if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -71,12 +78,12 @@ export default function TemplatesScreen() {
         <View style={{ paddingHorizontal: 16, paddingTop: 8 }}>
           <Text style={{ color: "#FFFFFF", fontSize: 30, fontWeight: "800" }}>Templates</Text>
           <Text style={{ color: "#8E8E93", fontSize: 13, marginTop: 2, marginBottom: 12 }}>
-            {TEMPLATE_DEFS.length} designs · tap one to open it in the share screen
+            {ALL_TEMPLATES.length} designs · {DYNAMIC_TEMPLATES.length} dynamic · tap one to open it in the share screen
           </Text>
         </View>
 
         <View style={{ flexDirection: "row", paddingHorizontal: 16, marginBottom: 10, gap: 8 }}>
-          {(["all", "activity", "totals"] as const).map((f) => (
+          {(["all", "activity", "totals", "dynamic"] as const).map((f) => (
             <TouchableOpacity
               key={f}
               onPress={() => setFilter(f)}

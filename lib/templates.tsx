@@ -1,6 +1,7 @@
 import React from "react";
 import { Text, View } from "react-native";
 import { Activity, formatDuration } from "./app-data";
+import { DYNAMIC_TEMPLATES } from "./dynamic-templates";
 
 /**
  * Template renderers matching the original Share Aura app designs.
@@ -866,6 +867,8 @@ export const TEMPLATE_DEFS: TemplateDef[] = [
   },
 ];
 
+export { DYNAMIC_TEMPLATES } from "./dynamic-templates";
+
 export function computeWeekTotals(activities: Activity[]): WeekTotals {
   const runKm = activities.filter((a) => a.type === "run").reduce((s, a) => s + a.distance, 0);
   const walkKm = activities.filter((a) => a.type !== "run").reduce((s, a) => s + a.distance, 0);
@@ -878,3 +881,21 @@ export function computeWeekTotals(activities: Activity[]): WeekTotals {
     items: activities.map((a) => ({ day: a.date, km: a.distance, type: a.type === "ride" ? "ride" : a.type })),
   };
 }
+
+/**
+ * ALL_TEMPLATES — the full collection including static + dynamic templates.
+ * Dynamic templates are cast to TemplateDef so they work in existing screens.
+ * They use the full Activity type which includes all Strava fields.
+ */
+export const ALL_TEMPLATES: TemplateDef[] = [
+  ...TEMPLATE_DEFS,
+  ...DYNAMIC_TEMPLATES.map((dt) => ({
+    id: dt.id,
+    name: dt.name,
+    tab: dt.tab,
+    fullWidth: dt.fullWidth,
+    badge: dt.badge as "New" | "Customize" | undefined,
+    lightCard: dt.lightCard,
+    render: dt.render as (a: Activity, totals: WeekTotals) => React.ReactNode,
+  })),
+];

@@ -4,7 +4,7 @@ import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { ScreenContainer } from "@/components/screen-container";
 import { useApp } from "@/lib/app-context";
-import { TEMPLATE_DEFS, computeWeekTotals, TemplateDef } from "@/lib/templates";
+import { ALL_TEMPLATES, computeWeekTotals, TemplateDef } from "@/lib/templates";
 
 export default function EditorScreen() {
   const router = useRouter();
@@ -15,7 +15,7 @@ export default function EditorScreen() {
 
   const activity = getSelectedActivity();
   const totals = computeWeekTotals(activities);
-  const templates = TEMPLATE_DEFS.filter((t) => t.tab === tab);
+  const templates = ALL_TEMPLATES.filter((t) => t.tab === tab);
 
   const onCopy = (t: TemplateDef) => {
     if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
