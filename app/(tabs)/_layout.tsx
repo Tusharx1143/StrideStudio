@@ -36,13 +36,6 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="editor"
-        options={{
-          title: "Editor",
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="pencil.circle.fill" color={color} />,
-        }}
-      />
-      <Tabs.Screen
         name="templates"
         options={{
           title: "Templates",

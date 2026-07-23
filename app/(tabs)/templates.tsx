@@ -1,24 +1,67 @@
 import { ScrollView, Text, View, TouchableOpacity, Platform, ActivityIndicator } from "react-native";
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
+import { captureRef } from "react-native-view-shot";
 import { ScreenContainer } from "@/components/screen-container";
 import { useApp } from "@/lib/app-context";
-import { TEMPLATE_DEFS, computeWeekTotals } from "@/lib/templates";
+import { ALL_TEMPLATES, computeWeekTotals } from "@/lib/templates";
+import { BRIGHT_WHITE } from "@/lib/color-presets";
 
 export default function TemplatesScreen() {
   const router = useRouter();
   const { activities, loading, stravaConnected, getSelectedActivity } = useApp();
   const [filter, setFilter] = useState<"all" | "activity" | "totals">("all");
+  const [toast, setToast] = useState<string | null>(null);
+  const capturingId = useRef<string | null>(null);
 
   const activity = getSelectedActivity();
   const totals = computeWeekTotals(activities);
-  const templates = TEMPLATE_DEFS.filter((t) => filter === "all" || t.tab === filter);
+  const templates = ALL_TEMPLATES.filter((t) => filter === "all" || t.tab === filter);
+
+  const showToast = useCallback((msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 1800);
+  }, []);
 
   const useTemplate = () => {
     if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    router.push("/(tabs)/editor");
+    router.push("/editor");
   };
+
+  const copyAsPNG = useCallback(async (templateId: string) => {
+    if (capturingId.current) return;
+    capturingId.current = templateId;
+    // Wait a tick for the ref to be available, then capture
+    await new Promise((r) => setTimeout(r, 100));
+    try {
+      const ref = (globalThis as any).__templateRefs?.get(templateId);
+      if (!ref) { showToast("Template not ready"); return; }
+      const uri = await captureRef(ref, { format: "png", quality: 1 });
+      if (Platform.OS === "web") {
+        const resp = await fetch(uri);
+        const blob = await resp.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `template-${templateId}.png`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showToast("Downloaded template PNG");
+      } else {
+        const { Share } = require("react-native");
+        await Share.share({ url: uri });
+        showToast("Shared template");
+      }
+      if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (e) {
+      showToast("Failed to capture");
+    } finally {
+      capturingId.current = null;
+    }
+  }, [showToast]);
 
   // ── Loading state ──
   if (loading && activities.length === 0) {
@@ -47,16 +90,8 @@ export default function TemplatesScreen() {
               : "Connect Strava to see live template previews with your activities."}
           </Text>
           {!stravaConnected && (
-            <TouchableOpacity
-              onPress={() => router.push("/(tabs)/profile")}
-              style={{
-                marginTop: 20,
-                backgroundColor: "#FF6B35",
-                borderRadius: 24,
-                paddingHorizontal: 28,
-                paddingVertical: 14,
-              }}
-            >
+            <TouchableOpacity onPress={() => router.push("/(tabs)/profile")}
+              style={{ marginTop: 20, backgroundColor: "#FF6B35", borderRadius: 24, paddingHorizontal: 28, paddingVertical: 14 }}>
               <Text style={{ color: "#FFFFFF", fontSize: 15, fontWeight: "700" }}>Connect Strava</Text>
             </TouchableOpacity>
           )}
@@ -71,30 +106,15 @@ export default function TemplatesScreen() {
         <View style={{ paddingHorizontal: 16, paddingTop: 8 }}>
           <Text style={{ color: "#FFFFFF", fontSize: 30, fontWeight: "800" }}>Templates</Text>
           <Text style={{ color: "#8E8E93", fontSize: 13, marginTop: 2, marginBottom: 12 }}>
-            {TEMPLATE_DEFS.length} designs · tap one to open it in the share screen
+            {ALL_TEMPLATES.length} adaptive designs · tap to edit · long-press to download PNG
           </Text>
         </View>
 
         <View style={{ flexDirection: "row", paddingHorizontal: 16, marginBottom: 10, gap: 8 }}>
           {(["all", "activity", "totals"] as const).map((f) => (
-            <TouchableOpacity
-              key={f}
-              onPress={() => setFilter(f)}
-              style={{
-                backgroundColor: filter === f ? "#FFFFFF" : "#1C1C1E",
-                borderRadius: 18,
-                paddingHorizontal: 16,
-                paddingVertical: 8,
-              }}
-            >
-              <Text
-                style={{
-                  color: filter === f ? "#000000" : "#FFFFFF",
-                  fontSize: 13,
-                  fontWeight: "600",
-                  textTransform: "capitalize",
-                }}
-              >
+            <TouchableOpacity key={f} onPress={() => setFilter(f)}
+              style={{ backgroundColor: filter === f ? "#FFFFFF" : "#1C1C1E", borderRadius: 18, paddingHorizontal: 16, paddingVertical: 8 }}>
+              <Text style={{ color: filter === f ? "#000000" : "#FFFFFF", fontSize: 13, fontWeight: "600", textTransform: "capitalize" }}>
                 {f}
               </Text>
             </TouchableOpacity>
@@ -107,6 +127,8 @@ export default function TemplatesScreen() {
               <View key={t.id} style={{ width: t.fullWidth ? "100%" : "50%", padding: 5 }}>
                 <TouchableOpacity
                   onPress={useTemplate}
+                  onLongPress={() => copyAsPNG(t.id)}
+                  delayLongPress={500}
                   activeOpacity={0.75}
                   style={{
                     backgroundColor: t.lightCard ? "#FFFFFF" : "#0E0E10",
@@ -117,14 +139,27 @@ export default function TemplatesScreen() {
                     borderColor: "#1C1C1E",
                     padding: 8,
                   }}
+                  ref={(el) => {
+                    if (el) {
+                      if (!(globalThis as any).__templateRefs) (globalThis as any).__templateRefs = new Map();
+                      (globalThis as any).__templateRefs.set(t.id, el);
+                    }
+                  }}
                 >
-                  {activity && t.render(activity, totals)}
+                  {activity && t.render(activity, totals, BRIGHT_WHITE.colors)}
                 </TouchableOpacity>
                 <Text style={{ color: "#8E8E93", fontSize: 10, textAlign: "center", marginTop: 4 }}>{t.name}</Text>
               </View>
             ))}
           </View>
         </ScrollView>
+
+        {/* Toast */}
+        {toast && (
+          <View style={{ position: "absolute", bottom: 30, alignSelf: "center", backgroundColor: "#1C1C1E", borderRadius: 20, paddingHorizontal: 18, paddingVertical: 10 }}>
+            <Text style={{ color: "#FFFFFF", fontSize: 13, fontWeight: "600" }}>{toast}</Text>
+          </View>
+        )}
       </View>
     </ScreenContainer>
   );

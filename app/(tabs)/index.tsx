@@ -77,7 +77,7 @@ export default function HomeScreen() {
   const goToEditor = (activityId: string) => {
     if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     selectActivity(activityId);
-    router.push("/(tabs)/editor");
+    router.push("/editor");
   };
 
   const openDetails = (activityId: string) => {

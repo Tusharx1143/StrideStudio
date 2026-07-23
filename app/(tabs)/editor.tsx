@@ -1,35 +1,162 @@
-import { ScrollView, Text, View, TouchableOpacity, Platform, Modal, Pressable, ActivityIndicator } from "react-native";
-import { useState } from "react";
+import React, { useRef, useState, useCallback } from "react";
+import {
+  ScrollView,
+  Text,
+  View,
+  TouchableOpacity,
+  Platform,
+  Modal,
+  Pressable,
+  ActivityIndicator,
+  ImageBackground,
+  Dimensions,
+  StyleSheet,
+} from "react-native";
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
+import * as ImagePicker from "expo-image-picker";
+import * as MediaLibrary from "expo-media-library";
+import { captureRef } from "react-native-view-shot";
+import { Gesture, GestureDetector, GestureHandlerRootView } from "react-native-gesture-handler";
+import Animated, { useSharedValue, useAnimatedStyle, withSpring } from "react-native-reanimated";
 import { ScreenContainer } from "@/components/screen-container";
 import { useApp } from "@/lib/app-context";
-import { TEMPLATE_DEFS, computeWeekTotals, TemplateDef } from "@/lib/templates";
+import { ALL_TEMPLATES, computeWeekTotals } from "@/lib/templates";
+import { useCanvas } from "@/lib/canvas-state";
+import { ALL_PRESETS, getPresetById, DEFAULT_PRESET_ID } from "@/lib/color-presets";
+
+const SCREEN_W = Dimensions.get("window").width;
+const CANVAS_H = 400;
 
 export default function EditorScreen() {
   const router = useRouter();
   const { activities, loading, stravaConnected, selectedActivityId, selectActivity, getSelectedActivity, incrementSavedPosts } = useApp();
+  const {
+    layers, selectedLayerId, photoUri,
+    addLayer, removeLayer, updateLayer,
+    bringForward, sendBackward, selectLayer, setPhoto,
+  } = useCanvas();
+
   const [tab, setTab] = useState<"activity" | "totals">("activity");
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [capturing, setCapturing] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+
+  const canvasRef = useRef<any>(null);
 
   const activity = getSelectedActivity();
   const totals = computeWeekTotals(activities);
-  const templates = TEMPLATE_DEFS.filter((t) => t.tab === tab);
 
-  const onCopy = (t: TemplateDef) => {
-    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    incrementSavedPosts();
-    setToast(`Copied "${t.name}" to clipboard`);
-    setTimeout(() => setToast(null), 1800);
-  };
+  const filteredTemplates = ALL_TEMPLATES.filter((t) => t.tab === tab);
+  const selectedLayer = layers.find((l) => l.id === selectedLayerId) ?? null;
+  const selectedPalette = selectedLayer ? getPresetById(selectedLayer.paletteId) : ALL_PRESETS[0];
 
-  const onSave = (t: TemplateDef) => {
-    if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    incrementSavedPosts();
-    setToast(`Saved "${t.name}" to camera roll`);
+  const showToast = useCallback((msg: string) => {
+    setToast(msg);
     setTimeout(() => setToast(null), 1800);
-  };
+  }, []);
+
+  // ── Photo picker ──
+  const pickPhoto = useCallback(async () => {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) { showToast("Photo library permission needed"); return; }
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.9 });
+    if (!result.canceled && result.assets[0]) {
+      setPhoto(result.assets[0].uri);
+    }
+  }, [setPhoto, showToast]);
+
+  // ── Save composite ──
+  const saveImage = useCallback(async () => {
+    if (!canvasRef.current) return;
+    setCapturing(true);
+    try {
+      const { status } = await MediaLibrary.requestPermissionsAsync();
+      if (status !== "granted") { showToast("Camera roll permission needed"); return; }
+      const uri = await captureRef(canvasRef, { format: "png", quality: 1 });
+      await MediaLibrary.saveToLibraryAsync(uri);
+      incrementSavedPosts();
+      if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      showToast("Saved to camera roll");
+    } catch {
+      showToast("Failed to save image");
+    } finally {
+      setCapturing(false);
+    }
+  }, [incrementSavedPosts, showToast]);
+
+  // ── Layer gesture hook ──
+  function LayerGesture({ layer }: { layer: typeof layers[0] }) {
+    const translateX = useSharedValue(0);
+    const translateY = useSharedValue(0);
+    const scale = useSharedValue(layer.scale);
+    const rotate = useSharedValue(layer.rotation);
+
+    const pan = Gesture.Pan()
+      .onUpdate((e) => { translateX.value = e.translationX; translateY.value = e.translationY; })
+      .onEnd(() => {
+        const newX = layer.x + (translateX.value / SCREEN_W);
+        const newY = layer.y + (translateY.value / CANVAS_H);
+        updateLayer(layer.id, { x: Math.max(0, Math.min(1, newX)), y: Math.max(0, Math.min(1, newY)) });
+        translateX.value = 0; translateY.value = 0;
+      });
+
+    const pinch = Gesture.Pinch()
+      .onUpdate((e) => { scale.value = layer.scale * e.scale; })
+      .onEnd(() => { updateLayer(layer.id, { scale: Math.max(0.3, Math.min(3, scale.value)) }); });
+
+    const rotation = Gesture.Rotation()
+      .onUpdate((e) => { rotate.value = layer.rotation + e.rotation; })
+      .onEnd(() => { updateLayer(layer.id, { rotation: rotate.value }); });
+
+    const tap = Gesture.Tap().onEnd(() => { selectLayer(layer.id); });
+
+    const composed = Gesture.Simultaneous(pan, pinch, rotation, tap);
+
+    const animatedStyle = useAnimatedStyle(() => ({
+      transform: [
+        { translateX: translateX.value },
+        { translateY: translateY.value },
+        { scale: scale.value },
+        { rotate: `${rotate.value}rad` },
+      ],
+    }));
+
+    const template = ALL_TEMPLATES.find((t) => t.id === layer.templateId);
+    const preset = getPresetById(layer.paletteId);
+    const isSelected = layer.id === selectedLayerId;
+
+    return (
+      <GestureDetector gesture={composed}>
+        <Animated.View
+          style={[
+            {
+              position: "absolute",
+              left: layer.x * SCREEN_W - (SCREEN_W * 0.4) / 2,
+              top: layer.y * CANVAS_H - 65,
+              width: SCREEN_W * 0.4,
+              minHeight: 130,
+              borderRadius: 12,
+              overflow: "hidden",
+              borderWidth: isSelected ? 2 : 0,
+              borderColor: isSelected ? "#FF6B35" : "transparent",
+              borderStyle: isSelected ? ("dashed" as any) : "solid",
+              backgroundColor: "rgba(0,0,0,0.35)",
+            },
+            animatedStyle,
+          ]}
+          onLayout={() => {}} // keeps ref stable
+        >
+          {template && activity && (
+            <View style={{ flex: 1, padding: 4 }}>
+              {template.render(activity, totals, preset.colors)}
+            </View>
+          )}
+        </Animated.View>
+      </GestureDetector>
+    );
+  }
 
   // ── Loading state ──
   if (loading && activities.length === 0) {
@@ -58,16 +185,8 @@ export default function EditorScreen() {
               : "Link your Strava account first, then come here to create shareable workout graphics."}
           </Text>
           {!stravaConnected && (
-            <TouchableOpacity
-              onPress={() => router.push("/(tabs)/profile")}
-              style={{
-                marginTop: 20,
-                backgroundColor: "#FF6B35",
-                borderRadius: 24,
-                paddingHorizontal: 28,
-                paddingVertical: 14,
-              }}
-            >
+            <TouchableOpacity onPress={() => router.push("/(tabs)/profile")}
+              style={{ marginTop: 20, backgroundColor: "#FF6B35", borderRadius: 24, paddingHorizontal: 28, paddingVertical: 14 }}>
               <Text style={{ color: "#FFFFFF", fontSize: 15, fontWeight: "700" }}>Connect Strava</Text>
             </TouchableOpacity>
           )}
@@ -79,42 +198,16 @@ export default function EditorScreen() {
   return (
     <ScreenContainer className="p-0" containerClassName="bg-black">
       <View style={{ flex: 1, backgroundColor: "#000000" }}>
-        {/* Top bar */}
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "space-between",
-            paddingHorizontal: 16,
-            paddingVertical: 8,
-          }}
-        >
-          <TouchableOpacity
-            onPress={() => router.back()}
-            style={{
-              width: 40,
-              height: 40,
-              borderRadius: 20,
-              backgroundColor: "#1C1C1E",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
+        {/* ── Top bar ── */}
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingVertical: 8 }}>
+          <TouchableOpacity onPress={() => router.back()}
+            style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: "#1C1C1E", alignItems: "center", justifyContent: "center" }}>
             <Text style={{ color: "#FFFFFF", fontSize: 18 }}>‹</Text>
           </TouchableOpacity>
 
           {activity && (
-            <TouchableOpacity
-              onPress={() => setPickerOpen(true)}
-              style={{
-                backgroundColor: "#1C1C1E",
-                borderRadius: 20,
-                paddingHorizontal: 16,
-                paddingVertical: 10,
-                flexDirection: "row",
-                alignItems: "center",
-              }}
-            >
+            <TouchableOpacity onPress={() => setPickerOpen(true)}
+              style={{ backgroundColor: "#1C1C1E", borderRadius: 20, paddingHorizontal: 16, paddingVertical: 10, flexDirection: "row", alignItems: "center" }}>
               <Text style={{ color: "#FFFFFF", fontSize: 14, fontWeight: "600" }}>
                 {activity.distance.toFixed(1)} km {activity.type}
               </Text>
@@ -122,149 +215,182 @@ export default function EditorScreen() {
             </TouchableOpacity>
           )}
 
-          <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: "#FFFFFF", borderRadius: 20, paddingHorizontal: 10, paddingVertical: 6 }}>
-            <View
-              style={{
-                width: 20,
-                height: 20,
-                borderRadius: 10,
-                marginRight: 8,
-                backgroundColor: "#FF3B30",
-                borderWidth: 2,
-                borderColor: "#34C759",
-              }}
-            />
-            <Text style={{ color: "#000000", fontSize: 15, fontWeight: "600" }}>Aa</Text>
+          {/* Palette indicator */}
+          {selectedLayer && (
+            <TouchableOpacity onPress={() => setPaletteOpen(true)}
+              style={{ flexDirection: "row", alignItems: "center", backgroundColor: "#1C1C1E", borderRadius: 20, paddingHorizontal: 10, paddingVertical: 8, gap: 6 }}>
+              <View style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: selectedPalette.colors.accent }} />
+              <Text style={{ color: "#FFFFFF", fontSize: 12, fontWeight: "600" }}>{selectedPalette.name}</Text>
+            </TouchableOpacity>
+          )}
+          {!selectedLayer && (
+            <View style={{ width: 40 }} />
+          )}
+        </View>
+
+        {/* ── Canvas ── */}
+        <View ref={canvasRef} collapsable={false}>
+          {photoUri ? (
+            <ImageBackground source={{ uri: photoUri }} style={{ width: SCREEN_W, height: CANVAS_H }} resizeMode="cover">
+              <Pressable style={{ flex: 1 }} onPress={() => selectLayer(null)}>
+                {layers.sort((a, b) => a.zIndex - b.zIndex).map((layer) => (
+                  <LayerGesture key={layer.id} layer={layer} />
+                ))}
+              </Pressable>
+            </ImageBackground>
+          ) : (
+            <Pressable
+              style={{ width: SCREEN_W, height: CANVAS_H, backgroundColor: "#1C1C1E", justifyContent: "center", alignItems: "center" }}
+              onPress={() => selectLayer(null)}
+            >
+              <Text style={{ fontSize: 32, marginBottom: 8 }}>🖼️</Text>
+              <Text style={{ color: "#8E8E93", fontSize: 14, fontWeight: "600" }}>Tap to pick a photo</Text>
+              <Text style={{ color: "#555555", fontSize: 11, marginTop: 4 }}>Templates appear on the photo canvas</Text>
+
+              {/* Preview layers even without photo */}
+              {layers.sort((a, b) => a.zIndex - b.zIndex).map((layer) => (
+                <LayerGesture key={layer.id} layer={layer} />
+              ))}
+            </Pressable>
+          )}
+        </View>
+
+        {/* ── Layer controls ── */}
+        {selectedLayer && (
+          <View style={{ paddingHorizontal: 16, paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: "#1C1C1E" }}>
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+              <Text style={{ color: "#8E8E93", fontSize: 11, fontWeight: "600" }}>
+                Layer: {ALL_TEMPLATES.find((t) => t.id === selectedLayer.templateId)?.name ?? selectedLayer.templateId}
+              </Text>
+              <View style={{ flexDirection: "row", gap: 8 }}>
+                <TouchableOpacity onPress={() => sendBackward(selectedLayer.id)}
+                  style={{ backgroundColor: "#2C2C2E", borderRadius: 14, paddingHorizontal: 12, paddingVertical: 6 }}>
+                  <Text style={{ color: "#FFFFFF", fontSize: 11, fontWeight: "600" }}>◀ Back</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => bringForward(selectedLayer.id)}
+                  style={{ backgroundColor: "#2C2C2E", borderRadius: 14, paddingHorizontal: 12, paddingVertical: 6 }}>
+                  <Text style={{ color: "#FFFFFF", fontSize: 11, fontWeight: "600" }}>Forward ▶</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => removeLayer(selectedLayer.id)}
+                  style={{ backgroundColor: "#3A1A1A", borderRadius: 14, paddingHorizontal: 12, paddingVertical: 6 }}>
+                  <Text style={{ color: "#FF453A", fontSize: 11, fontWeight: "600" }}>✕</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+            {/* Color swatches */}
+            <View style={{ flexDirection: "row", gap: 8, marginTop: 6 }}>
+              {ALL_PRESETS.map((preset) => (
+                <TouchableOpacity
+                  key={preset.id}
+                  onPress={() => updateLayer(selectedLayer.id, { paletteId: preset.id })}
+                  style={{
+                    width: 24, height: 24, borderRadius: 12,
+                    backgroundColor: preset.colors.accent,
+                    borderWidth: preset.id === selectedLayer.paletteId ? 2 : 0,
+                    borderColor: "#FFFFFF",
+                  }}
+                />
+              ))}
+            </View>
           </View>
-        </View>
+        )}
 
-        {/* Copy / Save hints */}
-        <View style={{ alignItems: "center", paddingVertical: 8 }}>
-          <Text style={{ color: "#FFFFFF", fontSize: 14, fontWeight: "700" }}>⧉ TAP TO COPY</Text>
-          <Text style={{ color: "#8E8E93", fontSize: 13, fontWeight: "600", marginTop: 4 }}>
-            ⬇ PRESS + HOLD TO SAVE
-          </Text>
-        </View>
-
-        {/* Tabs */}
-        <View style={{ flexDirection: "row", marginTop: 8 }}>
+        {/* ── Tabs ── */}
+        <View style={{ flexDirection: "row", marginTop: 4 }}>
           {(["activity", "totals"] as const).map((t) => (
             <TouchableOpacity
               key={t}
               onPress={() => setTab(t)}
-              style={{
-                flex: 1,
-                alignItems: "center",
-                paddingBottom: 10,
-                borderBottomWidth: 2,
-                borderBottomColor: tab === t ? "#FFFFFF" : "#2C2C2E",
-              }}
+              style={{ flex: 1, alignItems: "center", paddingBottom: 8, borderBottomWidth: 2, borderBottomColor: tab === t ? "#FFFFFF" : "#2C2C2E" }}
             >
-              <Text
-                style={{
-                  color: tab === t ? "#FFFFFF" : "#8E8E93",
-                  fontSize: 15,
-                  fontWeight: tab === t ? "700" : "500",
-                  textTransform: "capitalize",
-                }}
-              >
+              <Text style={{ color: tab === t ? "#FFFFFF" : "#8E8E93", fontSize: 14, fontWeight: tab === t ? "700" : "500", textTransform: "capitalize" }}>
                 {t}
               </Text>
             </TouchableOpacity>
           ))}
         </View>
 
-        {/* Template grid */}
-        <ScrollView contentContainerStyle={{ padding: 10, paddingBottom: 40 }}>
-          <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
-            {templates.map((t) => (
-              <View key={t.id} style={{ width: t.fullWidth ? "100%" : "50%", padding: 5 }}>
-                <TouchableOpacity
-                  onPress={() => onCopy(t)}
-                  onLongPress={() => onSave(t)}
-                  delayLongPress={400}
-                  activeOpacity={0.75}
-                  style={{
-                    backgroundColor: t.lightCard ? "#FFFFFF" : "#0E0E10",
-                    borderRadius: 14,
-                    minHeight: t.fullWidth ? 120 : 130,
-                    overflow: "hidden",
-                    borderWidth: 1,
-                    borderColor: "#1C1C1E",
-                    padding: 8,
-                  }}
-                >
-                  {activity && t.render(activity, totals)}
-                  {t.badge && (
-                    <View
-                      style={{
-                        position: "absolute",
-                        top: 6,
-                        right: 6,
-                        backgroundColor: "#0A84FF",
-                        borderRadius: 10,
-                        paddingHorizontal: 8,
-                        paddingVertical: 2,
-                      }}
-                    >
-                      <Text style={{ color: "#FFFFFF", fontSize: 9, fontWeight: "700" }}>{t.badge}</Text>
-                    </View>
-                  )}
-                </TouchableOpacity>
-              </View>
+        {/* ── Template tray ── */}
+        <View style={{ flex: 1, maxHeight: 100 }}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 10, paddingVertical: 6, gap: 8 }}>
+            {filteredTemplates.map((tpl) => (
+              <TouchableOpacity
+                key={tpl.id}
+                onPress={() => { addLayer(tpl.id); if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+                style={{ width: 80, height: 80, backgroundColor: "#0E0E10", borderRadius: 10, borderWidth: 1, borderColor: "#1C1C1E", padding: 4, justifyContent: "center", alignItems: "center", overflow: "hidden" }}
+              >
+                {activity && (
+                  <View style={{ transform: [{ scale: 0.25 }], width: 320, height: 320, position: "absolute" }}>
+                    {tpl.render(activity, totals)}
+                  </View>
+                )}
+                <Text style={{ color: "#FFFFFF", fontSize: 7, fontWeight: "600", textAlign: "center", zIndex: 1, backgroundColor: "rgba(0,0,0,0.5)", borderRadius: 4, paddingHorizontal: 4, paddingVertical: 1 }} numberOfLines={2}>
+                  {tpl.name}
+                </Text>
+              </TouchableOpacity>
             ))}
-          </View>
-        </ScrollView>
+          </ScrollView>
+        </View>
 
-        {/* Toast */}
+        {/* ── Bottom bar ── */}
+        <View style={{ flexDirection: "row", paddingHorizontal: 16, paddingVertical: 8, gap: 8, borderTopWidth: 1, borderTopColor: "#1C1C1E" }}>
+          <TouchableOpacity onPress={pickPhoto}
+            style={{ flex: 1, backgroundColor: "#2C2C2E", borderRadius: 20, paddingVertical: 12, alignItems: "center" }}>
+            <Text style={{ color: "#FFFFFF", fontSize: 14, fontWeight: "700" }}>🖼 Photo</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={saveImage} disabled={capturing}
+            style={{ flex: 1, backgroundColor: "#FF6B35", borderRadius: 20, paddingVertical: 12, alignItems: "center", opacity: capturing ? 0.5 : 1 }}>
+            <Text style={{ color: "#FFFFFF", fontSize: 14, fontWeight: "700" }}>{capturing ? "Saving…" : "💾 Save"}</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* ── Toast ── */}
         {toast && (
-          <View
-            style={{
-              position: "absolute",
-              bottom: 30,
-              alignSelf: "center",
-              backgroundColor: "#1C1C1E",
-              borderRadius: 20,
-              paddingHorizontal: 18,
-              paddingVertical: 10,
-            }}
-          >
+          <View style={{ position: "absolute", bottom: 80, alignSelf: "center", backgroundColor: "#1C1C1E", borderRadius: 20, paddingHorizontal: 18, paddingVertical: 10 }}>
             <Text style={{ color: "#FFFFFF", fontSize: 13, fontWeight: "600" }}>{toast}</Text>
           </View>
         )}
 
-        {/* Activity picker modal */}
+        {/* ── Activity picker modal ── */}
         <Modal visible={pickerOpen} transparent animationType="fade" onRequestClose={() => setPickerOpen(false)}>
-          <Pressable
-            style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.7)", justifyContent: "center", padding: 24 }}
-            onPress={() => setPickerOpen(false)}
-          >
+          <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.7)", justifyContent: "center", padding: 24 }} onPress={() => setPickerOpen(false)}>
             <View style={{ backgroundColor: "#1C1C1E", borderRadius: 16, overflow: "hidden" }}>
               {activities.map((a, i) => (
-                <TouchableOpacity
-                  key={a.id}
-                  onPress={() => {
-                    selectActivity(a.id);
-                    setPickerOpen(false);
-                  }}
-                  style={{
-                    padding: 16,
-                    borderBottomWidth: i < activities.length - 1 ? 1 : 0,
-                    borderBottomColor: "#2C2C2E",
-                    flexDirection: "row",
-                    justifyContent: "space-between",
-                  }}
-                >
-                  <Text
-                    style={{
-                      color: a.id === selectedActivityId ? "#0A84FF" : "#FFFFFF",
-                      fontSize: 15,
-                      fontWeight: "600",
-                    }}
-                  >
+                <TouchableOpacity key={a.id} onPress={() => { selectActivity(a.id); setPickerOpen(false); }}
+                  style={{ padding: 16, borderBottomWidth: i < activities.length - 1 ? 1 : 0, borderBottomColor: "#2C2C2E", flexDirection: "row", justifyContent: "space-between" }}>
+                  <Text style={{ color: a.id === selectedActivityId ? "#0A84FF" : "#FFFFFF", fontSize: 15, fontWeight: "600" }}>
                     {a.distance.toFixed(1)} km {a.type}
                   </Text>
                   <Text style={{ color: "#8E8E93", fontSize: 13 }}>{a.date}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </Pressable>
+        </Modal>
+
+        {/* ── Palette selector modal ── */}
+        <Modal visible={paletteOpen} transparent animationType="fade" onRequestClose={() => setPaletteOpen(false)}>
+          <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.7)", justifyContent: "center", padding: 32 }} onPress={() => setPaletteOpen(false)}>
+            <View style={{ backgroundColor: "#1C1C1E", borderRadius: 16, padding: 20 }}>
+              <Text style={{ color: "#FFFFFF", fontSize: 16, fontWeight: "700", marginBottom: 12 }}>Color Preset</Text>
+              {ALL_PRESETS.map((preset) => (
+                <TouchableOpacity key={preset.id} onPress={() => { if (selectedLayer) updateLayer(selectedLayer.id, { paletteId: preset.id }); setPaletteOpen(false); }}
+                  style={{ flexDirection: "row", alignItems: "center", paddingVertical: 10, gap: 10, borderBottomWidth: 1, borderBottomColor: "#2C2C2E" }}>
+                  <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: preset.colors.accent }} />
+                  <View>
+                    <Text style={{ color: "#FFFFFF", fontSize: 14, fontWeight: "600" }}>{preset.name}</Text>
+                    <View style={{ flexDirection: "row", gap: 4, marginTop: 2 }}>
+                      {[preset.colors.textPrimary, preset.colors.textMuted, preset.colors.border].map((clr, i) => (
+                        <View key={i} style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: clr }} />
+                      ))}
+                    </View>
+                  </View>
+                  {selectedLayer?.paletteId === preset.id && (
+                    <View style={{ flex: 1 }} />
+                  )}
+                  {selectedLayer?.paletteId === preset.id && (
+                    <Text style={{ color: "#FF6B35", fontSize: 12, fontWeight: "700" }}>✓</Text>
+                  )}
                 </TouchableOpacity>
               ))}
             </View>

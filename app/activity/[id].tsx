@@ -60,7 +60,7 @@ export default function ActivityDetailsScreen() {
   const onShare = () => {
     if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     selectActivity(activity.id);
-    router.push("/(tabs)/editor");
+    router.push("/editor");
   };
 
   const rows: [string, string][] = [
