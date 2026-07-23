@@ -89,11 +89,13 @@ export interface Activity {
   type: "run" | "ride" | "workout";
   title: string;
   distance: number; // km
-  duration: number; // minutes
+  duration: number; // minutes (moving time)
+  elapsedTime: number; // minutes (total elapsed)
   date: string;
   startDate: string; // ISO date
   pace?: number; // min/km
   speed?: number; // km/h
+  maxSpeed?: number; // km/h
   elevation?: number; // meters
   heartRate?: number; // avg bpm
   maxHeartRate?: number;
@@ -103,6 +105,7 @@ export interface Activity {
   sufferScore?: number;
   startLatlng?: [number, number];
   summaryPolyline?: string;
+  deviceName?: string;
 }
 
 // ─── In-memory token store (fallback when no DB) ────────────────────────
@@ -155,10 +158,12 @@ function toAppActivity(sa: StravaApiActivity): Activity {
     title: sa.name,
     distance: Math.round(distanceKm * 100) / 100,
     duration: Math.round(durationMin * 10) / 10,
+    elapsedTime: Math.round((sa.elapsed_time / 60) * 10) / 10,
     date: formatStravaDate(sa.start_date),
     startDate: sa.start_date,
     pace: pace ? Math.round(pace * 100) / 100 : undefined,
     speed: speedKmh > 0 ? Math.round(speedKmh * 100) / 100 : undefined,
+    maxSpeed: sa.max_speed > 0 ? Math.round(sa.max_speed * 3.6 * 100) / 100 : undefined,
     elevation: Math.round(sa.total_elevation_gain),
     heartRate: sa.average_heartrate ? Math.round(sa.average_heartrate) : undefined,
     maxHeartRate: sa.max_heartrate ? Math.round(sa.max_heartrate) : undefined,
@@ -168,6 +173,7 @@ function toAppActivity(sa: StravaApiActivity): Activity {
     sufferScore: sa.suffer_score,
     startLatlng: sa.start_latlng,
     summaryPolyline: sa.map?.summary_polyline,
+    deviceName: sa.device_name,
   };
 }
 
