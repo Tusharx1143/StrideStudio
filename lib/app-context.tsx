@@ -48,7 +48,7 @@ const DEFAULT_TOGGLES: StatToggles = {
 
 const AppContext = createContext<AppState | null>(null);
 
-const STORAGE_KEY = "share-aura-state";
+const STORAGE_KEY = "stride-studio-state";
 
 export function AppProvider({ children }: { children: ReactNode }) {
   // ── Strava data from backend ──

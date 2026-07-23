@@ -1,4 +1,4 @@
-# Share Aura Clone - Project TODO
+# StrideStudio - Project TODO
 
 ## Phase 1: Core Navigation & Layout
 - [x] Set up tab bar navigation (Home, Editor, Templates, Profile)

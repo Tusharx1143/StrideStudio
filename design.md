@@ -1,7 +1,7 @@
-# Share Aura Clone - Mobile App Design
+# StrideStudio - Mobile App Design
 
 ## Overview
-Share Aura is a creative tool for sharing workouts to social media. The app allows users to connect fitness tracking devices, sync their activities, and create beautiful shareable posts using customizable stat templates. The design emphasizes simplicity, visual hierarchy, and a dark aesthetic with vibrant accents.
+StrideStudio is a creative tool for sharing workouts to social media. The app allows users to connect fitness tracking devices, sync their activities, and create beautiful shareable posts using customizable stat templates. The design emphasizes simplicity, visual hierarchy, and a dark aesthetic with vibrant accents.
 
 ## Design Principles
 - **Portrait Orientation (9:16):** All screens designed for vertical mobile use

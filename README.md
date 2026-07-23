@@ -1,6 +1,6 @@
 # StrideStudio
 
-StrideStudio is a mobile app for turning workouts into beautiful, shareable graphics — inspired by [Aura](https://play.google.com/store/apps/details?id=com.auramovement.aura). Pick an activity, choose from 41 hand-crafted templates, and copy or save a story-ready card for Instagram and other social platforms.
+StrideStudio is a mobile app for turning workouts into beautiful, shareable graphics. Pick an activity, choose from 45+ dynamic templates, and create story-ready cards for Instagram and other social platforms.
 
 Built with **Expo (React Native)** and **TypeScript**, it runs on iOS, Android, and the web from a single codebase.
 
@@ -123,4 +123,4 @@ If you don't need cloud features, no environment setup is required.
 
 ## License
 
-This project is a design study / educational clone and is not affiliated with Aura or Aura Movement Technologies. All trademarks belong to their respective owners.
+Built with React Native (Expo), tRPC, and Drizzle ORM.
