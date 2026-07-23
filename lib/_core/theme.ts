@@ -59,26 +59,33 @@ export const Colors = {
 
 export type ThemeColorPalette = (typeof Colors)[ColorScheme];
 
+/**
+ * Font families — UI/UX Pro Max recommendation for fitness/sports app:
+ * Barlow Condensed (display/headings) + Barlow (body text).
+ * Falls back to system fonts when custom fonts aren't loaded.
+ */
+const FONT_DISPLAY = "'Barlow Condensed', 'Impact', 'Arial Black', sans-serif";
+const FONT_BODY = "'Barlow', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+
 export const Fonts = Platform.select({
   ios: {
-    /** iOS `UIFontDescriptorSystemDesignDefault` */
-    sans: "system-ui",
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
+    sans: FONT_BODY,
     serif: "ui-serif",
-    /** iOS `UIFontDescriptorSystemDesignRounded` */
+    display: FONT_DISPLAY,
     rounded: "ui-rounded",
-    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
     mono: "ui-monospace",
   },
   default: {
-    sans: "normal",
+    sans: FONT_BODY,
     serif: "serif",
+    display: FONT_DISPLAY,
     rounded: "normal",
     mono: "monospace",
   },
   web: {
-    sans: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+    sans: FONT_BODY,
     serif: "Georgia, 'Times New Roman', serif",
+    display: FONT_DISPLAY,
     rounded: "'SF Pro Rounded', 'Hiragino Maru Gothic ProN', Meiryo, 'MS PGothic', sans-serif",
     mono: "SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
   },
