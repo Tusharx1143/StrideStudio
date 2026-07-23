@@ -1,122 +1,89 @@
-import { ScrollView, Text, View, TouchableOpacity, FlatList, Platform } from "react-native";
+import { ScrollView, Text, View, TouchableOpacity, Platform } from "react-native";
 import { useState } from "react";
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { ScreenContainer } from "@/components/screen-container";
-import { useColors } from "@/hooks/use-colors";
 import { useApp } from "@/lib/app-context";
-import { TEMPLATES, Template } from "@/lib/app-data";
+import { TEMPLATE_DEFS, computeWeekTotals } from "@/lib/templates";
 
-type Category = "all" | "running" | "cycling" | "general";
-
-function TemplateGridItem({ template, onSelect }: { template: Template; onSelect: () => void }) {
-  const colors = useColors();
-  return (
-    <TouchableOpacity
-      onPress={onSelect}
-      activeOpacity={0.7}
-      style={{
-        flex: 1,
-        backgroundColor: colors.surface,
-        borderRadius: 12,
-        padding: 16,
-        alignItems: "center",
-        justifyContent: "center",
-        borderWidth: 1,
-        borderColor: colors.border,
-        margin: 6,
-        minHeight: 140,
-      }}
-    >
-      <Text style={{ fontSize: 40, marginBottom: 8 }}>{template.preview}</Text>
-      <Text style={{ color: colors.foreground, fontSize: 12, fontWeight: "600", textAlign: "center" }}>
-        {template.name}
-      </Text>
-      <Text style={{ color: colors.muted, fontSize: 10, marginTop: 4, textTransform: "capitalize" }}>
-        {template.category}
-      </Text>
-    </TouchableOpacity>
-  );
-}
-
+/**
+ * Templates gallery — live-rendered previews of every template using the
+ * currently selected activity, filterable by Activity/Totals group.
+ */
 export default function TemplatesScreen() {
-  const colors = useColors();
   const router = useRouter();
-  const { selectTemplate } = useApp();
-  const [selectedCategory, setSelectedCategory] = useState<Category>("all");
+  const { activities, getSelectedActivity } = useApp();
+  const [filter, setFilter] = useState<"all" | "activity" | "totals">("all");
 
-  const filteredTemplates =
-    selectedCategory === "all" ? TEMPLATES : TEMPLATES.filter((t) => t.category === selectedCategory);
+  const activity = getSelectedActivity();
+  const totals = computeWeekTotals(activities);
+  const templates = TEMPLATE_DEFS.filter((t) => filter === "all" || t.tab === filter);
 
-  const useTemplate = (id: string) => {
+  const useTemplate = () => {
     if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    selectTemplate(id);
     router.push("/(tabs)/editor");
   };
 
   return (
-    <ScreenContainer className="p-0">
-      <View style={{ backgroundColor: colors.background, flex: 1 }}>
-        {/* Header */}
-        <View
-          style={{
-            paddingHorizontal: 16,
-            paddingTop: 8,
-            paddingBottom: 12,
-            borderBottomWidth: 1,
-            borderBottomColor: colors.border,
-          }}
-        >
-          <Text style={{ color: colors.foreground, fontSize: 28, fontWeight: "bold" }}>Templates</Text>
-          <Text style={{ color: colors.muted, fontSize: 14, marginTop: 2 }}>
-            Tap a template to use it in the editor
+    <ScreenContainer className="p-0" containerClassName="bg-black">
+      <View style={{ flex: 1, backgroundColor: "#000000" }}>
+        <View style={{ paddingHorizontal: 16, paddingTop: 8 }}>
+          <Text style={{ color: "#FFFFFF", fontSize: 30, fontWeight: "800" }}>Templates</Text>
+          <Text style={{ color: "#8E8E93", fontSize: 13, marginTop: 2, marginBottom: 12 }}>
+            {TEMPLATE_DEFS.length} designs · tap one to open it in the share screen
           </Text>
         </View>
 
-        {/* Category Filter */}
-        <View style={{ borderBottomWidth: 1, borderBottomColor: colors.border }}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 12 }}
-          >
-            {(["all", "running", "cycling", "general"] as Category[]).map((category) => (
-              <TouchableOpacity
-                key={category}
-                onPress={() => setSelectedCategory(category)}
+        <View style={{ flexDirection: "row", paddingHorizontal: 16, marginBottom: 10, gap: 8 }}>
+          {(["all", "activity", "totals"] as const).map((f) => (
+            <TouchableOpacity
+              key={f}
+              onPress={() => setFilter(f)}
+              style={{
+                backgroundColor: filter === f ? "#FFFFFF" : "#1C1C1E",
+                borderRadius: 18,
+                paddingHorizontal: 16,
+                paddingVertical: 8,
+              }}
+            >
+              <Text
                 style={{
-                  paddingHorizontal: 14,
-                  paddingVertical: 7,
-                  borderRadius: 20,
-                  marginRight: 8,
-                  backgroundColor: selectedCategory === category ? colors.primary : colors.surface,
-                  borderWidth: selectedCategory === category ? 0 : 1,
-                  borderColor: colors.border,
+                  color: filter === f ? "#000000" : "#FFFFFF",
+                  fontSize: 13,
+                  fontWeight: "600",
+                  textTransform: "capitalize",
                 }}
               >
-                <Text
-                  style={{
-                    color: selectedCategory === category ? "#000000" : colors.foreground,
-                    fontSize: 12,
-                    fontWeight: "600",
-                    textTransform: "capitalize",
-                  }}
-                >
-                  {category}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+                {f}
+              </Text>
+            </TouchableOpacity>
+          ))}
         </View>
 
-        {/* Template Grid */}
-        <FlatList
-          data={filteredTemplates}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => <TemplateGridItem template={item} onSelect={() => useTemplate(item.id)} />}
-          numColumns={2}
-          contentContainerStyle={{ paddingHorizontal: 10, paddingVertical: 12, paddingBottom: 32 }}
-        />
+        <ScrollView contentContainerStyle={{ padding: 10, paddingBottom: 40 }}>
+          <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
+            {templates.map((t) => (
+              <View key={t.id} style={{ width: t.fullWidth ? "100%" : "50%", padding: 5 }}>
+                <TouchableOpacity
+                  onPress={useTemplate}
+                  activeOpacity={0.75}
+                  style={{
+                    backgroundColor: t.lightCard ? "#FFFFFF" : "#0E0E10",
+                    borderRadius: 14,
+                    minHeight: t.fullWidth ? 120 : 130,
+                    overflow: "hidden",
+                    borderWidth: 1,
+                    borderColor: "#1C1C1E",
+                    padding: 8,
+                  }}
+                >
+                  {t.render(activity, totals)}
+                </TouchableOpacity>
+                <Text style={{ color: "#8E8E93", fontSize: 10, textAlign: "center", marginTop: 4 }}>{t.name}</Text>
+              </View>
+            ))}
+          </View>
+        </ScrollView>
       </View>
     </ScreenContainer>
   );

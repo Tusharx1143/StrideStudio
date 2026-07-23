@@ -65,3 +65,14 @@
 ## Phase 11: Final Delivery
 - [ ] Create checkpoint
 - [ ] Deliver to user with known limitations documented
+
+## Phase 12: Redesign to match reference screenshots
+- [x] Rebuild template system: real rendered template cards (serif, bold KM, mono terminal, barcode, LED, iMessage bubble, quote, WASTED, weekday red, editorial, polaroid/photo, notes, location pill, light card)
+- [x] Share/editor screen: top bar (back, activity dropdown pill, color + Aa buttons), "TAP TO COPY" + "PRESS + HOLD TO SAVE" header
+- [x] Activity | Totals tabs with underline, 2-column masonry grid of live template previews
+- [x] Totals templates: This Week list, weekly totals table, THIS WEEK big KM, day columns
+- [x] Home feed redesign: tall story-style activity cards with day heading + bottom-left mono stats
+- [x] Badges (New / Customize) on template cards
+- [x] Templates gallery rebuilt with live previews + Activity/Totals filters
+- [x] Activity details page restyled to dark monochrome reference look
+- [x] Verify visuals against references and checkpoint

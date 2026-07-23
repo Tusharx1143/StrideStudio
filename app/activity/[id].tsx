@@ -1,130 +1,130 @@
-import { ScrollView, Text, View, TouchableOpacity } from "react-native";
+import { ScrollView, Text, View, TouchableOpacity, Platform } from "react-native";
 import { useLocalSearchParams, useRouter, Stack } from "expo-router";
+import * as Haptics from "expo-haptics";
 import { ScreenContainer } from "@/components/screen-container";
-import { useColors } from "@/hooks/use-colors";
 import { useApp } from "@/lib/app-context";
-import { formatDuration, formatPace } from "@/lib/app-data";
+import { formatDuration } from "@/lib/app-data";
 
+/**
+ * Activity details — dark monochrome layout matching the reference app:
+ * large day heading, mono stat rows, share button opening the template picker.
+ */
 export default function ActivityDetailsScreen() {
-  const colors = useColors();
-  const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
+  const router = useRouter();
   const { activities, selectActivity } = useApp();
 
   const activity = activities.find((a) => a.id === id) ?? activities[0];
-  const typeEmoji = activity.type === "run" ? "🏃" : activity.type === "ride" ? "🚴" : "💪";
 
-  const statRows: { label: string; value: string }[] = [];
-  if (activity.distance > 0) statRows.push({ label: "Distance", value: `${activity.distance.toFixed(1)} km` });
-  statRows.push({ label: "Duration", value: formatDuration(activity.duration) });
-  if (activity.pace != null) statRows.push({ label: "Avg Pace", value: formatPace(activity.pace) });
-  if (activity.speed != null) statRows.push({ label: "Avg Speed", value: `${activity.speed.toFixed(1)} km/h` });
-  if (activity.elevation != null) statRows.push({ label: "Elevation Gain", value: `${activity.elevation} m` });
-  if (activity.heartRate != null) statRows.push({ label: "Avg Heart Rate", value: `${activity.heartRate} bpm` });
-  if (activity.calories != null) statRows.push({ label: "Calories", value: `${activity.calories} kcal` });
+  const paceStr =
+    activity.pace != null
+      ? `${Math.floor(activity.pace)}:${Math.round((activity.pace - Math.floor(activity.pace)) * 60)
+          .toString()
+          .padStart(2, "0")} /km`
+      : activity.speed != null
+        ? `${activity.speed.toFixed(1)} km/h`
+        : "--";
 
-  const createPost = () => {
+  const onShare = () => {
+    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     selectActivity(activity.id);
     router.push("/(tabs)/editor");
   };
 
+  const rows: [string, string][] = [
+    ["Distance", `${activity.distance.toFixed(2)} km`],
+    ["Duration", formatDuration(activity.duration)],
+    ["Avg Pace", paceStr],
+    ["Elevation Gain", `${activity.elevation ?? 0} m`],
+    ["Avg Heart Rate", `${activity.heartRate ?? 0} bpm`],
+    ["Calories", `${activity.calories ?? 0} cal`],
+  ];
+
   return (
-    <ScreenContainer className="p-0" edges={["top", "left", "right", "bottom"]}>
+    <ScreenContainer className="p-0" containerClassName="bg-black" edges={["top", "left", "right", "bottom"]}>
       <Stack.Screen options={{ headerShown: false }} />
-      <View style={{ backgroundColor: colors.background, flex: 1 }}>
-        {/* Header */}
+      <View style={{ flex: 1, backgroundColor: "#000000" }}>
         <View
           style={{
             flexDirection: "row",
             alignItems: "center",
+            justifyContent: "space-between",
             paddingHorizontal: 16,
-            paddingVertical: 12,
-            borderBottomWidth: 1,
-            borderBottomColor: colors.border,
+            paddingVertical: 8,
           }}
         >
-          <TouchableOpacity onPress={() => router.back()} style={{ paddingRight: 12, paddingVertical: 4 }}>
-            <Text style={{ color: colors.primary, fontSize: 16, fontWeight: "600" }}>← Back</Text>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: 20,
+              backgroundColor: "#1C1C1E",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Text style={{ color: "#FFFFFF", fontSize: 18 }}>‹</Text>
           </TouchableOpacity>
-          <Text style={{ color: colors.foreground, fontSize: 18, fontWeight: "bold" }}>Activity Details</Text>
+          <TouchableOpacity
+            onPress={onShare}
+            style={{
+              backgroundColor: "#FFFFFF",
+              borderRadius: 20,
+              paddingHorizontal: 18,
+              paddingVertical: 9,
+            }}
+          >
+            <Text style={{ color: "#000000", fontSize: 13, fontWeight: "700" }}>Share</Text>
+          </TouchableOpacity>
         </View>
 
-        <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 32 }}>
-          {/* Activity Hero */}
+        <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+          <Text style={{ color: "#FFFFFF", fontSize: 34, fontWeight: "800" }}>{activity.date}</Text>
+          <Text style={{ color: "#8E8E93", fontSize: 14, marginTop: 4, marginBottom: 24 }}>
+            {activity.type === "run" ? "🏃" : activity.type === "ride" ? "🚴" : "💪"} {activity.title}
+          </Text>
+
           <View
             style={{
-              backgroundColor: colors.surface,
-              borderRadius: 16,
-              padding: 24,
-              alignItems: "center",
+              backgroundColor: "#0E0E10",
+              borderRadius: 18,
               borderWidth: 1,
-              borderColor: colors.border,
-              marginBottom: 16,
-            }}
-          >
-            <Text style={{ fontSize: 48, marginBottom: 8 }}>{typeEmoji}</Text>
-            <Text style={{ color: colors.foreground, fontSize: 22, fontWeight: "bold" }}>{activity.title}</Text>
-            <Text style={{ color: colors.muted, fontSize: 14, marginTop: 4 }}>{activity.date}</Text>
-          </View>
-
-          {/* Route placeholder */}
-          {activity.type !== "workout" && (
-            <View
-              style={{
-                backgroundColor: colors.surface,
-                borderRadius: 16,
-                height: 160,
-                alignItems: "center",
-                justifyContent: "center",
-                borderWidth: 1,
-                borderColor: colors.border,
-                marginBottom: 16,
-              }}
-            >
-              <Text style={{ fontSize: 32, marginBottom: 8 }}>🗺️</Text>
-              <Text style={{ color: colors.muted, fontSize: 13 }}>GPS route preview</Text>
-            </View>
-          )}
-
-          {/* Stats table */}
-          <View
-            style={{
-              backgroundColor: colors.surface,
-              borderRadius: 16,
-              borderWidth: 1,
-              borderColor: colors.border,
+              borderColor: "#1C1C1E",
               overflow: "hidden",
-              marginBottom: 24,
             }}
           >
-            {statRows.map((row, index) => (
+            {rows.map(([label, value], i) => (
               <View
-                key={row.label}
+                key={label}
                 style={{
                   flexDirection: "row",
                   justifyContent: "space-between",
-                  padding: 16,
-                  borderBottomWidth: index < statRows.length - 1 ? 1 : 0,
-                  borderBottomColor: colors.border,
+                  paddingHorizontal: 16,
+                  paddingVertical: 14,
+                  borderBottomWidth: i < rows.length - 1 ? 1 : 0,
+                  borderBottomColor: "#1C1C1E",
                 }}
               >
-                <Text style={{ color: colors.muted, fontSize: 14 }}>{row.label}</Text>
-                <Text style={{ color: colors.foreground, fontSize: 14, fontWeight: "600" }}>{row.value}</Text>
+                <Text style={{ color: "#8E8E93", fontSize: 14 }}>{label}</Text>
+                <Text style={{ color: "#FFFFFF", fontSize: 14, fontFamily: "Courier", fontWeight: "700" }}>
+                  {value}
+                </Text>
               </View>
             ))}
           </View>
 
-          {/* CTA */}
           <TouchableOpacity
-            onPress={createPost}
+            onPress={onShare}
             style={{
-              backgroundColor: colors.primary,
-              borderRadius: 12,
+              backgroundColor: "#FFFFFF",
+              borderRadius: 26,
               paddingVertical: 16,
               alignItems: "center",
+              marginTop: 24,
             }}
           >
-            <Text style={{ color: "#000000", fontSize: 16, fontWeight: "700" }}>Create Post from Activity</Text>
+            <Text style={{ color: "#000000", fontSize: 15, fontWeight: "700" }}>Create Post from Activity</Text>
           </TouchableOpacity>
         </ScrollView>
       </View>

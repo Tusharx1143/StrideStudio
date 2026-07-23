@@ -1,281 +1,231 @@
-import { ScrollView, Text, View, TouchableOpacity, FlatList, Switch, Platform, Alert } from "react-native";
+import { ScrollView, Text, View, TouchableOpacity, Platform, Modal, Pressable } from "react-native";
 import { useState } from "react";
 import * as Haptics from "expo-haptics";
 import { ScreenContainer } from "@/components/screen-container";
-import { useColors } from "@/hooks/use-colors";
 import { useApp } from "@/lib/app-context";
-import { TEMPLATES, Template, StatToggles } from "@/lib/app-data";
-import { PostPreview } from "@/components/post-preview";
+import { TEMPLATE_DEFS, computeWeekTotals, TemplateDef } from "@/lib/templates";
 
-function TemplateCard({
-  template,
-  selected,
-  onSelect,
-}: {
-  template: Template;
-  selected: boolean;
-  onSelect: () => void;
-}) {
-  const colors = useColors();
-  return (
-    <TouchableOpacity
-      onPress={onSelect}
-      style={{
-        backgroundColor: selected ? colors.primary : colors.surface,
-        borderRadius: 12,
-        padding: 12,
-        alignItems: "center",
-        justifyContent: "center",
-        borderWidth: selected ? 0 : 1,
-        borderColor: colors.border,
-        marginRight: 12,
-        width: 92,
-        height: 92,
-      }}
-    >
-      <Text style={{ fontSize: 28, marginBottom: 4 }}>{template.preview}</Text>
-      <Text
-        style={{
-          color: selected ? "#000000" : colors.foreground,
-          fontSize: 10,
-          fontWeight: "600",
-          textAlign: "center",
-        }}
-      >
-        {template.name}
-      </Text>
-    </TouchableOpacity>
-  );
-}
-
-const STAT_LABELS: { key: keyof StatToggles; label: string }[] = [
-  { key: "distance", label: "Distance" },
-  { key: "duration", label: "Duration" },
-  { key: "pace", label: "Pace / Speed" },
-  { key: "elevation", label: "Elevation" },
-  { key: "heartRate", label: "Heart Rate" },
-  { key: "calories", label: "Calories" },
-];
-
+/**
+ * Share screen — replica of the original app's template picker:
+ * top bar (back, activity dropdown pill, color + Aa buttons),
+ * "TAP TO COPY" / "PRESS + HOLD TO SAVE" header, Activity|Totals tabs,
+ * and a 2-column grid of live-rendered template cards.
+ */
 export default function EditorScreen() {
-  const colors = useColors();
-  const {
-    activities,
-    selectedActivityId,
-    selectActivity,
-    selectedTemplateId,
-    selectTemplate,
-    statToggles,
-    setStatToggle,
-    incrementSavedPosts,
-    getSelectedActivity,
-    getSelectedTemplate,
-  } = useApp();
-  const [feedback, setFeedback] = useState<string | null>(null);
+  const { activities, selectedActivityId, selectActivity, getSelectedActivity, incrementSavedPosts } = useApp();
+  const [tab, setTab] = useState<"activity" | "totals">("activity");
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
 
   const activity = getSelectedActivity();
-  const template = getSelectedTemplate();
+  const totals = computeWeekTotals(activities);
+  const templates = TEMPLATE_DEFS.filter((t) => t.tab === tab);
 
-  const doAction = (label: string) => {
+  const onCopy = (t: TemplateDef) => {
+    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    incrementSavedPosts();
+    setToast(`Copied "${t.name}" to clipboard`);
+    setTimeout(() => setToast(null), 1800);
+  };
+
+  const onSave = (t: TemplateDef) => {
     if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     incrementSavedPosts();
-    setFeedback(label);
-    setTimeout(() => setFeedback(null), 2000);
+    setToast(`Saved "${t.name}" to camera roll`);
+    setTimeout(() => setToast(null), 1800);
   };
 
   return (
-    <ScreenContainer className="p-0">
-      <View style={{ backgroundColor: colors.background, flex: 1 }}>
-        {/* Header */}
+    <ScreenContainer className="p-0" containerClassName="bg-black">
+      <View style={{ flex: 1, backgroundColor: "#000000" }}>
+        {/* Top bar */}
         <View
           style={{
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
             paddingHorizontal: 16,
-            paddingTop: 8,
-            paddingBottom: 12,
-            borderBottomWidth: 1,
-            borderBottomColor: colors.border,
+            paddingVertical: 8,
           }}
         >
-          <Text style={{ color: colors.foreground, fontSize: 28, fontWeight: "bold" }}>Create Post</Text>
+          <View
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: 20,
+              backgroundColor: "#1C1C1E",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Text style={{ color: "#FFFFFF", fontSize: 18 }}>‹</Text>
+          </View>
+
+          <TouchableOpacity
+            onPress={() => setPickerOpen(true)}
+            style={{
+              backgroundColor: "#1C1C1E",
+              borderRadius: 20,
+              paddingHorizontal: 16,
+              paddingVertical: 10,
+              flexDirection: "row",
+              alignItems: "center",
+            }}
+          >
+            <Text style={{ color: "#FFFFFF", fontSize: 14, fontWeight: "600" }}>
+              {activity.distance.toFixed(1)} km {activity.type}
+            </Text>
+            <Text style={{ color: "#8E8E93", fontSize: 11, marginLeft: 4 }}>⌄</Text>
+          </TouchableOpacity>
+
+          <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: "#FFFFFF", borderRadius: 20, paddingHorizontal: 10, paddingVertical: 6 }}>
+            <View
+              style={{
+                width: 20,
+                height: 20,
+                borderRadius: 10,
+                marginRight: 8,
+                backgroundColor: "#FF3B30",
+                borderWidth: 2,
+                borderColor: "#34C759",
+              }}
+            />
+            <Text style={{ color: "#000000", fontSize: 15, fontWeight: "600" }}>Aa</Text>
+          </View>
         </View>
 
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 32 }}>
-          {/* Activity selector */}
-          <View style={{ paddingTop: 16 }}>
-            <Text
+        {/* Copy / Save hints */}
+        <View style={{ alignItems: "center", paddingVertical: 8 }}>
+          <Text style={{ color: "#FFFFFF", fontSize: 14, fontWeight: "700" }}>⧉ TAP TO COPY</Text>
+          <Text style={{ color: "#8E8E93", fontSize: 13, fontWeight: "600", marginTop: 4 }}>
+            ⬇ PRESS + HOLD TO SAVE
+          </Text>
+        </View>
+
+        {/* Tabs */}
+        <View style={{ flexDirection: "row", marginTop: 8 }}>
+          {(["activity", "totals"] as const).map((t) => (
+            <TouchableOpacity
+              key={t}
+              onPress={() => setTab(t)}
               style={{
-                color: colors.foreground,
-                fontSize: 15,
-                fontWeight: "600",
-                paddingHorizontal: 16,
-                marginBottom: 10,
+                flex: 1,
+                alignItems: "center",
+                paddingBottom: 10,
+                borderBottomWidth: 2,
+                borderBottomColor: tab === t ? "#FFFFFF" : "#2C2C2E",
               }}
             >
-              Activity
-            </Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16 }}>
-              {activities.map((a) => {
-                const selected = a.id === selectedActivityId;
-                return (
-                  <TouchableOpacity
-                    key={a.id}
-                    onPress={() => selectActivity(a.id)}
-                    style={{
-                      paddingHorizontal: 14,
-                      paddingVertical: 8,
-                      borderRadius: 20,
-                      marginRight: 8,
-                      backgroundColor: selected ? colors.primary : colors.surface,
-                      borderWidth: selected ? 0 : 1,
-                      borderColor: colors.border,
-                    }}
-                  >
-                    <Text
-                      style={{
-                        color: selected ? "#000000" : colors.foreground,
-                        fontSize: 12,
-                        fontWeight: "600",
-                      }}
-                    >
-                      {a.title}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-          </View>
+              <Text
+                style={{
+                  color: tab === t ? "#FFFFFF" : "#8E8E93",
+                  fontSize: 15,
+                  fontWeight: tab === t ? "700" : "500",
+                  textTransform: "capitalize",
+                }}
+              >
+                {t}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
 
-          {/* Live Preview */}
-          <View style={{ paddingHorizontal: 16, paddingVertical: 16 }}>
-            <PostPreview activity={activity} template={template} toggles={statToggles} />
-          </View>
-
-          {/* Template Selection */}
-          <View>
-            <Text
-              style={{
-                color: colors.foreground,
-                fontSize: 15,
-                fontWeight: "600",
-                paddingHorizontal: 16,
-                marginBottom: 10,
-              }}
-            >
-              Choose Template
-            </Text>
-            <FlatList
-              horizontal
-              data={TEMPLATES}
-              keyExtractor={(item) => item.id}
-              renderItem={({ item }) => (
-                <TemplateCard
-                  template={item}
-                  selected={selectedTemplateId === item.id}
-                  onSelect={() => selectTemplate(item.id)}
-                />
-              )}
-              contentContainerStyle={{ paddingHorizontal: 16 }}
-              showsHorizontalScrollIndicator={false}
-            />
-          </View>
-
-          {/* Customization Section */}
-          <View style={{ paddingHorizontal: 16, paddingVertical: 16 }}>
-            <Text style={{ color: colors.foreground, fontSize: 15, fontWeight: "600", marginBottom: 10 }}>
-              Customize Stats
-            </Text>
-            <View
-              style={{
-                backgroundColor: colors.surface,
-                borderRadius: 12,
-                paddingHorizontal: 16,
-                borderWidth: 1,
-                borderColor: colors.border,
-              }}
-            >
-              {STAT_LABELS.map(({ key, label }, index) => (
-                <View
-                  key={key}
+        {/* Template grid */}
+        <ScrollView contentContainerStyle={{ padding: 10, paddingBottom: 40 }}>
+          <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
+            {templates.map((t) => (
+              <View key={t.id} style={{ width: t.fullWidth ? "100%" : "50%", padding: 5 }}>
+                <TouchableOpacity
+                  onPress={() => onCopy(t)}
+                  onLongPress={() => onSave(t)}
+                  delayLongPress={400}
+                  activeOpacity={0.75}
                   style={{
-                    flexDirection: "row",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    paddingVertical: 10,
-                    borderBottomWidth: index < STAT_LABELS.length - 1 ? 1 : 0,
-                    borderBottomColor: colors.border,
+                    backgroundColor: t.lightCard ? "#FFFFFF" : "#0E0E10",
+                    borderRadius: 14,
+                    minHeight: t.fullWidth ? 120 : 130,
+                    overflow: "hidden",
+                    borderWidth: 1,
+                    borderColor: "#1C1C1E",
+                    padding: 8,
                   }}
                 >
-                  <Text style={{ color: colors.foreground, fontSize: 14 }}>{label}</Text>
-                  <Switch
-                    value={statToggles[key]}
-                    onValueChange={(v) => {
-                      if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                      setStatToggle(key, v);
-                    }}
-                    trackColor={{ false: colors.border, true: colors.primary }}
-                  />
-                </View>
-              ))}
-            </View>
-          </View>
-
-          {/* Feedback banner */}
-          {feedback && (
-            <View
-              style={{
-                marginHorizontal: 16,
-                marginBottom: 12,
-                backgroundColor: "#14532d",
-                borderRadius: 10,
-                padding: 12,
-                alignItems: "center",
-              }}
-            >
-              <Text style={{ color: "#4ADE80", fontSize: 13, fontWeight: "600" }}>{feedback}</Text>
-            </View>
-          )}
-
-          {/* Action Buttons */}
-          <View style={{ paddingHorizontal: 16, gap: 10 }}>
-            <TouchableOpacity
-              onPress={() => doAction("Shared to Instagram Stories ✓")}
-              style={{
-                backgroundColor: colors.primary,
-                borderRadius: 12,
-                paddingVertical: 14,
-                alignItems: "center",
-              }}
-            >
-              <Text style={{ color: "#000000", fontSize: 15, fontWeight: "700" }}>Share to Instagram</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => doAction("Saved to Camera Roll ✓")}
-              style={{
-                backgroundColor: colors.surface,
-                borderRadius: 12,
-                paddingVertical: 14,
-                alignItems: "center",
-                borderWidth: 1,
-                borderColor: colors.border,
-              }}
-            >
-              <Text style={{ color: colors.foreground, fontSize: 15, fontWeight: "600" }}>Save to Camera Roll</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => doAction("Copied to Clipboard ✓")}
-              style={{
-                backgroundColor: colors.surface,
-                borderRadius: 12,
-                paddingVertical: 14,
-                alignItems: "center",
-                borderWidth: 1,
-                borderColor: colors.border,
-              }}
-            >
-              <Text style={{ color: colors.foreground, fontSize: 15, fontWeight: "600" }}>Copy to Clipboard</Text>
-            </TouchableOpacity>
+                  {t.render(activity, totals)}
+                  {t.badge && (
+                    <View
+                      style={{
+                        position: "absolute",
+                        top: 6,
+                        right: 6,
+                        backgroundColor: "#0A84FF",
+                        borderRadius: 10,
+                        paddingHorizontal: 8,
+                        paddingVertical: 2,
+                      }}
+                    >
+                      <Text style={{ color: "#FFFFFF", fontSize: 9, fontWeight: "700" }}>{t.badge}</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              </View>
+            ))}
           </View>
         </ScrollView>
+
+        {/* Toast */}
+        {toast && (
+          <View
+            style={{
+              position: "absolute",
+              bottom: 30,
+              alignSelf: "center",
+              backgroundColor: "#1C1C1E",
+              borderRadius: 20,
+              paddingHorizontal: 18,
+              paddingVertical: 10,
+            }}
+          >
+            <Text style={{ color: "#FFFFFF", fontSize: 13, fontWeight: "600" }}>{toast}</Text>
+          </View>
+        )}
+
+        {/* Activity picker modal */}
+        <Modal visible={pickerOpen} transparent animationType="fade" onRequestClose={() => setPickerOpen(false)}>
+          <Pressable
+            style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.7)", justifyContent: "center", padding: 24 }}
+            onPress={() => setPickerOpen(false)}
+          >
+            <View style={{ backgroundColor: "#1C1C1E", borderRadius: 16, overflow: "hidden" }}>
+              {activities.map((a, i) => (
+                <TouchableOpacity
+                  key={a.id}
+                  onPress={() => {
+                    selectActivity(a.id);
+                    setPickerOpen(false);
+                  }}
+                  style={{
+                    padding: 16,
+                    borderBottomWidth: i < activities.length - 1 ? 1 : 0,
+                    borderBottomColor: "#2C2C2E",
+                    flexDirection: "row",
+                    justifyContent: "space-between",
+                  }}
+                >
+                  <Text
+                    style={{
+                      color: a.id === selectedActivityId ? "#0A84FF" : "#FFFFFF",
+                      fontSize: 15,
+                      fontWeight: "600",
+                    }}
+                  >
+                    {a.distance.toFixed(1)} km {a.type}
+                  </Text>
+                  <Text style={{ color: "#8E8E93", fontSize: 13 }}>{a.date}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </Pressable>
+        </Modal>
       </View>
     </ScreenContainer>
   );
