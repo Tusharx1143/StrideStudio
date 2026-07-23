@@ -5,6 +5,7 @@ import * as Haptics from "expo-haptics";
 import { ScreenContainer } from "@/components/screen-container";
 import { useApp } from "@/lib/app-context";
 import { ALL_TEMPLATES, computeWeekTotals } from "@/lib/templates";
+import { BRIGHT_WHITE } from "@/lib/color-presets";
 
 export default function TemplatesScreen() {
   const router = useRouter();
@@ -118,7 +119,7 @@ export default function TemplatesScreen() {
                     padding: 8,
                   }}
                 >
-                  {activity && t.render(activity, totals)}
+                  {activity && t.render(activity, totals, BRIGHT_WHITE.colors)}
                 </TouchableOpacity>
                 <Text style={{ color: "#8E8E93", fontSize: 10, textAlign: "center", marginTop: 4 }}>{t.name}</Text>
               </View>

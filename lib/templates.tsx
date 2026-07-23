@@ -1,11 +1,16 @@
 import React from "react";
+import { View, Text } from "react-native";
 import { Activity, formatDuration } from "./app-data";
 import { DYNAMIC_TEMPLATES } from "./dynamic-templates";
+import type { TemplateColors } from "./color-presets";
 
 /**
  * Template type definition — a pure function of activity + week data.
  * All templates are now dynamic: they adapt to whatever fields the
  * Strava activity provides.
+ *
+ * Render functions accept an optional 3rd `colors` argument so the
+ * caller can override the colour scheme (e.g. for photo‑overlay use).
  */
 
 export interface TemplateDef {
@@ -15,7 +20,7 @@ export interface TemplateDef {
   fullWidth?: boolean;
   badge?: "New" | "Customize";
   lightCard?: boolean;
-  render: (a: Activity, totals: WeekTotals) => React.ReactNode;
+  render: (a: Activity, totals: WeekTotals, colors?: TemplateColors) => React.ReactNode;
 }
 
 export interface WeekTotals {
@@ -39,7 +44,7 @@ export const ALL_TEMPLATES: TemplateDef[] = DYNAMIC_TEMPLATES.map((dt) => ({
   fullWidth: dt.fullWidth,
   badge: dt.badge as "New" | "Customize" | undefined,
   lightCard: dt.lightCard,
-  render: dt.render as (a: Activity, totals: WeekTotals) => React.ReactNode,
+  render: dt.render as (a: Activity, totals: WeekTotals, colors?: TemplateColors) => React.ReactNode,
 }));
 
 export function computeWeekTotals(activities: Activity[]): WeekTotals {
