@@ -24,6 +24,18 @@ const MAPPING = {
   "gear": "settings",
   "heart.fill": "favorite",
   "arrow.clockwise": "refresh",
+  // Sport/activity icons
+  "figure.run": "directions-run",
+  "bicycle": "directions-bike",
+  "figure.strengthtraining.traditional": "fitness-center",
+  // Map/route icons
+  "map.fill": "map",
+  "location.fill": "my-location",
+  // Stats icons
+  "flame.fill": "local-fire-department",
+  "clock.fill": "access-time",
+  "mountain.2.fill": "terrain",
+  "speedometer": "speed",
 } as IconMapping;
 
 /**

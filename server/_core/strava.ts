@@ -196,9 +196,31 @@ function formatStravaDate(iso: string): string {
   return `${months[d.getMonth()]} ${d.getDate()}`;
 }
 
-// ─── Strava SDK Class ────────────────────────────────────────────────────
+// ─── Strava Service Interface ────────────────────────────────────────────
 
-class StravaSDK {
+/**
+ * StravaService — seam between Strava API and the rest of the app.
+ *
+ * The interface exposes every operation the app needs against Strava.
+ * Multiple implementations allow testing without live credentials.
+ */
+export interface StravaService {
+  setStore(store: StravaTokenStore): void;
+  getAuthorizationUrl(userId: string, redirectUri: string): string;
+  exchangeCode(code: string, userId: string): Promise<StravaTokenSet>;
+  refreshToken(userId: string): Promise<StravaTokenSet>;
+  getAthlete(userId: string): Promise<StravaAthlete>;
+  getAthleteStats(userId: string, athleteId: number): Promise<Record<string, unknown>>;
+  getActivities(userId: string, page?: number, perPage?: number): Promise<Activity[]>;
+  getActivityById(userId: string, id: number): Promise<Activity>;
+  getConnectionStatus(userId: string): Promise<{ connected: boolean; athleteId: number | null }>;
+  disconnect(userId: string): Promise<void>;
+}
+
+/**
+ * Production Strava adapter — calls the live Strava API.
+ */
+export class ProdStrava implements StravaService {
   private readonly apiBase = "https://www.strava.com/api/v3";
   private readonly oauthBase = "https://www.strava.com/oauth";
 
@@ -408,4 +430,49 @@ class StravaSDK {
   }
 }
 
-export const strava = new StravaSDK();
+export const strava: StravaService = new ProdStrava();
+
+// ─── Test / In-Memory Adapter ─────────────────────────────────────────
+
+/**
+ * In-memory Strava adapter for tests and demos.
+ * Returns fixture data without network calls.
+ */
+export class TestStrava implements StravaService {
+  private athlete: StravaAthlete = {
+    id: 12345,
+    firstname: "Test",
+    lastname: "User",
+    city: "Testville",
+    state: "TS",
+    country: "Testland",
+    sex: null,
+    premium: false,
+    profile: "",
+    profileMedium: "",
+  };
+
+  private activities: Activity[] = [];
+
+  setStore(_store: StravaTokenStore) {}
+  getAuthorizationUrl(_userId: string, _redirectUri: string): string { return "http://localhost/mock-auth"; }
+  async exchangeCode(_code: string, _userId: string): Promise<StravaTokenSet> {
+    return { accessToken: "mock", refreshToken: "mock", expiresAt: 9999999999, athleteId: 12345 };
+  }
+  async refreshToken(_userId: string): Promise<StravaTokenSet> {
+    return { accessToken: "mock", refreshToken: "mock", expiresAt: 9999999999, athleteId: 12345 };
+  }
+  async getAthlete(_userId: string): Promise<StravaAthlete> { return this.athlete; }
+  async getAthleteStats(_userId: string, _athleteId: number): Promise<Record<string, unknown>> { return {}; }
+  async getActivities(_userId: string, _page?: number, _perPage?: number): Promise<Activity[]> { return this.activities; }
+  async getActivityById(_userId: string, _id: number): Promise<Activity> {
+    return this.activities[0] ?? { id: "0", stravaId: 0, type: "run", title: "Test Run", distance: 5, duration: 30, elapsedTime: 35, date: "Today", startDate: new Date().toISOString(), pace: 6, speed: 10, elevation: 50, hasHeartrate: false };
+  }
+  async getConnectionStatus(_userId: string): Promise<{ connected: boolean; athleteId: number | null }> {
+    return { connected: true, athleteId: 12345 };
+  }
+  async disconnect(_userId: string): Promise<void> {}
+
+  /** Seed fixture activities for tests. */
+  setFixtureActivities(activities: Activity[]) { this.activities = activities; }
+}
