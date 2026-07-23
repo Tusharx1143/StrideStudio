@@ -1,9 +1,11 @@
-import { ScrollView, Text, View, TouchableOpacity, Switch, Platform, Linking, ActivityIndicator } from "react-native";
+import { ScrollView, Text, View, TouchableOpacity, Switch, Platform, Linking } from "react-native";
 import { useState, useEffect } from "react";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useApp } from "@/lib/app-context";
+import { StrideButton } from "@/components/stride-button";
+import { ActivityIndicator } from "react-native";
 
 const API_BASE = "http://localhost:3000";
 
@@ -20,7 +22,6 @@ export default function ProfileScreen() {
       const params = new URLSearchParams(window.location.search);
       if (params.get("strava") === "connected") {
         refresh();
-        // Clean URL
         window.history.replaceState({}, "", window.location.pathname);
       }
     }
@@ -30,10 +31,8 @@ export default function ProfileScreen() {
     setConnecting(true);
     try {
       if (Platform.OS === "web") {
-        // Web: direct redirect to the backend auth endpoint
         window.location.href = `${API_BASE}/api/strava/auth`;
       } else {
-        // Mobile: open in browser
         const supported = await Linking.canOpenURL(`${API_BASE}/api/strava/auth`);
         if (supported) {
           await Linking.openURL(`${API_BASE}/api/strava/auth`);
@@ -137,6 +136,8 @@ export default function ProfileScreen() {
                   borderWidth: 1,
                   borderColor: colors.border,
                 }}
+                accessibilityRole="summary"
+                accessibilityLabel={`${activities.length} activities`}
               >
                 <Text style={{ color: colors.primary, fontSize: 22, fontWeight: "bold" }}>{activities.length}</Text>
                 <Text style={{ color: colors.muted, fontSize: 12, marginTop: 4 }}>Activities</Text>
@@ -151,6 +152,8 @@ export default function ProfileScreen() {
                   borderWidth: 1,
                   borderColor: colors.border,
                 }}
+                accessibilityRole="summary"
+                accessibilityLabel={`${totalDistance.toFixed(0)} kilometers total`}
               >
                 <Text style={{ color: colors.primary, fontSize: 22, fontWeight: "bold" }}>
                   {totalDistance.toFixed(0)} km
@@ -167,6 +170,8 @@ export default function ProfileScreen() {
                   borderWidth: 1,
                   borderColor: colors.border,
                 }}
+                accessibilityRole="summary"
+                accessibilityLabel={`${savedPostsCount} posts created`}
               >
                 <Text style={{ color: colors.primary, fontSize: 22, fontWeight: "bold" }}>{savedPostsCount}</Text>
                 <Text style={{ color: colors.muted, fontSize: 12, marginTop: 4 }}>Posts Created</Text>
@@ -214,35 +219,28 @@ export default function ProfileScreen() {
                 {stravaConnected ? (
                   <TouchableOpacity
                     onPress={disconnectStrava}
+                    accessibilityRole="button"
+                    accessibilityLabel="Disconnect Strava"
                     style={{
-                      backgroundColor: "#EF4444" + "20",
+                      backgroundColor: colors.error + "20",
                       borderRadius: 16,
                       paddingHorizontal: 14,
                       paddingVertical: 7,
+                      minHeight: 44,
+                      justifyContent: "center",
                     }}
                   >
-                    <Text style={{ color: "#EF4444", fontSize: 12, fontWeight: "600" }}>Disconnect</Text>
+                    <Text style={{ color: colors.error, fontSize: 12, fontWeight: "600" }}>Disconnect</Text>
                   </TouchableOpacity>
                 ) : (
-                  <TouchableOpacity
+                  <StrideButton
                     onPress={connectStrava}
-                    disabled={connecting}
-                    style={{
-                      backgroundColor: colors.primary,
-                      borderRadius: 16,
-                      paddingHorizontal: 14,
-                      paddingVertical: 7,
-                      flexDirection: "row",
-                      alignItems: "center",
-                      gap: 6,
-                    }}
+                    loading={connecting}
+                    style={{ borderRadius: 16, paddingHorizontal: 14, paddingVertical: 7, minHeight: 36 }}
+                    textStyle={{ fontSize: 12 }}
                   >
-                    {connecting ? (
-                      <ActivityIndicator size="small" color="#FFFFFF" />
-                    ) : (
-                      <Text style={{ color: "#FFFFFF", fontSize: 12, fontWeight: "600" }}>Connect</Text>
-                    )}
-                  </TouchableOpacity>
+                    Connect
+                  </StrideButton>
                 )}
               </View>
             </View>
@@ -277,6 +275,9 @@ export default function ProfileScreen() {
                   value={notifications}
                   onValueChange={setNotifications}
                   trackColor={{ false: colors.border, true: colors.primary }}
+                  accessibilityRole="switch"
+                  accessibilityLabel="Notifications"
+                  accessibilityState={{ checked: notifications }}
                 />
               </View>
               <TouchableOpacity
@@ -287,7 +288,10 @@ export default function ProfileScreen() {
                   padding: 16,
                   borderBottomWidth: 1,
                   borderBottomColor: colors.border,
+                  minHeight: 48,
                 }}
+                accessibilityRole="button"
+                accessibilityLabel="Privacy Policy"
               >
                 <Text style={{ color: colors.foreground, fontSize: 14 }}>Privacy Policy</Text>
                 <IconSymbol name="chevron.right" size={18} color={colors.muted} />
@@ -298,7 +302,10 @@ export default function ProfileScreen() {
                   alignItems: "center",
                   justifyContent: "space-between",
                   padding: 16,
+                  minHeight: 48,
                 }}
+                accessibilityRole="button"
+                accessibilityLabel="Support"
               >
                 <Text style={{ color: colors.foreground, fontSize: 14 }}>Support</Text>
                 <IconSymbol name="chevron.right" size={18} color={colors.muted} />
@@ -308,21 +315,13 @@ export default function ProfileScreen() {
 
           {/* Refresh Data */}
           <View style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
-            <TouchableOpacity
+            <StrideButton
+              variant="secondary"
               onPress={refresh}
-              style={{
-                backgroundColor: colors.surface,
-                borderRadius: 12,
-                paddingVertical: 14,
-                alignItems: "center",
-                borderWidth: 1,
-                borderColor: colors.border,
-              }}
+              loading={loading}
             >
-              <Text style={{ color: colors.foreground, fontSize: 14, fontWeight: "600" }}>
-                {loading ? "Refreshing…" : "Refresh from Strava"}
-              </Text>
-            </TouchableOpacity>
+              Refresh from Strava
+            </StrideButton>
           </View>
         </ScrollView>
       </View>

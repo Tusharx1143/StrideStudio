@@ -1,12 +1,17 @@
-import { Text, View, TouchableOpacity, FlatList, RefreshControl, Platform, ActivityIndicator } from "react-native";
+import { Text, View, TouchableOpacity, FlatList, RefreshControl, Platform } from "react-native";
 import { useState } from "react";
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { ScreenContainer } from "@/components/screen-container";
 import { useApp } from "@/lib/app-context";
 import { Activity, formatDuration } from "@/lib/app-data";
+import { useColors } from "@/hooks/use-colors";
+import { StrideButton } from "@/components/stride-button";
+import { ActivityListSkeleton } from "@/components/skeleton";
 
 function StoryCard({ activity, onShare, onOpen }: { activity: Activity; onShare: () => void; onOpen: () => void }) {
+  const colors = useColors();
+
   const paceOrSpeed =
     activity.pace != null
       ? `${Math.floor(activity.pace)}:${Math.round((activity.pace - Math.floor(activity.pace)) * 60)
@@ -16,46 +21,55 @@ function StoryCard({ activity, onShare, onOpen }: { activity: Activity; onShare:
         ? `${activity.speed.toFixed(1)} km/h`
         : "--";
 
+  const typeEmoji =
+    activity.type === "run" ? "🏃" : activity.type === "ride" ? "🚴" : "💪";
+
   return (
     <TouchableOpacity
       onPress={onOpen}
       activeOpacity={0.8}
+      accessibilityRole="button"
+      accessibilityLabel={`${activity.title}, ${activity.distance.toFixed(1)} kilometers, ${activity.date}`}
+      accessibilityHint="Tap to view activity details"
       style={{
-        backgroundColor: "#0E0E10",
+        backgroundColor: colors.surface,
         borderRadius: 18,
         height: 300,
         marginBottom: 14,
         padding: 16,
         justifyContent: "space-between",
         borderWidth: 1,
-        borderColor: "#1C1C1E",
+        borderColor: colors.border,
       }}
     >
       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
-        <Text style={{ color: "#FFFFFF", fontSize: 24, fontWeight: "700" }}>{activity.date}</Text>
+        <Text style={{ color: colors.foreground, fontSize: 24, fontWeight: "700" }}>{activity.date}</Text>
         <TouchableOpacity
           onPress={onShare}
+          accessibilityRole="button"
+          accessibilityLabel={`Share ${activity.title}`}
           style={{
-            backgroundColor: "#1C1C1E",
+            backgroundColor: colors.border,
             borderRadius: 16,
             paddingHorizontal: 14,
             paddingVertical: 7,
+            minHeight: 44,
+            justifyContent: "center",
           }}
         >
-          <Text style={{ color: "#FFFFFF", fontSize: 12, fontWeight: "700" }}>Share</Text>
+          <Text style={{ color: colors.foreground, fontSize: 12, fontWeight: "700" }}>Share</Text>
         </TouchableOpacity>
       </View>
 
       <View>
-        <Text style={{ color: "#8E8E93", fontSize: 12, marginBottom: 6 }}>
-          {activity.type === "run" ? "🏃 " : activity.type === "ride" ? "🚴 " : "💪 "}
-          {activity.title}
+        <Text style={{ color: colors.muted, fontSize: 12, marginBottom: 6 }}>
+          {typeEmoji} {activity.title}
         </Text>
-        <Text style={{ color: "#FFFFFF", fontSize: 14, fontFamily: "Courier", fontWeight: "700", lineHeight: 20 }}>
+        <Text style={{ color: colors.foreground, fontSize: 14, fontFamily: "Courier", fontWeight: "700", lineHeight: 20 }}>
           {activity.distance > 0 ? `${activity.distance.toFixed(2)} km` : "—"}
         </Text>
-        <Text style={{ color: "#AEAEB2", fontSize: 12, fontFamily: "Courier", lineHeight: 18 }}>{paceOrSpeed}</Text>
-        <Text style={{ color: "#AEAEB2", fontSize: 12, fontFamily: "Courier", lineHeight: 18 }}>
+        <Text style={{ color: colors.muted, fontSize: 12, fontFamily: "Courier", lineHeight: 18 }}>{paceOrSpeed}</Text>
+        <Text style={{ color: colors.muted, fontSize: 12, fontFamily: "Courier", lineHeight: 18 }}>
           {formatDuration(activity.duration)}
         </Text>
       </View>
@@ -65,6 +79,7 @@ function StoryCard({ activity, onShare, onOpen }: { activity: Activity; onShare:
 
 export default function HomeScreen() {
   const router = useRouter();
+  const colors = useColors();
   const { activities, loading, error, stravaConnected, refresh, selectActivity } = useApp();
   const [refreshing, setRefreshing] = useState(false);
 
@@ -89,70 +104,59 @@ export default function HomeScreen() {
     router.push("/(tabs)/profile");
   };
 
-  // ── Render states ──
-
+  // ── Loading state ──
   if (loading && activities.length === 0) {
     return (
-      <ScreenContainer className="p-0" containerClassName="bg-black">
-        <View style={{ flex: 1, backgroundColor: "#000000", justifyContent: "center", alignItems: "center" }}>
-          <ActivityIndicator size="large" color="#FFFFFF" />
-          <Text style={{ color: "#8E8E93", fontSize: 14, marginTop: 16 }}>Loading your activities…</Text>
+      <ScreenContainer className="p-0">
+        <View style={{ flex: 1, backgroundColor: colors.background }}>
+          <View style={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: 12 }}>
+            <Text style={{ color: colors.foreground, fontSize: 30, fontWeight: "800" }}>StrideStudio</Text>
+          </View>
+          <ActivityListSkeleton count={3} />
         </View>
       </ScreenContainer>
     );
   }
 
+  // ── Error state ──
   if (error && activities.length === 0) {
     return (
-      <ScreenContainer className="p-0" containerClassName="bg-black">
-        <View style={{ flex: 1, backgroundColor: "#000000", justifyContent: "center", alignItems: "center", padding: 32 }}>
-          <Text style={{ color: "#EF4444", fontSize: 16, fontWeight: "600", textAlign: "center" }}>⚠️</Text>
-          <Text style={{ color: "#FFFFFF", fontSize: 16, fontWeight: "600", marginTop: 12, textAlign: "center" }}>
+      <ScreenContainer className="p-0">
+        <View style={{ flex: 1, backgroundColor: colors.background, justifyContent: "center", alignItems: "center", padding: 32 }}>
+          <Text style={{ color: colors.error, fontSize: 16, fontWeight: "600", textAlign: "center" }}>⚠️</Text>
+          <Text style={{ color: colors.foreground, fontSize: 16, fontWeight: "600", marginTop: 12, textAlign: "center" }}>
             {error}
           </Text>
-          <TouchableOpacity
-            onPress={onRefresh}
-            style={{
-              marginTop: 16,
-              backgroundColor: "#1C1C1E",
-              borderRadius: 20,
-              paddingHorizontal: 24,
-              paddingVertical: 12,
-            }}
-          >
-            <Text style={{ color: "#FFFFFF", fontSize: 14, fontWeight: "600" }}>Try Again</Text>
-          </TouchableOpacity>
+          <View style={{ marginTop: 16 }}>
+            <StrideButton variant="secondary" onPress={onRefresh}>
+              Try Again
+            </StrideButton>
+          </View>
         </View>
       </ScreenContainer>
     );
   }
 
+  // ── Empty state ──
   if (activities.length === 0) {
     return (
-      <ScreenContainer className="p-0" containerClassName="bg-black">
-        <View style={{ flex: 1, backgroundColor: "#000000", justifyContent: "center", alignItems: "center", padding: 32 }}>
+      <ScreenContainer className="p-0">
+        <View style={{ flex: 1, backgroundColor: colors.background, justifyContent: "center", alignItems: "center", padding: 32 }}>
           <Text style={{ fontSize: 48, marginBottom: 16 }}>🏃</Text>
-          <Text style={{ color: "#FFFFFF", fontSize: 20, fontWeight: "700", textAlign: "center" }}>
+          <Text style={{ color: colors.foreground, fontSize: 20, fontWeight: "700", textAlign: "center" }}>
             {stravaConnected ? "No activities yet" : "Connect your Strava"}
           </Text>
-          <Text style={{ color: "#8E8E93", fontSize: 14, marginTop: 8, textAlign: "center", lineHeight: 20 }}>
+          <Text style={{ color: colors.muted, fontSize: 14, marginTop: 8, textAlign: "center", lineHeight: 20 }}>
             {stravaConnected
               ? "We couldn't find any activities. Sync your Strava and pull to refresh."
               : "Link your Strava account to see your rides, runs, and workouts here."}
           </Text>
           {!stravaConnected && (
-            <TouchableOpacity
-              onPress={goToProfile}
-              style={{
-                marginTop: 20,
-                backgroundColor: "#FF6B35",
-                borderRadius: 24,
-                paddingHorizontal: 28,
-                paddingVertical: 14,
-              }}
-            >
-              <Text style={{ color: "#FFFFFF", fontSize: 15, fontWeight: "700" }}>Connect Strava</Text>
-            </TouchableOpacity>
+            <View style={{ marginTop: 20 }}>
+              <StrideButton onPress={goToProfile}>
+                Connect Strava
+              </StrideButton>
+            </View>
           )}
         </View>
       </ScreenContainer>
@@ -160,10 +164,10 @@ export default function HomeScreen() {
   }
 
   return (
-    <ScreenContainer className="p-0" containerClassName="bg-black">
-      <View style={{ flex: 1, backgroundColor: "#000000" }}>
+    <ScreenContainer className="p-0">
+      <View style={{ flex: 1, backgroundColor: colors.background }}>
         <View style={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: 12 }}>
-          <Text style={{ color: "#FFFFFF", fontSize: 30, fontWeight: "800" }}>StrideStudio</Text>
+          <Text style={{ color: colors.foreground, fontSize: 30, fontWeight: "800" }}>StrideStudio</Text>
         </View>
 
         <FlatList
@@ -173,7 +177,13 @@ export default function HomeScreen() {
             <StoryCard activity={item} onShare={() => goToEditor(item.id)} onOpen={() => openDetails(item.id)} />
           )}
           contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40 }}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FFFFFF" />}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={colors.foreground}
+            />
+          }
         />
       </View>
     </ScreenContainer>
