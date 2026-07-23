@@ -4,6 +4,43 @@
  * plus a shadow color for legibility over photos.
  */
 
+// ── Font Families ──
+
+export const FONT_FAMILIES = [
+  { id: "system" as const, name: "System", family: undefined },
+  { id: "serif" as const, name: "Serif", family: "Georgia" },
+  { id: "mono" as const, name: "Mono", family: "Courier" },
+  { id: "bold-system" as const, name: "Bold System", family: undefined, fontWeight: "900" as const },
+  { id: "light-system" as const, name: "Light", family: undefined, fontWeight: "300" as const },
+];
+
+export type FontFamily = typeof FONT_FAMILIES[number]["id"];
+export const DEFAULT_FONT_FAMILY: FontFamily = "system";
+
+export function getFontFamily(id: FontFamily) {
+  return FONT_FAMILIES.find((f) => f.id === id) ?? FONT_FAMILIES[0];
+}
+
+// ── Custom color grid ──
+
+export const CUSTOM_COLORS = [
+  "#FFFFFF", "#FF6B35", "#FF453A", "#FF9F0A",
+  "#FFD60A", "#32D74B", "#30D158", "#0A84FF",
+  "#5E5CE6", "#8B5CF6", "#FF375F", "#BF5AF2",
+  "#000000", "#333333", "#666666", "#999999",
+];
+
+/** Merge partial colour overrides into a full palette — falls back to preset then defaults */
+export function resolveColors(
+  paletteId: string,
+  customColors?: Partial<TemplateColors>,
+): TemplateColors {
+  const preset = ALL_PRESETS.find((p) => p.id === paletteId);
+  const base = preset?.colors ?? BRIGHT_WHITE.colors;
+  if (!customColors) return base;
+  return { ...base, ...customColors };
+}
+
 // ── Types ──
 
 export interface TemplateColors {
@@ -18,6 +55,7 @@ export interface TemplateColors {
   accentElev: string;
   chipBg: string;
   shadowColor: string;
+  fontFamily?: string;
 }
 
 export interface ColorPreset {

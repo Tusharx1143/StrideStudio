@@ -6,7 +6,7 @@
  */
 
 import React, { createContext, useContext, useCallback, useState } from "react";
-import { DEFAULT_PRESET_ID } from "./color-presets";
+import { DEFAULT_PRESET_ID, DEFAULT_FONT_FAMILY, type FontFamily } from "./color-presets";
 
 // ── Types ──
 
@@ -23,6 +23,8 @@ export interface CanvasLayer {
   rotation: number;
   /** Which color preset this layer uses */
   paletteId: string;
+  /** Font family override */
+  fontFamily: FontFamily;
   /** Layer ordering (higher = on top) */
   zIndex: number;
 }
@@ -38,6 +40,7 @@ interface CanvasState {
   sendBackward: (id: string) => void;
   selectLayer: (id: string | null) => void;
   setPhoto: (uri: string | null) => void;
+  resetCanvas: () => void;
 }
 
 // ── Helpers ──
@@ -72,6 +75,7 @@ export function CanvasProvider({ children }: { children: React.ReactNode }) {
       scale: 1,
       rotation: 0,
       paletteId: DEFAULT_PRESET_ID,
+      fontFamily: DEFAULT_FONT_FAMILY,
       zIndex: maxZ + 1,
     };
     setLayers((prev) => [...prev, newLayer]);
@@ -118,6 +122,12 @@ export function CanvasProvider({ children }: { children: React.ReactNode }) {
     setPhotoUri(uri);
   }, []);
 
+  const resetCanvas = useCallback(() => {
+    setLayers([]);
+    setSelectedLayerId(null);
+    setPhotoUri(null);
+  }, []);
+
   const value: CanvasState = {
     layers,
     selectedLayerId,
@@ -129,6 +139,7 @@ export function CanvasProvider({ children }: { children: React.ReactNode }) {
     sendBackward,
     selectLayer,
     setPhoto,
+    resetCanvas,
   };
 
   return <CanvasContext.Provider value={value}>{children}</CanvasContext.Provider>;
