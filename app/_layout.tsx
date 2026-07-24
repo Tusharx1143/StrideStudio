@@ -57,6 +57,8 @@ export default function RootLayout() {
             refetchOnWindowFocus: false,
             // Retry failed requests once
             retry: 1,
+            // Keep data in cache for 5 minutes after last observer unmounts
+            gcTime: 5 * 60 * 1000,
           },
         },
       }),
@@ -89,6 +91,7 @@ export default function RootLayout() {
             <Stack.Screen name="index" options={{ animation: "fade" }} />
             <Stack.Screen name="(tabs)" />
             <Stack.Screen name="oauth/callback" />
+            <Stack.Screen name="settings" options={{ animation: "slide_from_right", title: "Settings" }} />
           </Stack>
           <StatusBar style="light" />
             </CanvasProvider>
