@@ -15,10 +15,13 @@ export interface StatToggles {
   calories: boolean;
 }
 
-export function formatDuration(minutes: number): string {
-  const h = Math.floor(minutes / 60);
-  const m = Math.round(minutes % 60);
-  return h > 0 ? `${h}h ${m}m` : `${m} min`;
+export function formatDuration(minutes: number, opts?: { compact?: boolean }): string {
+  const compact = opts?.compact ?? false;
+  const rounded = Math.round(minutes);
+  const h = Math.floor(rounded / 60);
+  const m = rounded % 60;
+  if (h > 0) return `${h}h ${m}m`;
+  return compact ? `${m}m` : `${m} min`;
 }
 
 export function formatPace(pace: number): string {

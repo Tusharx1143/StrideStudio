@@ -125,6 +125,9 @@ const config: ExpoConfig = {
     typedRoutes: true,
     reactCompiler: true,
   },
+  extra: {
+    apiUrl: process.env.API_URL ?? "http://localhost:3000",
+  },
 };
 
 export default config;

@@ -23,6 +23,7 @@ import { useRouter } from "expo-router";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
 import { useApp } from "@/lib/app-context";
+import { API_BASE } from "@/lib/config";
 import { StrideButton } from "@/components/stride-button";
 import { useThemeContext } from "@/lib/theme-provider";
 
@@ -144,7 +145,6 @@ export default function SettingsScreen() {
 
   const handleDisconnectStrava = useCallback(async () => {
     try {
-      const API_BASE = "http://localhost:3000";
       const resp = await fetch(`${API_BASE}/api/strava/disconnect`, { method: "POST" });
       if (resp.ok) refresh();
     } catch (e) {

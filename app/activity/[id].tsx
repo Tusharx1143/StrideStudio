@@ -10,6 +10,7 @@ import { ActivityCardSkeleton } from "@/components/skeleton";
 import { getSportConfig, relativeTime, computeAchievements } from "@/lib/sport-theme";
 import { polylineToSvgPath } from "@/lib/map-utils";
 import { IconSymbol } from "@/components/ui/icon-symbol";
+import { ActivityAnimatedIcon } from "@/components/activity-animated-icon";
 import Svg, { Polyline, Circle } from "react-native-svg";
 
 // ── Route Map Widget ──
@@ -173,9 +174,9 @@ export default function ActivityDetailsScreen() {
         </View>
 
         <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
-          {/* Sport header */}
+          {/* Sport header with animated icon */}
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 4 }}>
-            <IconSymbol name={sport.sfSymbol as any} size={22} color={sport.color} />
+            <ActivityAnimatedIcon type={activity.type} size={32} />
             <Text style={{ color: sport.color, fontSize: 14, fontWeight: "700", textTransform: "uppercase", letterSpacing: 1 }}>{sport.label}</Text>
           </View>
 

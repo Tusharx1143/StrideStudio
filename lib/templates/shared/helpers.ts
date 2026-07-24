@@ -2,6 +2,7 @@
  * Shared template rendering helpers.
  */
 import type { Activity } from "@/lib/app-data";
+import { formatDuration } from "@/lib/app-data";
 
 export const serif = { fontFamily: "Georgia" as const };
 export const mono = { fontFamily: "Courier" as const };
@@ -14,14 +15,12 @@ export function paceStr(a: Activity): string {
 }
 
 export function timeStr(a: Activity): string {
-  return durationStr(a.duration).toUpperCase();
+  return formatDuration(a.duration, { compact: true }).toUpperCase();
 }
 
+/** @deprecated Use formatDuration(minutes, { compact: true }) instead */
 export function durationStr(minutes: number): string {
-  if (minutes < 60) return `${Math.round(minutes)}m`;
-  const h = Math.floor(minutes / 60);
-  const m = Math.round(minutes % 60);
-  return `${h}h ${m}m`;
+  return formatDuration(minutes, { compact: true });
 }
 
 export const MONTHS_SHORT = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];

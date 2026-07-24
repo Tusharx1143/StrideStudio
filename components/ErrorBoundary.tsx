@@ -5,7 +5,8 @@
  * Wrap template renders and other isolation-worthy subtrees with this.
  */
 import React, { Component, type ReactNode } from "react";
-import { Text, View, TouchableOpacity, StyleSheet } from "react-native";
+import { Text, View, TouchableOpacity } from "react-native";
+import { useColors } from "@/hooks/use-colors";
 
 interface Props {
   children: ReactNode;
@@ -47,53 +48,40 @@ export class ErrorBoundary extends Component<Props, State> {
 }
 
 function DefaultFallback({ error, onReset }: { error: Error; onReset: () => void }) {
+  const colors = useColors();
   return (
-    <View style={styles.container}>
-      <Text style={styles.icon}>⚠️</Text>
-      <Text style={styles.title}>Something went wrong</Text>
-      <Text style={styles.message} numberOfLines={3}>
+    <View
+      style={{
+        flex: 1,
+        justifyContent: "center",
+        alignItems: "center",
+        padding: 32,
+        backgroundColor: colors.background,
+        borderRadius: 12,
+        minHeight: 160,
+      }}
+    >
+      <Text style={{ fontSize: 36, marginBottom: 12 }}>⚠️</Text>
+      <Text style={{ color: colors.foreground, fontSize: 16, fontWeight: "700", marginBottom: 8 }}>
+        Something went wrong
+      </Text>
+      <Text
+        style={{ color: colors.muted, fontSize: 12, fontWeight: "500", textAlign: "center", marginBottom: 20 }}
+        numberOfLines={3}
+      >
         {error.message}
       </Text>
-      <TouchableOpacity onPress={onReset} style={styles.button}>
-        <Text style={styles.buttonText}>Try Again</Text>
+      <TouchableOpacity
+        onPress={onReset}
+        style={{
+          paddingHorizontal: 20,
+          paddingVertical: 10,
+          backgroundColor: colors.primary,
+          borderRadius: 20,
+        }}
+      >
+        <Text style={{ color: "#FFFFFF", fontSize: 14, fontWeight: "700" }}>Try Again</Text>
       </TouchableOpacity>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 32,
-    backgroundColor: "#0F172A",
-    borderRadius: 12,
-    minHeight: 160,
-  },
-  icon: { fontSize: 36, marginBottom: 12 },
-  title: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "700",
-    marginBottom: 8,
-  },
-  message: {
-    color: "#94A3B8",
-    fontSize: 12,
-    fontWeight: "500",
-    textAlign: "center",
-    marginBottom: 20,
-  },
-  button: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    backgroundColor: "#7C3AED",
-    borderRadius: 20,
-  },
-  buttonText: {
-    color: "#FFFFFF",
-    fontSize: 14,
-    fontWeight: "700",
-  },
-});
