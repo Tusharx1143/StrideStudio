@@ -162,10 +162,10 @@ export default function LandingPage() {
   const [ready, setReady] = useState(false);
 
   // ── Auth gate ──
-  // Redirect immediately if already connected. The landing page acts as a
-  // branded loading state while the tRPC status check is in flight (~300ms).
+  // Redirect immediately if already connected, or always in mock mode
+  // (mock server always reports connected — no real OAuth needed).
   useEffect(() => {
-    if (!loading && stravaConnected) {
+    if (!loading && (stravaConnected || USE_MOCK_STRAVA)) {
       router.replace("/home");
       return;
     }
@@ -179,10 +179,8 @@ export default function LandingPage() {
     setConnecting(true);
     try {
       if (USE_MOCK_STRAVA) {
-        // Mock mode: skip real OAuth — the server's TestStrava always
-        // returns connected=true. Just refresh and the auth gate will
-        // redirect to /home.
-        await refresh();
+        // Mock mode: navigate directly — no server round-trip needed
+        router.replace("/home");
         return;
       }
       if (Platform.OS === "web") {
@@ -196,10 +194,10 @@ export default function LandingPage() {
     } finally {
       setConnecting(false);
     }
-  }, [refresh]);
+  }, [router]);
 
   // ── Don't render anything if redirecting ──
-  if (stravaConnected) return null;
+  if (stravaConnected || USE_MOCK_STRAVA) return null;
 
   return (
     <View style={{ flex: 1, backgroundColor: "#090D14" }}>
