@@ -83,10 +83,8 @@ describe("formatDuration", () => {
 
   it("rounds fractional minutes", () => {
     expect(formatDuration(59.4)).toBe("59 min");
-    // 59.6 rounds to 60 minutes, but formatDuration checks h > 0 first,
-    // so m=60 with h=0 gives "60 min" (not "1h 0m")
-    // Bug note: when m rounds to 60, it should reflow to 1h 0m
-    expect(formatDuration(59.6)).toBe("60 min");
+    // 59.6 rounds to 60, which now correctly reflows to 1h 0m
+    expect(formatDuration(59.6)).toBe("1h 0m");
     // True hour boundary works correctly
     expect(formatDuration(60)).toBe("1h 0m");
   });
@@ -242,7 +240,7 @@ describe("computeWeekTotals", () => {
 
     expect(totals.totalKm).toBeCloseTo(45, 1);
     expect(totals.runKm).toBeCloseTo(15, 1);
-    expect(totals.walkKm).toBeCloseTo(30, 1); // non-run = rides + workouts
+    expect(totals.otherKm).toBeCloseTo(30, 1); // non-run = rides + workouts
     expect(totals.items).toHaveLength(3);
   });
 
@@ -250,7 +248,7 @@ describe("computeWeekTotals", () => {
     const totals = computeWeekTotals([]);
     expect(totals.totalKm).toBe(0);
     expect(totals.runKm).toBe(0);
-    expect(totals.walkKm).toBe(0);
+    expect(totals.otherKm).toBe(0);
     expect(totals.totalMinutes).toBe(0);
     expect(totals.items).toHaveLength(0);
   });

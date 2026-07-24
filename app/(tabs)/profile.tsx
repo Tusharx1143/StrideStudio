@@ -1,14 +1,14 @@
-import { ScrollView, Text, View, TouchableOpacity, Switch, Platform, Linking, Image, ActivityIndicator } from "react-native";
+import { ScrollView, Text, View, TouchableOpacity, Switch, Platform, Linking, Image, ActivityIndicator, Alert } from "react-native";
 import { useState, useEffect, useMemo } from "react";
+import { useRouter } from "expo-router";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useApp } from "@/lib/app-context";
+import { API_BASE } from "@/lib/config";
 import { StrideButton } from "@/components/stride-button";
 import { computeWeekStats, computeAchievements, getSportColor } from "@/lib/sport-theme";
 import Svg, { Circle } from "react-native-svg";
-
-const API_BASE = "http://localhost:3000";
 const WEEKLY_GOAL_KM = 40; // Default weekly goal
 
 // ── Progress Ring ──
@@ -89,6 +89,7 @@ function SportBreakdownBar({ runKm, rideKm, workoutCount }: { runKm: number; rid
 }
 
 export default function ProfileScreen() {
+  const router = useRouter();
   const colors = useColors();
   const { activities, savedPostsCount, stravaConnected, athlete, loading, refresh } = useApp();
   const totalDistance = activities.reduce((sum, a) => sum + a.distance, 0);
@@ -125,13 +126,26 @@ export default function ProfileScreen() {
     }
   };
 
-  const disconnectStrava = async () => {
-    try {
-      const resp = await fetch(`${API_BASE}/api/strava/disconnect`, { method: "POST" });
-      if (resp.ok) refresh();
-    } catch (error) {
-      console.error("[Strava] Disconnect failed:", error);
-    }
+  const disconnectStrava = () => {
+    Alert.alert(
+      "Disconnect Strava?",
+      "Your activity data and posts won't be deleted, but new activities won't sync until you reconnect.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Disconnect",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              const resp = await fetch(`${API_BASE}/api/strava/disconnect`, { method: "POST" });
+              if (resp.ok) refresh();
+            } catch (error) {
+              console.error("[Strava] Disconnect failed:", error);
+            }
+          },
+        },
+      ],
+    );
   };
 
   return (
@@ -248,13 +262,17 @@ export default function ProfileScreen() {
                 <Switch value={notifications} onValueChange={setNotifications} trackColor={{ false: colors.border, true: colors.primary }}
                   accessibilityRole="switch" accessibilityLabel="Notifications" accessibilityState={{ checked: notifications }} />
               </View>
-              {[["Privacy Policy"], ["Support"]].map(([label]) => (
-                <TouchableOpacity key={label} style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: 16, minHeight: 48, borderBottomWidth: 1, borderBottomColor: colors.border }}
-                  accessibilityRole="button" accessibilityLabel={label}>
-                  <Text style={{ color: colors.foreground, fontSize: 14 }}>{label}</Text>
-                  <IconSymbol name="chevron.right" size={18} color={colors.muted} />
-                </TouchableOpacity>
-              ))}
+              <TouchableOpacity
+                onPress={() => router.push("/settings")}
+                style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: 16, minHeight: 48 }}
+                accessibilityRole="button" accessibilityLabel="Open full settings"
+              >
+                <View>
+                  <Text style={{ color: colors.foreground, fontSize: 14 }}>All Settings</Text>
+                  <Text style={{ color: colors.muted, fontSize: 11, marginTop: 1 }}>Appearance, privacy, account</Text>
+                </View>
+                <IconSymbol name="chevron.right" size={18} color={colors.muted} />
+              </TouchableOpacity>
             </View>
           </View>
 

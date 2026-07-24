@@ -18,8 +18,8 @@ import { sdk } from "./sdk";
  */
 
 const DEFAULT_USER_ID = "default";
-const API_URL = "http://localhost:3000";
-const FRONTEND_URL = "http://localhost:8081";
+const API_URL = process.env.API_URL ?? "http://localhost:3000";
+const FRONTEND_URL = process.env.FRONTEND_URL ?? "http://localhost:8081";
 // Expo Router maps filesystem routes like app/(tabs)/profile.tsx to /profile on web
 const CALLBACK_PATH = "/profile";
 

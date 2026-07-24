@@ -27,6 +27,7 @@ import {
   Dimensions,
   ActivityIndicator,
   StyleSheet,
+  Share,
 } from "react-native";
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
@@ -136,13 +137,15 @@ export default function EditorScreen() {
   const router = useRouter();
   const colors = useColors();
   const {
-    activities, loading, stravaConnected,
+    activities, loading, error, stravaConnected,
     selectedActivityId, selectActivity, getSelectedActivity, incrementSavedPosts,
+    refresh,
   } = useApp();
   const {
     layers, selectedLayerId, photoUri,
     addLayer, removeLayer, updateLayer,
     bringForward, sendBackward, selectLayer, setPhoto, resetCanvas,
+    canUndo, canRedo, undo, redo,
   } = useCanvas();
 
   // ── Local state ──
@@ -234,7 +237,7 @@ export default function EditorScreen() {
     }
   }, [incrementSavedPosts, showToast]);
 
-  // Copy composite
+  // Share / Copy composite
   const copyAll = useCallback(async () => {
     if (!canvasRef.current) return;
     setCopying(true);
@@ -246,18 +249,14 @@ export default function EditorScreen() {
         await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
         showToast("Copied to clipboard", "success");
       } else {
-        const { status } = await MediaLibrary.requestPermissionsAsync();
-        if (status === "granted") {
-          await MediaLibrary.saveToLibraryAsync(uri);
-          showToast("Saved to camera roll", "success");
-        }
+        await Share.share({ url: uri });
       }
       incrementSavedPosts();
       if (Platform.OS !== "web") {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
     } catch {
-      showToast("Failed to copy", "error");
+      showToast("Failed to share", "error");
     } finally {
       setCopying(false);
     }
@@ -280,6 +279,27 @@ export default function EditorScreen() {
     name: f.name,
     cssFilter: typeof f.style.filter === "string" ? f.style.filter : undefined,
   })), []);
+
+  // Build CSS filter string from photo adjustments (brightness, contrast, saturation, warmth)
+  const adjustmentFilter = useMemo(() => {
+    const parts: string[] = [];
+    const b = adjustments.brightness;
+    if (b != null && b !== 0) parts.push(`brightness(${(1 + b / 100).toFixed(2)})`);
+    const c = adjustments.contrast;
+    if (c != null && c !== 0) parts.push(`contrast(${(1 + c / 100).toFixed(2)})`);
+    const s = adjustments.saturation;
+    if (s != null && s !== 0) parts.push(`saturate(${(1 + s / 100).toFixed(2)})`);
+    const w = adjustments.warmth;
+    if (w != null && w !== 0) {
+      // warmth: positive = warmer (sepia), negative = cooler (blue tint via hue-rotate)
+      if (w > 0) {
+        parts.push(`sepia(${(w / 200).toFixed(2)})`);
+      } else {
+        parts.push(`hue-rotate(${(w / 5).toFixed(0)}deg)`);
+      }
+    }
+    return parts.length > 0 ? parts.join(" ") : undefined;
+  }, [adjustments]);
 
   // ── Build ToolPanel sections ──
   const toolSections: ToolSection[] = useMemo(() => {
@@ -503,6 +523,65 @@ export default function EditorScreen() {
   }
 
   // ════════════════════════════════════════════════════════
+  // Error state — network / server failure with retry
+  // ════════════════════════════════════════════════════════
+  if (error && activities.length === 0) {
+    return (
+      <ScreenContainer className="p-0">
+        <View style={{
+          flex: 1, backgroundColor: EditorColors.background,
+          justifyContent: "center", alignItems: "center", padding: 40,
+        }}>
+          <View style={{
+            width: 80, height: 80, borderRadius: 40,
+            backgroundColor: EditorColors.destructive + "20",
+            alignItems: "center", justifyContent: "center",
+            marginBottom: EditorSpace["2xl"],
+          }}>
+            <Text style={{ fontSize: 32 }}>⚠️</Text>
+          </View>
+          <Text style={{
+            color: EditorColors.foreground,
+            fontSize: EditorType.title.size,
+            fontWeight: EditorType.title.weight,
+            letterSpacing: -0.5, marginBottom: 8,
+          }}>
+            Failed to load
+          </Text>
+          <Text style={{
+            color: EditorColors.mutedText,
+            fontSize: EditorType.body.size,
+            fontWeight: "500",
+            textAlign: "center",
+            lineHeight: EditorType.body.lineHeight,
+            marginBottom: EditorSpace["2xl"],
+            maxWidth: 280,
+          }}>
+            {error}
+          </Text>
+          <TouchableOpacity
+            onPress={refresh}
+            accessibilityRole="button"
+            accessibilityLabel="Retry loading"
+            style={{
+              paddingHorizontal: 24,
+              paddingVertical: 12,
+              backgroundColor: EditorColors.primary,
+              borderRadius: EditorRadius.pill,
+              minHeight: EditorTouch.buttonMd,
+              justifyContent: "center",
+            }}
+          >
+            <Text style={{ color: "#fff", fontSize: EditorType.body.size, fontWeight: "700" }}>
+              Try Again
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </ScreenContainer>
+    );
+  }
+
+  // ════════════════════════════════════════════════════════
   // Empty state
   // ════════════════════════════════════════════════════════
   if (activities.length === 0) {
@@ -581,6 +660,26 @@ export default function EditorScreen() {
             <Text style={localStyles.backArrow}>‹</Text>
           </TouchableOpacity>
 
+          {/* Undo / Redo */}
+          <View style={{ flexDirection: "row", gap: 2 }}>
+            <TouchableOpacity
+              onPress={undo}
+              disabled={!canUndo}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              style={[localStyles.undoRedoBtn, !canUndo && { opacity: 0.3 }]}
+            >
+              <Text style={localStyles.undoRedoText}>↩</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={redo}
+              disabled={!canRedo}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              style={[localStyles.undoRedoBtn, !canRedo && { opacity: 0.3 }]}
+            >
+              <Text style={localStyles.undoRedoText}>↪</Text>
+            </TouchableOpacity>
+          </View>
+
           <Text style={localStyles.topTitle}>Create Post</Text>
 
           {selectedLayer ? (
@@ -641,6 +740,8 @@ export default function EditorScreen() {
                   style={[
                     StyleSheet.absoluteFill,
                     PHOTO_FILTERS.find((f) => f.id === photoFilter)?.style,
+                    // Apply live adjustment sliders (brightness/contrast/saturation/warmth)
+                    adjustmentFilter ? { filter: adjustmentFilter } as Record<string, unknown> : undefined,
                   ]}
                   resizeMode="cover"
                 />
@@ -965,14 +1066,14 @@ export default function EditorScreen() {
             disabled={copying}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             accessibilityRole="button"
-            accessibilityLabel="Copy post"
+            accessibilityLabel="Share post"
             style={localStyles.copyButton}
           >
             {copying && (
               <ActivityIndicator size="small" color={EditorColors.foreground} />
             )}
             <Text style={localStyles.copyButtonText}>
-              {copying ? "Copying…" : "📋 Copy"}
+              {copying ? "Sharing…" : "📤 Share"}
             </Text>
           </TouchableOpacity>
 
@@ -1057,6 +1158,19 @@ const localStyles = StyleSheet.create({
     fontSize: EditorType.heading.size,
     fontWeight: EditorType.heading.weight,
     textAlign: "center",
+  },
+  undoRedoBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: EditorColors.surface,
+  },
+  undoRedoText: {
+    color: EditorColors.foreground,
+    fontSize: 16,
+    fontWeight: "600",
   },
   styleButton: {
     flexDirection: "row",

@@ -21,7 +21,7 @@ import { fmtDateShort, fmtDateFull, fmtTime12, fmtWeekday, paceStr, timeStr } fr
 
 export interface WeekTotals {
   runKm: number;
-  walkKm: number;
+  otherKm: number;
   totalKm: number;
   totalMinutes: number;
   items: { day: string; km: number; type: string }[];
@@ -59,8 +59,8 @@ export const TOTALS: TemplateDef[] = [
     render: (_a, t, colors) => {
       const c = colors ?? BRIGHT_WHITE.colors;
       const showRun = t.runKm > 0;
-      const showWalk = t.walkKm > 0;
-      const ratio = showRun && showWalk ? (t.runKm / (t.runKm + t.walkKm) * 100) : showRun ? 100 : 0;
+      const showOther = t.otherKm > 0;
+      const ratio = showRun && showOther ? (t.runKm / (t.runKm + t.otherKm) * 100) : showRun ? 100 : 0;
 
       return (
         <View style={{ flex: 1, justifyContent: "center", padding: 10 }}>
@@ -71,7 +71,7 @@ export const TOTALS: TemplateDef[] = [
             THIS WEEK · {formatDuration(t.totalMinutes).toUpperCase()}
           </Text>
 
-          {showRun && showWalk && (
+          {showRun && showOther && (
             <View style={{ height: 4, backgroundColor: c.border, borderRadius: 2, overflow: "hidden", marginBottom: 6 }}>
               <View style={{ width: `${ratio}%`, backgroundColor: c.accentRun, height: "100%" }} />
             </View>
@@ -86,11 +86,11 @@ export const TOTALS: TemplateDef[] = [
                 </Text>
               </View>
             )}
-            {showWalk && (
+            {showOther && (
               <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
                 <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: c.accentRide }} />
                 <Text style={[{ color: c.textSecondary, fontSize: 8, fontWeight: "600" }, ts(c.shadowColor, c.fontFamily)]}>
-                  RIDE {t.walkKm.toFixed(1)} km
+                  RIDE {t.otherKm.toFixed(1)} km
                 </Text>
               </View>
             )}
@@ -147,11 +147,11 @@ export const TOTALS: TemplateDef[] = [
               <Text style={{ fontSize: 10 }}>🚴</Text>
               <View style={{ flex: 1 }}>
                 <View style={{ height: 6, backgroundColor: c.border, borderRadius: 3, overflow: "hidden" }}>
-                  <View style={{ width: `${(t.walkKm / t.totalKm) * 100}%`, backgroundColor: c.accentRide, height: "100%" }} />
+                  <View style={{ width: `${(t.otherKm / t.totalKm) * 100}%`, backgroundColor: c.accentRide, height: "100%" }} />
                 </View>
               </View>
               <Text style={[{ color: c.textPrimary, fontSize: 9, fontWeight: "700", fontFamily: c.fontFamily ?? "Courier", minWidth: 50, textAlign: "right" }, ts(c.shadowColor, c.fontFamily)]}>
-                {t.walkKm.toFixed(1)} km
+                {t.otherKm.toFixed(1)} km
               </Text>
               <Text style={[{ color: c.textMuted, fontSize: 7 }]}>{rideCount}x</Text>
             </View>
@@ -179,7 +179,7 @@ export const TOTALS: TemplateDef[] = [
     render: (_a, t, colors) => {
       const c = colors ?? BRIGHT_WHITE.colors;
       const runKm = t.runKm;
-      const walkKm = t.walkKm;
+      const otherKm = t.otherKm;
 
       return (
         <View style={{ flex: 1, justifyContent: "center", padding: 8 }}>
@@ -198,11 +198,11 @@ export const TOTALS: TemplateDef[] = [
                 </Text>
               </View>
             )}
-            {walkKm > 0 && (
+            {otherKm > 0 && (
               <View style={{ backgroundColor: alpha(c.accentRide, "20"), borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3, flexDirection: "row", alignItems: "center", gap: 3 }}>
                 <Text style={{ fontSize: 8 }}>🚴</Text>
                 <Text style={[{ color: c.accentRide, fontSize: 8, fontWeight: "700" }, ts(c.shadowColor, c.fontFamily)]}>
-                  {walkKm.toFixed(1)} km
+                  {otherKm.toFixed(1)} km
                 </Text>
               </View>
             )}

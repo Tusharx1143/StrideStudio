@@ -17,26 +17,9 @@ import { analyseFields, heroField, type AvailableField } from "./shared/analyse-
 import { ts, ff, typeEmoji, typeLabel } from "./shared/styling";
 import { fmtDateShort, fmtDateFull, fmtTime12, fmtWeekday, paceStr, timeStr } from "./shared/helpers";
 
-// ── Types ──
-
-export interface WeekTotals {
-  runKm: number;
-  walkKm: number;
-  totalKm: number;
-  totalMinutes: number;
-  items: { day: string; km: number; type: string }[];
-}
-
-export interface TemplateDef {
-  id: string;
-  name: string;
-  tab: "activity" | "totals";
-  fullWidth?: boolean;
-  badge?: "New" | "Dynamic" | "Auto" | "Customize";
-  lightCard?: boolean;
-  description: string;
-  render: (a: Activity, totals: WeekTotals, colors?: TemplateColors) => React.ReactNode;
-}
+// ── Types (canonical source: ./shared/types.ts) ──
+import type { WeekTotals, TemplateDef } from "./shared/types";
+export type { WeekTotals, TemplateDef };
 
 /** @deprecated Use TemplateDef instead */
 export type { TemplateDef as DynamicTemplateDef };
@@ -80,12 +63,12 @@ export const DYNAMIC_TEMPLATES: TemplateDef[] = [
  */
 export function computeWeekTotals(activities: Activity[]): WeekTotals {
   const runKm = activities.filter((a) => a.type === "run").reduce((s, a) => s + a.distance, 0);
-  const walkKm = activities.filter((a) => a.type !== "run").reduce((s, a) => s + a.distance, 0);
+  const otherKm = activities.filter((a) => a.type !== "run").reduce((s, a) => s + a.distance, 0);
   const totalMinutes = activities.reduce((s, a) => s + a.duration, 0);
   return {
     runKm,
-    walkKm,
-    totalKm: runKm + walkKm,
+    otherKm,
+    totalKm: runKm + otherKm,
     totalMinutes,
     items: activities.map((a) => ({ day: a.date, km: a.distance, type: a.type === "ride" ? "ride" : a.type })),
   };

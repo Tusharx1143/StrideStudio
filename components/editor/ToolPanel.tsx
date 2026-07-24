@@ -114,7 +114,7 @@ export function ToolPanel({
   });
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  if (!visible && (animValue as any)._value === 0) return null;
+  if (!visible && (animValue as unknown as { _value: number })._value === 0) return null;
 
   return (
     <View style={styles.wrapper} pointerEvents="box-none">
