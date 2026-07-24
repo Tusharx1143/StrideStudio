@@ -1,10 +1,26 @@
 /** Photo filter presets for image backgrounds */
 
+/**
+ * Photo filter style properties — applied as CSS filters on web,
+ * or as tint/opacity adjustments on native.
+ *
+ * NOTE: `filter` is a web-only CSS property not present in RN's
+ * ImageStyle. Consumers should cast when spreading into Image style
+ * arrays on web targets.
+ */
+export interface PhotoFilterStyle {
+  /** CSS filter string (web-only) */
+  filter?: string;
+  /** Tint color override (native) */
+  tint?: string;
+  /** Opacity multiplier */
+  opacity?: number;
+}
+
 export interface PhotoFilter {
   id: string;
   name: string;
-  /** CSS filter string for web / Image style */
-  style: Record<string, any>;
+  style: PhotoFilterStyle;
 }
 
 export const PHOTO_FILTERS: PhotoFilter[] = [

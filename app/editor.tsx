@@ -23,7 +23,6 @@ import {
   View,
   TouchableOpacity,
   Platform,
-  Modal,
   Pressable,
   Dimensions,
   ActivityIndicator,
@@ -35,8 +34,7 @@ import * as ImagePicker from "expo-image-picker";
 import * as MediaLibrary from "expo-media-library";
 import { captureRef } from "react-native-view-shot";
 import { VideoView, useVideoPlayer } from "expo-video";
-import { Gesture, GestureDetector } from "react-native-gesture-handler";
-import Animated, { FadeIn, FadeInDown, useSharedValue, useAnimatedStyle } from "react-native-reanimated";
+import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 import { ScreenContainer } from "@/components/screen-container";
 import { useApp } from "@/lib/app-context";
 import { ALL_TEMPLATES, computeWeekTotals } from "@/lib/templates";
@@ -46,11 +44,15 @@ import {
   CUSTOM_COLORS, FONT_FAMILIES, getFontFamily,
 } from "@/lib/color-presets";
 import { PHOTO_FILTERS, DEFAULT_FILTER, type PhotoFilter } from "@/lib/photo-filters";
+import { typeEmoji } from "@/lib/templates/shared/helpers";
 import { useColors } from "@/hooks/use-colors";
 import { StrideButton } from "@/components/stride-button";
 import { AnimatedToast } from "@/components/animated-toast";
 import { ActivityListSkeleton } from "@/components/skeleton";
 import { FilterCarousel } from "@/components/editor/FilterCarousel";
+import { LayerGesture } from "@/components/editor/LayerGesture";
+import { DeleteZone } from "@/components/editor/DeleteZone";
+import { ActivityPickerModal } from "@/components/editor/ActivityPickerModal";
 import { AdjustmentSlider, type AdjustmentDef } from "@/components/editor/AdjustmentSlider";
 import { ToolPanel, type ToolSection } from "@/components/editor/ToolPanel";
 import {
@@ -124,150 +126,6 @@ function filterActivitiesByPeriod(activities: any[], period: PeriodId): any[] {
       default: return true;
     }
   });
-}
-
-function activityEmoji(type: string): string {
-  switch (type) {
-    case "run": return "🏃";
-    case "ride": return "🚴";
-    case "workout": return "💪";
-    default: return "🏃";
-  }
-}
-
-// ════════════════════════════════════════════════════════════════
-// Layer Gesture Component
-// ════════════════════════════════════════════════════════════════
-
-interface LayerGestureProps {
-  layer: ReturnType<typeof useCanvas>["layers"][0];
-  canvasH: number;
-  onDragStart?: (id: string) => void;
-  onDragEnd?: (id: string | null) => void;
-  onDragOverDelete?: (over: boolean) => void;
-}
-
-function LayerGesture({ layer, canvasH, onDragStart, onDragEnd, onDragOverDelete }: LayerGestureProps) {
-  const colors = useColors();
-  const { selectedLayerId, selectLayer, updateLayer, removeLayer } = useCanvas();
-  const app = useApp();
-  const tx = useSharedValue(0);
-  const ty = useSharedValue(0);
-
-  const activity = app.getSelectedActivity();
-  const totals = useMemo(() => computeWeekTotals(app.activities), [app.activities]);
-
-  const pan = Gesture.Pan()
-    .minDistance(10)
-    .onBegin(() => { onDragStart?.(layer.id); })
-    .onUpdate((e) => {
-      tx.value = e.translationX; ty.value = e.translationY;
-      const cy = layer.y * canvasH + e.translationY;
-      const cx = layer.x * SCREEN_W + e.translationX;
-      const over = cy > canvasH - 90 && cx > SCREEN_W / 2 - 70 && cx < SCREEN_W / 2 + 70;
-      onDragOverDelete?.(over);
-    })
-    .onEnd((e) => {
-      const cy = layer.y * canvasH + e.translationY;
-      const cx = layer.x * SCREEN_W + e.translationX;
-      const over = cy > canvasH - 90 && cx > SCREEN_W / 2 - 70 && cx < SCREEN_W / 2 + 70;
-      setTimeout(() => {
-        if (over) removeLayer(layer.id);
-        else updateLayer(layer.id, {
-          x: Math.max(0, Math.min(1, layer.x + e.translationX / SCREEN_W)),
-          y: Math.max(0, Math.min(1, layer.y + e.translationY / canvasH)),
-        });
-        onDragEnd?.(null);
-        onDragOverDelete?.(false);
-      }, 50);
-      tx.value = 0; ty.value = 0;
-    });
-
-  const tap = Gesture.Tap().onEnd(() => selectLayer(layer.id));
-  const composed = Gesture.Exclusive(tap, pan);
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: tx.value }, { translateY: ty.value }],
-  }));
-
-  const template = ALL_TEMPLATES.find((t) => t.id === layer.templateId);
-  const palette = resolveColors(layer.paletteId);
-  const layerFont = getFontFamily(layer.fontFamily);
-  const finalColors = { ...palette, fontFamily: layerFont.family };
-  const isSelected = layer.id === selectedLayerId;
-
-  // Background style map
-  const bgStyle = layer.backgroundStyle ?? 'glass';
-  const bgColors: Record<string, { bg: string; border: string }> = {
-    none:      { bg: 'transparent',                 border: 'transparent' },
-    glass:     { bg: 'rgba(15, 23, 42, 0.55)',      border: 'rgba(255,255,255,0.08)' },
-    solid:     { bg: '#0F172A',                      border: 'rgba(255,255,255,0.12)' },
-    outlined:  { bg: 'rgba(15, 23, 42, 0.15)',      border: 'rgba(255,255,255,0.25)' },
-  };
-  const bg = bgColors[bgStyle] ?? bgColors.glass;
-
-  return (
-    <GestureDetector gesture={composed}>
-      <Animated.View style={[{
-        position: "absolute",
-        left: layer.x * SCREEN_W - (SCREEN_W * 0.4) / 2,
-        top: layer.y * canvasH - 65,
-        width: SCREEN_W * 0.4,
-        minHeight: 130,
-        borderRadius: EditorRadius.card,
-        overflow: "hidden",
-        borderWidth: isSelected ? 2 : bgStyle === 'outlined' ? 1 : 0,
-        borderColor: isSelected ? EditorColors.primary : bg.border,
-        backgroundColor: bg.bg,
-        // Glow effect when selected
-        shadowColor: isSelected ? EditorColors.primary : "#000",
-        shadowOffset: { width: 0, height: isSelected ? 0 : 2 },
-        shadowOpacity: isSelected ? 0.5 : 0.15,
-        shadowRadius: isSelected ? 16 : 6,
-        elevation: isSelected ? 12 : 4,
-      }, animatedStyle]}>
-        {template && activity && (
-          <View style={{ flex: 1, padding: 4 }}>
-            {template.render(activity, totals, finalColors)}
-          </View>
-        )}
-      </Animated.View>
-    </GestureDetector>
-  );
-}
-
-// ════════════════════════════════════════════════════════════════
-// Delete Zone Overlay
-// ════════════════════════════════════════════════════════════════
-
-function DeleteZone({ visible, dragOver }: { visible: boolean; dragOver: boolean }) {
-  if (!visible) return null;
-  return (
-    <Animated.View entering={FadeIn.duration(EditorMotion.fast)} style={{
-      position: "absolute", bottom: 0,
-      left: SCREEN_W / 2 - DELETE_ZONE_SIZE,
-      width: DELETE_ZONE_SIZE * 2, height: DELETE_ZONE_SIZE + 20,
-      alignItems: "center", justifyContent: "center",
-    }}>
-      <View style={{
-        width: DELETE_ZONE_SIZE, height: DELETE_ZONE_SIZE,
-        borderRadius: DELETE_ZONE_SIZE / 2,
-        backgroundColor: dragOver ? EditorColors.destructive + "30" : EditorSemantic.glass,
-        alignItems: "center", justifyContent: "center",
-        borderWidth: 2,
-        borderColor: dragOver ? EditorColors.destructive : EditorSemantic.glassBorder,
-        transform: [{ scale: dragOver ? 1.15 : 1 }],
-      }}>
-        <Text style={{ fontSize: 22 }}>🗑️</Text>
-      </View>
-      <Text style={{
-        color: dragOver ? EditorColors.destructive : EditorColors.mutedText,
-        fontSize: 9, fontWeight: "700", marginTop: 6,
-        letterSpacing: 1.5,
-      }}>
-        {dragOver ? "RELEASE TO DELETE" : "DRAG TO DELETE"}
-      </Text>
-    </Animated.View>
-  );
 }
 
 // ════════════════════════════════════════════════════════════════
@@ -782,7 +640,7 @@ export default function EditorScreen() {
                   source={{ uri: photoUri }}
                   style={[
                     StyleSheet.absoluteFill,
-                    PHOTO_FILTERS.find((f) => f.id === photoFilter)?.style as any,
+                    PHOTO_FILTERS.find((f) => f.id === photoFilter)?.style,
                   ]}
                   resizeMode="cover"
                 />
@@ -886,7 +744,7 @@ export default function EditorScreen() {
               accessibilityLabel="Select activity"
               style={localStyles.activityChip}
             >
-              <Text style={{ fontSize: 14 }}>{activityEmoji(activity?.type ?? "")}</Text>
+              <Text style={{ fontSize: 14 }}>{typeEmoji(activity?.type ?? "")}</Text>
               <Text style={localStyles.activityChipText} numberOfLines={1}>
                 {activity?.distance.toFixed(1)} km · {activity?.type}
               </Text>
@@ -1145,55 +1003,13 @@ export default function EditorScreen() {
         />
 
         {/* ══ Activity Picker Modal ══ */}
-        <Modal
+        <ActivityPickerModal
           visible={pickerOpen}
-          transparent
-          animationType="fade"
-          onRequestClose={() => setPickerOpen(false)}
-        >
-          <Pressable
-            style={localStyles.modalOverlay}
-            onPress={() => setPickerOpen(false)}
-          >
-            <Pressable
-              onPress={(e) => e.stopPropagation()}
-              style={localStyles.modalSheet}
-            >
-              <View style={localStyles.modalHandle} />
-              <Text style={localStyles.modalTitle}>Select Activity</Text>
-              <ScrollView bounces={false}>
-                {activities.map((a, i) => (
-                  <TouchableOpacity
-                    key={a.id}
-                    onPress={() => { selectActivity(a.id); setPickerOpen(false); }}
-                    style={[
-                      localStyles.modalItem,
-                      i < activities.length - 1 && { borderBottomWidth: 0.5, borderBottomColor: EditorColors.border },
-                    ]}
-                  >
-                    <View style={[
-                      localStyles.modalItemIcon,
-                      a.id === selectedActivityId && {
-                        backgroundColor: EditorColors.primary,
-                      },
-                    ]}>
-                      <Text style={{ fontSize: 16 }}>{activityEmoji(a.type)}</Text>
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={localStyles.modalItemTitle}>
-                        {a.distance.toFixed(1)} km · {a.type}
-                      </Text>
-                      <Text style={localStyles.modalItemSubtitle}>{a.date}</Text>
-                    </View>
-                    {a.id === selectedActivityId && (
-                      <Text style={{ color: EditorColors.primary, fontSize: 16 }}>✓</Text>
-                    )}
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </Pressable>
-          </Pressable>
-        </Modal>
+          onClose={() => setPickerOpen(false)}
+          activities={activities}
+          selectedActivityId={selectedActivityId}
+          onSelect={(id) => { selectActivity(id); setPickerOpen(false); }}
+        />
 
         {/* ══ Tool Panel ══ */}
         <ToolPanel
@@ -1478,64 +1294,6 @@ const localStyles = StyleSheet.create({
     color: "#fff",
     fontSize: EditorType.body.size,
     fontWeight: "800",
-  },
-
-  // Modal
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: EditorSemantic.overlay,
-    justifyContent: "flex-end",
-  },
-  modalSheet: {
-    backgroundColor: EditorColors.background,
-    borderTopLeftRadius: EditorRadius.modal,
-    borderTopRightRadius: EditorRadius.modal,
-    paddingTop: EditorSpace.sm,
-    paddingBottom: EditorSpace["3xl"],
-    maxHeight: "60%",
-    borderWidth: 1,
-    borderColor: EditorColors.border,
-    borderBottomWidth: 0,
-  },
-  modalHandle: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: EditorColors.panelHandle,
-    alignSelf: "center",
-    marginBottom: EditorSpace.md,
-  },
-  modalTitle: {
-    color: EditorColors.foreground,
-    fontSize: EditorType.heading.size,
-    fontWeight: EditorType.heading.weight,
-    paddingHorizontal: EditorSpace.lg,
-    marginBottom: EditorSpace.sm,
-  },
-  modalItem: {
-    paddingHorizontal: EditorSpace.lg,
-    paddingVertical: EditorSpace.md,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  modalItemIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: EditorColors.surface,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  modalItemTitle: {
-    color: EditorColors.foreground,
-    fontSize: EditorType.body.size,
-    fontWeight: "600",
-  },
-  modalItemSubtitle: {
-    color: EditorColors.mutedText,
-    fontSize: EditorType.caption.size,
-    marginTop: 1,
   },
 
   // Section label (used in ToolPanel content)

@@ -25,6 +25,7 @@ import {
 } from "react-native";
 import {
   EditorColors,
+  EditorSemantic,
   EditorRadius,
   EditorType,
   EditorMotion,
@@ -112,7 +113,8 @@ export function ToolPanel({
     outputRange: [0, 1],
   });
 
-  if (!visible && animValue._value === 0) return null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  if (!visible && (animValue as any)._value === 0) return null;
 
   return (
     <View style={styles.wrapper} pointerEvents="box-none">
@@ -199,7 +201,7 @@ const styles = StyleSheet.create({
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: EditorColors.overlay,
+    backgroundColor: EditorSemantic.overlay,
   },
   panel: {
     backgroundColor: EditorColors.surface,
@@ -225,7 +227,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 4,
     borderRadius: 2,
-    backgroundColor: EditorColors.panelHandle,
+    backgroundColor: EditorSemantic.panelHandle,
   },
   tabs: {
     flexDirection: "row",
