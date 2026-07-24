@@ -38,7 +38,7 @@ function ProgressRing({ progress, size = 100, strokeWidth = 8, color }: { progre
           stroke={color}
           strokeWidth={strokeWidth}
           fill="none"
-          strokeDasharray={circumference}
+          strokeDasharray={[circumference]}
           strokeDashoffset={offset}
           strokeLinecap="round"
           transform={`rotate(-90 ${size / 2} ${size / 2})`}

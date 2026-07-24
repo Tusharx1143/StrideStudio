@@ -117,7 +117,7 @@ export function WeekProgressRing({ entranceDelay = 100, activities: propActiviti
               stroke="#FF6B35"
               strokeWidth={strokeWidth}
               fill="none"
-              strokeDasharray={`${circumference * runRatio * progress} ${circumference}`}
+              strokeDasharray={[circumference * runRatio * progress, circumference]}
               strokeLinecap="round"
               opacity={0.3}
             />
@@ -142,7 +142,7 @@ export function WeekProgressRing({ entranceDelay = 100, activities: propActiviti
               stroke="#0A84FF"
               strokeWidth={strokeWidth}
               fill="none"
-              strokeDasharray={`${circumference * rideRatio * progress} ${circumference}`}
+              strokeDasharray={[circumference * rideRatio * progress, circumference]}
               strokeLinecap="butt"
               opacity={0.3}
             />
@@ -163,7 +163,7 @@ export function WeekProgressRing({ entranceDelay = 100, activities: propActiviti
             stroke={colors.primary}
             strokeWidth={strokeWidth}
             fill="none"
-            strokeDasharray={`${circumference} ${circumference}`}
+            strokeDasharray={[circumference, circumference]}
             strokeLinecap="round"
             animatedProps={ringProps}
           />
