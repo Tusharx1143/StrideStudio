@@ -8,10 +8,16 @@
 
 export const FONT_FAMILIES = [
   { id: "system" as const, name: "System", family: undefined },
+  { id: "inter" as const, name: "Inter", family: "Inter" },
+  { id: "bebas-neue" as const, name: "Bebas Neue", family: "BebasNeue", fontWeight: "900" as const },
+  { id: "league-spartan" as const, name: "League Spartan", family: "LeagueSpartan", fontWeight: "700" as const },
+  { id: "manrope" as const, name: "Manrope", family: "Manrope" },
+  { id: "oswald" as const, name: "Oswald", family: "Oswald" },
+  { id: "din-condensed" as const, name: "DIN Condensed", family: "DINCondensed", fontWeight: "700" as const },
+  { id: "general-sans" as const, name: "General Sans", family: "GeneralSans" },
+  { id: "roboto" as const, name: "Roboto", family: "Roboto" },
   { id: "serif" as const, name: "Serif", family: "Georgia" },
   { id: "mono" as const, name: "Mono", family: "Courier" },
-  { id: "bold-system" as const, name: "Bold System", family: undefined, fontWeight: "900" as const },
-  { id: "light-system" as const, name: "Light", family: undefined, fontWeight: "300" as const },
 ];
 
 export type FontFamily = typeof FONT_FAMILIES[number]["id"];

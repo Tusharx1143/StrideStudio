@@ -82,12 +82,14 @@ export default function RootLayout() {
       <trpc.Provider client={trpcClient} queryClient={queryClient}>
         <QueryClientProvider client={queryClient}>
           <AppProvider>
-          {/* Default to hiding native headers so raw route segments don't appear (e.g. "(tabs)", "products/[id]"). */}
+          {/* Default to hiding native headers so raw route segments don't appear. */}
           {/* If a screen needs the native header, explicitly enable it and set a human title via Stack.Screen options. */}
           {/* Landing page uses fullScreenModal presentation so it doesn't interfere with tab switching on iOS. */}
           <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen name="index" options={{ animation: "fade" }} />
-            <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="home" />
+            <Stack.Screen name="profile-screen" options={{ animation: "slide_from_right" }} />
+            <Stack.Screen name="templates-gallery" options={{ animation: "slide_from_right" }} />
             <Stack.Screen name="oauth/callback" />
             <Stack.Screen name="settings" options={{ animation: "slide_from_right", title: "Settings" }} />
           </Stack>

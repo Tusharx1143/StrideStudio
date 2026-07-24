@@ -171,6 +171,81 @@ export const EXTRAS: TemplateDef[] = [
     },
   },
 
+  // ─── NAME STICKERS ───
+  {
+    id: "name-hero",
+    name: "Name Hero",
+    tab: "activity", badge: "New",
+    description: "Bold activity name as hero text",
+    render: (a, _t, colors) => {
+      const c = colors ?? BRIGHT_WHITE.colors;
+      return (
+        <View style={{ flex: 1, justifyContent: "center", alignItems: "center", padding: 12 }}>
+          <Text style={[{ color: c.textPrimary, fontSize: 22, fontWeight: "900", letterSpacing: -0.5, textAlign: "center" }, ts(c.shadowColor, c.fontFamily)]}>
+            {(a.title || typeLabel(a.type)).toUpperCase()}
+          </Text>
+          <Text style={[{ color: c.textMuted, fontSize: 7, fontWeight: "600", letterSpacing: 1.5, marginTop: 4 }, ts(c.shadowColor, c.fontFamily)]}>
+            {typeLabel(a.type)}
+          </Text>
+        </View>
+      );
+    },
+  },
+  {
+    id: "name-chip",
+    name: "Name Chip",
+    tab: "activity", badge: "New",
+    description: "Activity name in a pill/chip badge",
+    render: (a, _t, colors) => {
+      const c = colors ?? BRIGHT_WHITE.colors;
+      return (
+        <View style={{ flex: 1, justifyContent: "center", alignItems: "center", padding: 8 }}>
+          <View style={{ backgroundColor: alpha(c.accent, "20"), borderRadius: 20, paddingHorizontal: 16, paddingVertical: 8, borderWidth: 1, borderColor: alpha(c.accent, "40") }}>
+            <Text style={[{ color: c.accent, fontSize: 12, fontWeight: "800", letterSpacing: 0.5, textAlign: "center" }, ts(c.shadowColor, c.fontFamily)]}>
+              {(a.title || typeLabel(a.type)).toUpperCase()}
+            </Text>
+          </View>
+        </View>
+      );
+    },
+  },
+  {
+    id: "name-stacked",
+    name: "Name Stacked",
+    tab: "activity", badge: "New",
+    description: "Activity name stacked with type and date",
+    render: (a, _t, colors) => {
+      const c = colors ?? BRIGHT_WHITE.colors;
+      return (
+        <View style={{ flex: 1, justifyContent: "center", alignItems: "center", padding: 10, gap: 2 }}>
+          <Text style={[{ color: c.accent, fontSize: 14, fontWeight: "800", letterSpacing: 1 }, ts(c.shadowColor, c.fontFamily)]}>{typeLabel(a.type)}</Text>
+          <Text style={[{ color: c.textPrimary, fontSize: 14, fontWeight: "700", letterSpacing: 0.5, textAlign: "center" }, ts(c.shadowColor, c.fontFamily)]}>
+            {(a.title || typeLabel(a.type)).toUpperCase()}
+          </Text>
+          <Text style={[{ color: c.textMuted, fontSize: 6, fontWeight: "600", letterSpacing: 1 }, ts(c.shadowColor, c.fontFamily)]}>
+            {a.startDate ? new Date(a.startDate).toLocaleDateString() : a.date}
+          </Text>
+        </View>
+      );
+    },
+  },
+  {
+    id: "name-minimal",
+    name: "Name Minimal",
+    tab: "activity", badge: "New",
+    description: "Minimal lowercase activity name",
+    render: (a, _t, colors) => {
+      const c = colors ?? BRIGHT_WHITE.colors;
+      return (
+        <View style={{ flex: 1, justifyContent: "center", paddingHorizontal: 14 }}>
+          <Text style={[{ color: c.textSecondary, fontSize: 16, fontWeight: "300", letterSpacing: 0.5 }, ts(c.shadowColor, c.fontFamily)]}>
+            {a.title || typeLabel(a.type)}
+          </Text>
+        </View>
+      );
+    },
+  },
+
   {
     id: "watermark-bg",
     name: "Watermark BG",

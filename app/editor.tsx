@@ -41,8 +41,7 @@ import { useApp } from "@/lib/app-context";
 import { ALL_TEMPLATES, computeWeekTotals } from "@/lib/templates";
 import { useCanvas, CanvasProvider } from "@/lib/canvas-state";
 import {
-  ALL_PRESETS, resolveColors,
-  CUSTOM_COLORS, FONT_FAMILIES, getFontFamily,
+  resolveColors,
 } from "@/lib/color-presets";
 import { PHOTO_FILTERS, DEFAULT_FILTER, type PhotoFilter } from "@/lib/photo-filters";
 import { typeEmoji } from "@/lib/templates/shared/helpers";
@@ -56,6 +55,7 @@ import { DeleteZone } from "@/components/editor/DeleteZone";
 import { ActivityPickerModal } from "@/components/editor/ActivityPickerModal";
 import { AdjustmentSlider, type AdjustmentDef } from "@/components/editor/AdjustmentSlider";
 import { ToolPanel, type ToolSection } from "@/components/editor/ToolPanel";
+import { LayerStylePanel } from "@/components/editor/LayerStylePanel";
 import {
   EditorColors,
   EditorSemantic,
@@ -172,13 +172,19 @@ function EditorContent() {
   // ToolPanel state
   const [toolPanelVisible, setToolPanelVisible] = useState(false);
   const [activeToolSection, setActiveToolSection] = useState<string | null>(null);
+  const closePanel = useCallback(() => setToolPanelVisible(false), []);
+  const noop = useCallback(() => {}, []);
 
   // Photo adjustments state
   const [adjustments, setAdjustments] = useState<Record<string, number>>({});
 
+  // Suggested gallery photos from activity date
+  const [suggestedPhotos, setSuggestedPhotos] = useState<string[]>([]);
+
   // ── Derived state ──
   const CANVAS_H = useMemo(() => getCanvasHeight(aspectRatio), [aspectRatio]);
   const canvasRef = useRef<any>(null);
+  const scrollRef = useRef<ScrollView>(null);
   const filteredActivities = useMemo(
     () => filterActivitiesByPeriod(activities, periodFilter),
     [activities, periodFilter],
@@ -186,6 +192,30 @@ function EditorContent() {
   const totals = useMemo(() => computeWeekTotals(filteredActivities), [filteredActivities]);
   const activity = getSelectedActivity();
   const filteredTemplates = ALL_TEMPLATES.filter((t) => t.tab === tab);
+
+  // Load suggested photos based on activity date
+  useEffect(() => {
+    if (!activity?.startDate) { setSuggestedPhotos([]); return; }
+    const activityDate = new Date(activity.startDate);
+    const dayStart = new Date(activityDate);
+    dayStart.setHours(0, 0, 0, 0);
+    const dayEnd = new Date(activityDate);
+    dayEnd.setHours(23, 59, 59, 999);
+    const rangeStart = new Date(dayStart);
+    rangeStart.setDate(rangeStart.getDate() - 1);
+    const rangeEnd = new Date(dayEnd);
+    rangeEnd.setDate(rangeEnd.getDate() + 1);
+
+    MediaLibrary.getAssetsAsync({
+      first: 8,
+      mediaType: ["photo"],
+      createdAfter: rangeStart.getTime(),
+      createdBefore: rangeEnd.getTime(),
+      sortBy: ["creationTime"],
+    })
+      .then((result) => { setSuggestedPhotos(result.assets.map((a) => a.uri)); })
+      .catch(() => { setSuggestedPhotos([]); });
+  }, [activity?.startDate]);
   const selectedLayer = layers.find((l) => l.id === selectedLayerId) ?? null;
 
   // Video player
@@ -272,8 +302,7 @@ function EditorContent() {
 
   // Open ToolPanel for layer styling
   const openLayerStyle = useCallback(() => {
-    setActiveToolSection("style");
-    setToolPanelVisible(true);
+    scrollRef.current?.scrollToEnd({ animated: true });
   }, []);
 
   // Handle adjustment change
@@ -309,213 +338,35 @@ function EditorContent() {
     return parts.length > 0 ? parts.join(" ") : undefined;
   }, [adjustments]);
 
-  // ── Build ToolPanel sections ──
+  // ── Build ToolPanel sections (photo adjustments only — style is inline) ──
   const toolSections: ToolSection[] = useMemo(() => {
-    const sections: ToolSection[] = [];
-
-    if (selectedLayer) {
-      sections.push({
-        id: "style",
-        title: "Style",
-        icon: "🎨",
-        content: (
-          <View style={{ gap: EditorSpace["2xl"] }}>
-            {/* Template info */}
-            <Text style={{
-              color: EditorColors.mutedText,
-              fontSize: EditorType.caption.size,
-              fontWeight: "600",
-            }}>
-              Template: {ALL_TEMPLATES.find((t) => t.id === selectedLayer.templateId)?.name ?? selectedLayer.templateId}
-            </Text>
-
-            {/* Font selection */}
-            <View>
-              <Text style={localStyles.sectionLabel}>FONT</Text>
-              <View style={{ flexDirection: "row", gap: 6, flexWrap: "wrap" }}>
-                {FONT_FAMILIES.map((ff) => (
-                  <TouchableOpacity
-                    key={ff.id}
-                    onPress={() => updateLayer(selectedLayer.id, { fontFamily: ff.id })}
-                    style={{
-                      paddingHorizontal: 14,
-                      paddingVertical: 8,
-                      borderRadius: EditorRadius.pill,
-                      backgroundColor: selectedLayer.fontFamily === ff.id
-                        ? EditorColors.primary
-                        : EditorColors.card,
-                      minHeight: EditorTouch.buttonSm,
-                      justifyContent: "center",
-                    }}
-                  >
-                    <Text style={{
-                      color: selectedLayer.fontFamily === ff.id ? "#fff" : EditorColors.foreground,
-                      fontSize: EditorType.caption.size,
-                      fontWeight: ff.id === "bold-system" ? "900" : ff.id === "light-system" ? "300" : "600",
-                    }}>
-                      {ff.name}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-
-            {/* Color presets */}
-            <View>
-              <Text style={localStyles.sectionLabel}>COLOR PRESETS</Text>
-              <View style={{ flexDirection: "row", gap: 10, flexWrap: "wrap" }}>
-                {ALL_PRESETS.map((preset) => {
-                  const isActive = selectedLayer.paletteId === preset.id;
-                  return (
-                    <TouchableOpacity
-                      key={preset.id}
-                      onPress={() => updateLayer(selectedLayer.id, { paletteId: preset.id })}
-                      style={{ alignItems: "center", gap: 4 }}
-                    >
-                      <View style={{
-                        width: 36, height: 36, borderRadius: 18,
-                        backgroundColor: preset.colors.accent,
-                        borderWidth: isActive ? 2.5 : 0,
-                        borderColor: isActive ? EditorColors.foreground : "transparent",
-                        alignItems: "center", justifyContent: "center",
-                      }}>
-                        {isActive && (
-                          <Text style={{ color: EditorColors.foreground, fontSize: 12, fontWeight: "800" }}>✓</Text>
-                        )}
-                      </View>
-                      <Text style={{
-                        color: EditorColors.mutedText,
-                        fontSize: 8,
-                        fontWeight: "600",
-                      }} numberOfLines={1}>
-                        {preset.name}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            </View>
-
-            {/* Custom colors */}
-            <View>
-              <Text style={localStyles.sectionLabel}>CUSTOM</Text>
-              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-                {CUSTOM_COLORS.map((hex) => (
-                  <TouchableOpacity
-                    key={hex}
-                    onPress={() => { updateLayer(selectedLayer.id, { paletteId: "custom" }); setToolPanelVisible(false); }}
-                    style={{
-                      width: 28, height: 28, borderRadius: 14,
-                      backgroundColor: hex,
-                      borderWidth: 1,
-                      borderColor: EditorColors.borderSolid,
-                    }}
-                  />
-                ))}
-              </View>
-            </View>
-
-            {/* Layer background style */}
-            <View>
-              <Text style={localStyles.sectionLabel}>BACKGROUND</Text>
-              <View style={{ flexDirection: "row", gap: 8 }}>
-                {([
-                  { id: 'none' as const,     label: 'None',     icon: '🚫', desc: 'Transparent' },
-                  { id: 'glass' as const,    label: 'Glass',    icon: '🪟', desc: 'Frosted' },
-                  { id: 'solid' as const,    label: 'Solid',    icon: '⬛', desc: 'Opaque' },
-                  { id: 'outlined' as const, label: 'Outline',  icon: '▫️', desc: 'Border only' },
-                ]).map((opt) => {
-                  const isActive = (selectedLayer.backgroundStyle ?? 'glass') === opt.id;
-                  return (
-                    <TouchableOpacity
-                      key={opt.id}
-                      onPress={() => updateLayer(selectedLayer.id, { backgroundStyle: opt.id })}
-                      style={{
-                        flex: 1, alignItems: "center", gap: 4,
-                        paddingVertical: 10, paddingHorizontal: 4,
-                        borderRadius: EditorRadius.card,
-                        backgroundColor: isActive ? EditorColors.primary + '20' : EditorColors.card,
-                        borderWidth: isActive ? 1 : 1,
-                        borderColor: isActive ? EditorColors.primary : EditorColors.border,
-                        minHeight: 56, justifyContent: "center",
-                      }}
-                    >
-                      <Text style={{ fontSize: 16 }}>{opt.icon}</Text>
-                      <Text style={{
-                        color: isActive ? EditorColors.primary : EditorColors.foreground,
-                        fontSize: 9, fontWeight: isActive ? "800" : "600",
-                      }}>{opt.label}</Text>
-                      <Text style={{
-                        color: EditorColors.mutedText,
-                        fontSize: 7, fontWeight: "500",
-                      }}>{opt.desc}</Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            </View>
-
-            {/* Layer actions */}
-            <View>
-              <Text style={localStyles.sectionLabel}>LAYER</Text>
-              <View style={{ flexDirection: "row", gap: 8 }}>
-                {[
-                  { label: "◀ Back", action: () => sendBackward(selectedLayer.id), color: EditorColors.foreground, bg: EditorColors.card },
-                  { label: "Forward ▶", action: () => bringForward(selectedLayer.id), color: EditorColors.foreground, bg: EditorColors.card },
-                  { label: "✕ Remove", action: () => { removeLayer(selectedLayer.id); setToolPanelVisible(false); }, color: EditorColors.destructive, bg: EditorColors.destructive + "20" },
-                ].map((btn) => (
-                  <TouchableOpacity
-                    key={btn.label}
-                    onPress={btn.action}
-                    style={{
-                      flex: 1, paddingVertical: 10, borderRadius: EditorRadius.card,
-                      backgroundColor: btn.bg, alignItems: "center",
-                      minHeight: EditorTouch.buttonSm, justifyContent: "center",
-                    }}
-                  >
-                    <Text style={{ color: btn.color, fontSize: EditorType.caption.size, fontWeight: "700" }}>
-                      {btn.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-          </View>
-        ),
-      });
-    }
-
-    // Photo adjustments (when photo is selected)
-    if (photoUri) {
-      sections.push({
-        id: "adjust",
-        title: "Adjust",
-        icon: "⚙️",
-        content: (
-          <View style={{ gap: EditorSpace.lg }}>
-            <Text style={{
-              color: EditorColors.mutedText,
-              fontSize: EditorType.caption.size,
-              fontWeight: "600",
-              marginBottom: 4,
-            }}>
-              Photo adjustments
-            </Text>
-            {PHOTO_ADJUSTMENTS.map((adj) => (
-              <AdjustmentSlider
-                key={adj.id}
-                adjustment={adj}
-                value={adjustments[adj.id] ?? adj.defaultValue}
-                onChange={handleAdjustment}
-              />
-            ))}
-          </View>
-        ),
-      });
-    }
-
-    return sections;
-  }, [selectedLayer, photoUri, adjustments, handleAdjustment, updateLayer, bringForward, sendBackward, removeLayer]);
+    if (!photoUri) return [];
+    return [{
+      id: "adjust",
+      title: "Adjust",
+      icon: "A",
+      content: (
+        <View style={{ gap: EditorSpace.lg }}>
+          <Text style={{
+            color: EditorColors.mutedText,
+            fontSize: EditorType.caption.size,
+            fontWeight: "600",
+            marginBottom: 4,
+          }}>
+            Photo adjustments
+          </Text>
+          {PHOTO_ADJUSTMENTS.map((adj) => (
+            <AdjustmentSlider
+              key={adj.id}
+              adjustment={adj}
+              value={adjustments[adj.id] ?? adj.defaultValue}
+              onChange={handleAdjustment}
+            />
+          ))}
+        </View>
+      ),
+    }];
+  }, [photoUri, adjustments, handleAdjustment]);
 
   // ════════════════════════════════════════════════════════
   // Loading state
@@ -640,7 +491,7 @@ function EditorContent() {
               : "Link your Strava account to turn workouts into beautiful posts"}
           </Text>
           {!stravaConnected && (
-            <StrideButton onPress={() => router.push("/(tabs)/profile")}>
+            <StrideButton onPress={() => router.push("/profile-screen")}>
               Connect Strava
             </StrideButton>
           )}
@@ -711,6 +562,7 @@ function EditorContent() {
 
         {/* ── Scrollable content ── */}
         <ScrollView
+          ref={scrollRef}
           style={{ flex: 1 }}
           contentContainerStyle={{ flexGrow: 1 }}
           keyboardShouldPersistTaps="handled"
@@ -845,6 +697,37 @@ function EditorContent() {
             )}
           </View>
 
+          {/* ══ Floating style toolbar (visible when a layer is selected) ══ */}
+          {selectedLayer && (
+            <Animated.View
+              entering={FadeIn.duration(EditorMotion.fast)}
+              style={localStyles.floatingToolbar}
+            >
+              {[
+                { icon: "S", label: "Style", onPress: openLayerStyle, color: EditorColors.primary },
+                { icon: "◀", label: "Back", onPress: () => sendBackward(selectedLayer.id), color: EditorColors.mutedText },
+                { icon: "▶", label: "Fwd", onPress: () => bringForward(selectedLayer.id), color: EditorColors.mutedText },
+                { icon: "×", label: "Delete", onPress: () => { removeLayer(selectedLayer.id); }, color: EditorColors.destructive },
+              ].map((btn) => (
+                <TouchableOpacity
+                  key={btn.label}
+                  onPress={btn.onPress}
+                  accessibilityRole="button"
+                  accessibilityLabel={btn.label}
+                  style={localStyles.floatingToolBtn}
+                >
+                  <Text style={{ fontSize: 14 }}>{btn.icon}</Text>
+                  <Text style={{
+                    color: btn.color,
+                    fontSize: 7,
+                    fontWeight: "700",
+                    textAlign: "center",
+                  }}>{btn.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </Animated.View>
+          )}
+
           {/* ══ Context bar: activity + period ══ */}
           <Animated.View entering={FadeIn.duration(EditorMotion.slow)} style={localStyles.contextBar}>
             <TouchableOpacity
@@ -902,6 +785,61 @@ function EditorContent() {
             </Animated.View>
           )}
 
+          {/* ══ Suggested gallery photos from activity date ══ */}
+          {suggestedPhotos.length > 0 && !photoUri && (
+            <Animated.View entering={FadeInDown.duration(EditorMotion.normal).delay(50)}>
+              <View style={{
+                paddingVertical: EditorSpace.sm,
+                borderBottomWidth: 1,
+                borderBottomColor: EditorColors.border,
+              }}>
+                <Text style={{
+                  color: EditorColors.mutedText,
+                  fontSize: 9,
+                  fontWeight: "700",
+                  letterSpacing: 1,
+                  textTransform: "uppercase",
+                  paddingHorizontal: EditorSpace.md,
+                  marginBottom: EditorSpace.sm,
+                }}>
+                  Suggested from your gallery
+                </Text>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={{
+                    paddingHorizontal: EditorSpace.md,
+                    gap: EditorSpace.sm,
+                  }}
+                >
+                  {suggestedPhotos.map((uri, i) => (
+                    <TouchableOpacity
+                      key={`suggested-${i}`}
+                      onPress={() => { setPhoto(uri); setIsVideoBg(false); }}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Use suggested photo ${i + 1}`}
+                      style={{
+                        width: 72,
+                        height: 72,
+                        borderRadius: EditorRadius.card,
+                        overflow: "hidden",
+                        borderWidth: 1,
+                        borderColor: EditorColors.border,
+                      }}
+                      activeOpacity={0.7}
+                    >
+                      <Animated.Image
+                        source={{ uri }}
+                        style={{ width: 72, height: 72 }}
+                        resizeMode="cover"
+                      />
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            </Animated.View>
+          )}
+
           {/* ══ Template strip — always visible horizontal scroll ══ */}
           <View style={{ paddingVertical: EditorSpace.sm }}>
             {/* Tab pills */}
@@ -951,7 +889,7 @@ function EditorContent() {
                   gap: EditorSpace.sm,
                 }}
                 decelerationRate="fast"
-                snapToInterval={152 + EditorSpace.sm}
+                snapToInterval={168 + EditorSpace.sm}
                 snapToAlignment="start"
               >
                 {filteredTemplates.map((tpl) => (
@@ -966,8 +904,8 @@ function EditorContent() {
                     accessibilityRole="button"
                     accessibilityLabel={`Add ${tpl.name} template`}
                     style={{
-                      width: 152,
-                      height: 180,
+                      width: 168,
+                      height: 200,
                       backgroundColor: EditorColors.card,
                       borderRadius: EditorRadius.card,
                       borderWidth: 1,
@@ -986,11 +924,11 @@ function EditorContent() {
                     }}>
                       {activity && (
                         <View style={{
-                          transform: [{ scale: 0.35 }],
+                          transform: [{ scale: 0.42 }],
                           width: 360,
                           height: 400,
                           position: "absolute",
-                          top: -40,
+                          top: -30,
                           left: -104,
                         }}>
                           {tpl.render(activity, totals)}
@@ -1000,8 +938,8 @@ function EditorContent() {
 
                     {/* Template name badge */}
                     <View style={{
-                      paddingHorizontal: 10,
-                      paddingVertical: 8,
+                      paddingHorizontal: 12,
+                      paddingVertical: 10,
                       backgroundColor: EditorColors.surface,
                       borderTopWidth: 1,
                       borderTopColor: EditorColors.border,
@@ -1011,15 +949,15 @@ function EditorContent() {
                         fontSize: EditorType.caption.size,
                         fontWeight: "700",
                       }} numberOfLines={1}>
-                        {tpl.name}
+                        {tpl.badge ? `${tpl.badge} · ` : ""}{tpl.name}
                       </Text>
                       <Text style={{
                         color: EditorColors.mutedText,
                         fontSize: 9,
                         fontWeight: "500",
-                        marginTop: 1,
+                        marginTop: 2,
                       }}>
-                        {tpl.tab === "activity" ? "Activity" : "Weekly totals"}
+                        {tpl.description ?? (tpl.tab === "activity" ? "Activity stat sticker" : "Weekly totals")}
                       </Text>
                     </View>
                   </TouchableOpacity>
@@ -1038,6 +976,25 @@ function EditorContent() {
               </View>
             )}
           </View>
+
+          {/* ══ Inline style panel (visible when a layer is selected) ══ */}
+          {selectedLayer && (
+            <Animated.View entering={FadeInDown.duration(EditorMotion.normal)} style={{
+              padding: EditorSpace.md,
+              borderBottomWidth: 1,
+              borderBottomColor: EditorColors.border,
+              backgroundColor: EditorColors.surface,
+            }}>
+              <LayerStylePanel
+                layer={selectedLayer}
+                onUpdateLayer={updateLayer}
+                onRemoveLayer={(id) => { removeLayer(id); }}
+                onBringForward={bringForward}
+                onSendBackward={sendBackward}
+                onClose={noop}
+              />
+            </Animated.View>
+          )}
         </ScrollView>
 
         {/* ══ Bottom action bar ══ */}
@@ -1064,7 +1021,7 @@ function EditorContent() {
               accessibilityLabel="Adjust photo"
               style={localStyles.actionIconBtn}
             >
-              <Text style={{ fontSize: 16 }}>⚙️</Text>
+              <Text style={{ fontSize: 16 }}>A</Text>
             </TouchableOpacity>
           )}
 
@@ -1126,7 +1083,7 @@ function EditorContent() {
           activeSectionId={activeToolSection}
           onSectionChange={setActiveToolSection}
           visible={toolPanelVisible}
-          onDismiss={() => setToolPanelVisible(false)}
+          onDismiss={closePanel}
         />
       </View>
     </ScreenContainer>
@@ -1426,5 +1383,25 @@ const localStyles = StyleSheet.create({
     marginBottom: 8,
     letterSpacing: 1,
     textTransform: "uppercase",
+  },
+
+  // Floating style toolbar
+  floatingToolbar: {
+    position: "absolute",
+    right: EditorSpace.xs,
+    top: 120,
+    gap: 4,
+    zIndex: 50,
+  },
+  floatingToolBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: EditorSemantic.glass,
+    borderWidth: 1,
+    borderColor: EditorSemantic.glassBorder,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 1,
   },
 });

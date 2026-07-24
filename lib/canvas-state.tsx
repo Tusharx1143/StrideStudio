@@ -140,7 +140,7 @@ export function CanvasProvider({ children }: { children: React.ReactNode }) {
         paletteId: DEFAULT_PRESET_ID,
         fontFamily: DEFAULT_FONT_FAMILY,
         zIndex: maxZ + 1,
-        backgroundStyle: 'glass',
+        backgroundStyle: 'none',
       };
       return [...prev, newLayer];
     });

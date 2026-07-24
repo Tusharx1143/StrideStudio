@@ -92,7 +92,7 @@ export function HomeEmptyState({ onSync }: HomeEmptyStateProps) {
         style={{ marginTop: 24 }}
       >
         {!stravaConnected ? (
-          <StrideButton onPress={() => router.push("/(tabs)/profile")}>
+          <StrideButton onPress={() => router.push("/profile-screen")}>
             Connect Strava
           </StrideButton>
         ) : (

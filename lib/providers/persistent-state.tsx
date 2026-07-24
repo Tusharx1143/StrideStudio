@@ -96,15 +96,16 @@ export function PersistentStateProvider({ children }: { children: ReactNode }) {
     setStatToggle: (key, v) => setStatToggles((prev) => ({ ...prev, [key]: v })),
     incrementSavedPosts: () => setSavedPostsCount((c) => c + 1),
     getSelectedActivity: () => {
+      if (activities.length === 0) {
+        console.warn("[PersistentState] getSelectedActivity called with no activities available — returning fallback.");
+        return { id: "", stravaId: 0, type: "run", title: "", distance: 0, duration: 0, elapsedTime: 0, date: "", startDate: "", hasHeartrate: false } as Activity;
+      }
       const found = activities.find((a) => a.id === selectedActivityId);
       if (found) return found;
-      if (activities.length > 0) {
-        console.warn(
-          `[PersistentState] Selected activity "${selectedActivityId}" not found in ${activities.length} activities, falling back to first.`,
-        );
-        return activities[0];
-      }
-      throw new Error("[PersistentState] getSelectedActivity called with no activities available");
+      console.warn(
+        `[PersistentState] Selected activity "${selectedActivityId}" not found in ${activities.length} activities, falling back to first.`,
+      );
+      return activities[0];
     },
   };
 

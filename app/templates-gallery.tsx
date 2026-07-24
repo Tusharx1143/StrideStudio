@@ -130,7 +130,7 @@ export default function TemplatesScreen() {
           </Text>
           {!stravaConnected && (
             <View style={{ marginTop: 20 }}>
-              <StrideButton onPress={() => router.push("/(tabs)/profile")}>
+              <StrideButton onPress={() => router.push("/profile-screen")}>
                 Connect Strava
               </StrideButton>
             </View>

@@ -6,7 +6,7 @@
  * serves as the single accent against deep near-black backgrounds.
  *
  * Auth flow:
- *   1. Check if Strava is already connected → redirect to /(tabs)
+ *   1. Check if Strava is already connected → redirect to /home
  *   2. Show landing page with "Connect with Strava" CTA
  *   3. Redirect to backend /api/strava/auth to initiate OAuth
  */
@@ -166,7 +166,7 @@ export default function LandingPage() {
   // branded loading state while the tRPC status check is in flight (~300ms).
   useEffect(() => {
     if (!loading && stravaConnected) {
-      router.replace("/(tabs)");
+      router.replace("/home");
       return;
     }
     // Brief delay so the entrance animation doesn't fight the status check

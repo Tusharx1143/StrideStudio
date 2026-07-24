@@ -122,7 +122,7 @@ export function HeroHeader({ scrollY }: HeroHeaderProps) {
 
           {/* Avatar button */}
           <TouchableOpacity
-            onPress={() => router.push("/(tabs)/profile")}
+            onPress={() => router.push("/profile-screen")}
             accessibilityRole="button"
             accessibilityLabel="View profile"
           >
