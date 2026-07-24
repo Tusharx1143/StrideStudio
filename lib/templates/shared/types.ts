@@ -6,7 +6,7 @@ import type { TemplateColors } from "@/lib/color-presets";
 
 export interface WeekTotals {
   runKm: number;
-  walkKm: number;
+  otherKm: number;
   totalKm: number;
   totalMinutes: number;
   items: { day: string; km: number; type: string }[];

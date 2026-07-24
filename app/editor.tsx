@@ -143,6 +143,7 @@ export default function EditorScreen() {
     layers, selectedLayerId, photoUri,
     addLayer, removeLayer, updateLayer,
     bringForward, sendBackward, selectLayer, setPhoto, resetCanvas,
+    canUndo, canRedo, undo, redo,
   } = useCanvas();
 
   // ── Local state ──
@@ -580,6 +581,26 @@ export default function EditorScreen() {
           >
             <Text style={localStyles.backArrow}>‹</Text>
           </TouchableOpacity>
+
+          {/* Undo / Redo */}
+          <View style={{ flexDirection: "row", gap: 2 }}>
+            <TouchableOpacity
+              onPress={undo}
+              disabled={!canUndo}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              style={[localStyles.undoRedoBtn, !canUndo && { opacity: 0.3 }]}
+            >
+              <Text style={localStyles.undoRedoText}>↩</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={redo}
+              disabled={!canRedo}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              style={[localStyles.undoRedoBtn, !canRedo && { opacity: 0.3 }]}
+            >
+              <Text style={localStyles.undoRedoText}>↪</Text>
+            </TouchableOpacity>
+          </View>
 
           <Text style={localStyles.topTitle}>Create Post</Text>
 
@@ -1057,6 +1078,19 @@ const localStyles = StyleSheet.create({
     fontSize: EditorType.heading.size,
     fontWeight: EditorType.heading.weight,
     textAlign: "center",
+  },
+  undoRedoBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: EditorColors.surface,
+  },
+  undoRedoText: {
+    color: EditorColors.foreground,
+    fontSize: 16,
+    fontWeight: "600",
   },
   styleButton: {
     flexDirection: "row",

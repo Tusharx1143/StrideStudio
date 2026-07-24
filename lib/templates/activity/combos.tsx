@@ -21,7 +21,7 @@ import { fmtDateShort, fmtDateFull, fmtTime12, fmtWeekday, paceStr, timeStr } fr
 
 export interface WeekTotals {
   runKm: number;
-  walkKm: number;
+  otherKm: number;
   totalKm: number;
   totalMinutes: number;
   items: { day: string; km: number; type: string }[];

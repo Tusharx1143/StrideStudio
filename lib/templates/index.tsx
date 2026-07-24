@@ -21,7 +21,7 @@ import { fmtDateShort, fmtDateFull, fmtTime12, fmtWeekday, paceStr, timeStr } fr
 
 export interface WeekTotals {
   runKm: number;
-  walkKm: number;
+  otherKm: number;
   totalKm: number;
   totalMinutes: number;
   items: { day: string; km: number; type: string }[];
@@ -80,12 +80,12 @@ export const DYNAMIC_TEMPLATES: TemplateDef[] = [
  */
 export function computeWeekTotals(activities: Activity[]): WeekTotals {
   const runKm = activities.filter((a) => a.type === "run").reduce((s, a) => s + a.distance, 0);
-  const walkKm = activities.filter((a) => a.type !== "run").reduce((s, a) => s + a.distance, 0);
+  const otherKm = activities.filter((a) => a.type !== "run").reduce((s, a) => s + a.distance, 0);
   const totalMinutes = activities.reduce((s, a) => s + a.duration, 0);
   return {
     runKm,
-    walkKm,
-    totalKm: runKm + walkKm,
+    otherKm,
+    totalKm: runKm + otherKm,
     totalMinutes,
     items: activities.map((a) => ({ day: a.date, km: a.distance, type: a.type === "ride" ? "ride" : a.type })),
   };

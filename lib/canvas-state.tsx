@@ -5,7 +5,7 @@
  * positioned on the photo canvas. State is ephemeral (session-only).
  */
 
-import React, { createContext, useContext, useCallback, useState } from "react";
+import React, { createContext, useContext, useCallback, useState, useRef } from "react";
 import { DEFAULT_PRESET_ID, DEFAULT_FONT_FAMILY, type FontFamily } from "./color-presets";
 
 // ── Types ──
@@ -34,10 +34,19 @@ export interface CanvasLayer {
   backgroundStyle: LayerBackground;
 }
 
+/** Snapshot of canvas state for undo/redo history */
+interface CanvasSnapshot {
+  layers: CanvasLayer[];
+  selectedLayerId: string | null;
+  photoUri: string | null;
+}
+
 interface CanvasState {
   layers: CanvasLayer[];
   selectedLayerId: string | null;
   photoUri: string | null;
+  canUndo: boolean;
+  canRedo: boolean;
   addLayer: (templateId: string) => void;
   removeLayer: (id: string) => void;
   updateLayer: (id: string, patch: Partial<CanvasLayer>) => void;
@@ -46,6 +55,8 @@ interface CanvasState {
   selectLayer: (id: string | null) => void;
   setPhoto: (uri: string | null) => void;
   resetCanvas: () => void;
+  undo: () => void;
+  redo: () => void;
 }
 
 // ── Helpers ──
@@ -68,31 +79,79 @@ export function CanvasProvider({ children }: { children: React.ReactNode }) {
   const [selectedLayerId, setSelectedLayerId] = useState<string | null>(null);
   const [photoUri, setPhotoUri] = useState<string | null>(null);
 
+  // ── Undo / Redo history ──
+  const pastRef = useRef<CanvasSnapshot[]>([]);
+  const futureRef = useRef<CanvasSnapshot[]>([]);
+  const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
+
+  /** Snapshot current canvas state before mutation */
+  const pushHistory = useCallback(() => {
+    pastRef.current.push({
+      layers: JSON.parse(JSON.stringify(layers)),
+      selectedLayerId,
+      photoUri,
+    });
+    // Cap history at 50 entries
+    if (pastRef.current.length > 50) pastRef.current.shift();
+    futureRef.current = [];
+    setCanUndo(true);
+    setCanRedo(false);
+  }, [layers, selectedLayerId, photoUri]);
+
+  const undo = useCallback(() => {
+    const prev = pastRef.current.pop();
+    if (!prev) return;
+    // Save current state to future stack
+    futureRef.current.push({ layers: JSON.parse(JSON.stringify(layers)), selectedLayerId, photoUri });
+    setLayers(prev.layers);
+    setSelectedLayerId(prev.selectedLayerId);
+    setPhotoUri(prev.photoUri);
+    setCanUndo(pastRef.current.length > 0);
+    setCanRedo(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [layers, selectedLayerId, photoUri]);
+
+  const redo = useCallback(() => {
+    const next = futureRef.current.pop();
+    if (!next) return;
+    // Save current state to past stack
+    pastRef.current.push({ layers: JSON.parse(JSON.stringify(layers)), selectedLayerId, photoUri });
+    setLayers(next.layers);
+    setSelectedLayerId(next.selectedLayerId);
+    setPhotoUri(next.photoUri);
+    setCanUndo(true);
+    setCanRedo(futureRef.current.length > 0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [layers, selectedLayerId, photoUri]);
+
   const addLayer = useCallback((templateId: string) => {
     const id = genId();
-    // Start centred, at z-index just above the topmost layer
-    const maxZ = layers.length > 0 ? Math.max(...layers.map((l) => l.zIndex)) : 0;
-    const newLayer: CanvasLayer = {
-      id,
-      templateId,
-      x: 0.5,
-      y: 0.5,
-      scale: 1,
-      rotation: 0,
-      paletteId: DEFAULT_PRESET_ID,
-      fontFamily: DEFAULT_FONT_FAMILY,
-      zIndex: maxZ + 1,
-      backgroundStyle: 'glass',
-    };
-    setLayers((prev) => [...prev, newLayer]);
+    setLayers((prev) => {
+      // Compute maxZ from prev (functional updater) to avoid stale-closure bugs
+      const maxZ = prev.length > 0 ? Math.max(...prev.map((l) => l.zIndex)) : 0;
+      const newLayer: CanvasLayer = {
+        id,
+        templateId,
+        x: 0.5,
+        y: 0.5,
+        scale: 1,
+        rotation: 0,
+        paletteId: DEFAULT_PRESET_ID,
+        fontFamily: DEFAULT_FONT_FAMILY,
+        zIndex: maxZ + 1,
+        backgroundStyle: 'glass',
+      };
+      return [...prev, newLayer];
+    });
     setSelectedLayerId(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [layers]);
+  }, []);
 
   const removeLayer = useCallback((id: string) => {
+    pushHistory();
     setLayers((prev) => prev.filter((l) => l.id !== id));
     setSelectedLayerId((prev) => (prev === id ? null : prev));
-  }, []);
+  }, [pushHistory]);
 
   const updateLayer = useCallback((id: string, patch: Partial<CanvasLayer>) => {
     setLayers((prev) => prev.map((l) => (l.id === id ? { ...l, ...patch } : l)));
@@ -125,19 +184,23 @@ export function CanvasProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const setPhoto = useCallback((uri: string | null) => {
+    pushHistory();
     setPhotoUri(uri);
-  }, []);
+  }, [pushHistory]);
 
   const resetCanvas = useCallback(() => {
+    pushHistory();
     setLayers([]);
     setSelectedLayerId(null);
     setPhotoUri(null);
-  }, []);
+  }, [pushHistory]);
 
   const value: CanvasState = {
     layers,
     selectedLayerId,
     photoUri,
+    canUndo,
+    canRedo,
     addLayer,
     removeLayer,
     updateLayer,
@@ -146,6 +209,8 @@ export function CanvasProvider({ children }: { children: React.ReactNode }) {
     selectLayer,
     setPhoto,
     resetCanvas,
+    undo,
+    redo,
   };
 
   return <CanvasContext.Provider value={value}>{children}</CanvasContext.Provider>;

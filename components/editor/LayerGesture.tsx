@@ -25,7 +25,7 @@ interface LayerGestureProps {
   onDragOverDelete?: (over: boolean) => void;
 }
 
-export function LayerGesture({ layer, canvasH, onDragStart, onDragEnd, onDragOverDelete }: LayerGestureProps) {
+export const LayerGesture = React.memo(function LayerGesture({ layer, canvasH, onDragStart, onDragEnd, onDragOverDelete }: LayerGestureProps) {
   const colors = useColors();
   const { selectedLayerId, selectLayer, updateLayer, removeLayer } = useCanvas();
   const app = useApp();
@@ -111,4 +111,4 @@ export function LayerGesture({ layer, canvasH, onDragStart, onDragEnd, onDragOve
       </Animated.View>
     </GestureDetector>
   );
-}
+});

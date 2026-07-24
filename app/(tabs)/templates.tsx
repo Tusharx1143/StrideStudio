@@ -1,5 +1,5 @@
-import { ScrollView, Text, View, TouchableOpacity, Platform } from "react-native";
-import { useState, useRef, useCallback } from "react";
+import { ScrollView, Text, View, TouchableOpacity, Platform, TextInput } from "react-native";
+import { useState, useRef, useCallback, useMemo } from "react";
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { captureRef } from "react-native-view-shot";
@@ -11,18 +11,35 @@ import { useColors } from "@/hooks/use-colors";
 import { StrideButton } from "@/components/stride-button";
 import { AnimatedToast } from "@/components/animated-toast";
 import { TemplateCardSkeleton } from "@/components/skeleton";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 export default function TemplatesScreen() {
   const router = useRouter();
   const colors = useColors();
   const { activities, loading, stravaConnected, getSelectedActivity } = useApp();
   const [filter, setFilter] = useState<"all" | "activity" | "totals">("all");
+  const [search, setSearch] = useState("");
+  const [sortBy, setSortBy] = useState<"default" | "name-asc" | "name-desc">("default");
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
   const capturingId = useRef<string | null>(null);
 
   const activity = getSelectedActivity();
   const totals = computeWeekTotals(activities);
-  const templates = ALL_TEMPLATES.filter((t) => filter === "all" || t.tab === filter);
+  const templates = useMemo(() => {
+    let filtered = ALL_TEMPLATES.filter((t) => filter === "all" || t.tab === filter);
+    if (search.trim()) {
+      const q = search.toLowerCase().trim();
+      filtered = filtered.filter(
+        (t) => t.name.toLowerCase().includes(q) || t.description.toLowerCase().includes(q),
+      );
+    }
+    if (sortBy === "name-asc") {
+      filtered = [...filtered].sort((a, b) => a.name.localeCompare(b.name));
+    } else if (sortBy === "name-desc") {
+      filtered = [...filtered].sort((a, b) => b.name.localeCompare(a.name));
+    }
+    return filtered;
+  }, [filter, search, sortBy]);
 
   const showToast = useCallback((message: string, type: "success" | "error" | "info" = "info") => {
     setToast({ message, type });
@@ -151,6 +168,69 @@ export default function TemplatesScreen() {
           ))}
         </View>
 
+        {/* Search + sort bar */}
+        <View style={{ paddingHorizontal: 16, marginBottom: 8, gap: 8 }}>
+          <View style={{
+            flexDirection: "row",
+            alignItems: "center",
+            backgroundColor: colors.surface,
+            borderRadius: 12,
+            paddingHorizontal: 14,
+            borderWidth: 1,
+            borderColor: colors.border,
+          }}>
+            <Text style={{ color: colors.muted, fontSize: 14, marginRight: 8 }}>🔍</Text>
+            <TextInput
+              placeholder="Search templates..."
+              placeholderTextColor={colors.muted}
+              value={search}
+              onChangeText={setSearch}
+              style={{
+                flex: 1,
+                color: colors.foreground,
+                fontSize: 14,
+                paddingVertical: 10,
+                minHeight: 44,
+              }}
+              clearButtonMode="while-editing"
+            />
+            {search.length > 0 && (
+              <TouchableOpacity onPress={() => setSearch("")} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <Text style={{ color: colors.muted, fontSize: 16 }}>✕</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+            <Text style={{ color: colors.muted, fontSize: 12, fontWeight: "600" }}>
+              {templates.length} template{templates.length !== 1 ? "s" : ""}
+            </Text>
+            <TouchableOpacity
+              onPress={() => setSortBy((s) => s === "name-asc" ? "name-desc" : s === "name-desc" ? "default" : "name-asc")}
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 4,
+                paddingHorizontal: 10,
+                paddingVertical: 4,
+                borderRadius: 8,
+                backgroundColor: sortBy !== "default" ? colors.foreground + "15" : "transparent",
+              }}
+            >
+              <Text style={{ fontSize: 12 }}>
+                {sortBy === "name-asc" ? "↓" : sortBy === "name-desc" ? "↑" : "↕"}
+              </Text>
+              <Text style={{
+                color: sortBy !== "default" ? colors.foreground : colors.muted,
+                fontSize: 11,
+                fontWeight: "600",
+              }}>
+                {sortBy === "name-asc" ? "A–Z" : sortBy === "name-desc" ? "Z–A" : "Sort"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
         <ScrollView contentContainerStyle={{ padding: 10, paddingBottom: 40 }}>
           <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
             {templates.map((t) => (
@@ -179,7 +259,11 @@ export default function TemplatesScreen() {
                     }
                   }}
                 >
-                  {activity && t.render(activity, totals, t.lightCard ? BRIGHT_WHITE.colors : undefined)}
+                  {activity && (
+                    <ErrorBoundary>
+                      {t.render(activity, totals, t.lightCard ? BRIGHT_WHITE.colors : undefined)}
+                    </ErrorBoundary>
+                  )}
                 </TouchableOpacity>
                 <Text style={{ color: colors.muted, fontSize: 10, textAlign: "center", marginTop: 4 }}>{t.name}</Text>
               </View>
