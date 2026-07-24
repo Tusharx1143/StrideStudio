@@ -1,5 +1,8 @@
+import { parse as parseCookieHeader } from "cookie";
+import { COOKIE_NAME } from "../../shared/const";
 import type { Express, Request, Response } from "express";
 import { strava } from "./strava";
+import { sdk } from "./sdk";
 
 /**
  * Strava OAuth routes — handles the authorize → callback → token flow.
@@ -10,8 +13,8 @@ import { strava } from "./strava";
  *   3. Backend exchanges code for tokens, stores them
  *   4. Backend redirects back to frontend with ?strava=connected
  *
- * For local dev the user is identified by a simple "userId" state param.
- * In production this would be tied to your session/JWT system.
+ * User identity is resolved from the JWT session cookie via sdk.verifySession().
+ * Falls back to "default" only when no session is present (unauthenticated/dev).
  */
 
 const DEFAULT_USER_ID = "default";
@@ -20,21 +23,34 @@ const FRONTEND_URL = "http://localhost:8081";
 // Expo Router maps filesystem routes like app/(tabs)/profile.tsx to /profile on web
 const CALLBACK_PATH = "/profile";
 
-function getUserId(req: Request): string {
-  // Could read from session cookie here in production
+async function getUserId(req: Request): Promise<string> {
+  // Extract the app_session_id cookie and verify it to get the real openId
+  const cookieHeader = req.headers.cookie;
+  if (cookieHeader) {
+    try {
+      const cookies = parseCookieHeader(cookieHeader);
+      const sessionToken = cookies[COOKIE_NAME];
+      if (sessionToken) {
+        const session = await sdk.verifySession(sessionToken);
+        if (session?.openId) return session.openId;
+      }
+    } catch {
+      // Fall through to default
+    }
+  }
   return DEFAULT_USER_ID;
 }
 
 export function registerStravaOAuthRoutes(app: Express) {
   // ── Step 1: Initiate Strava OAuth ──
-  app.get("/api/strava/auth", (_req: Request, res: Response) => {
+  app.get("/api/strava/auth", async (_req: Request, res: Response) => {
     if (!strava.getAuthorizationUrl) {
       // Defensive: shouldn't happen, but type-safe handling
       res.status(500).json({ error: "Strava SDK not initialized" });
       return;
     }
 
-    const userId = getUserId(_req);
+    const userId = await getUserId(_req);
     const redirectUri = `${API_URL}/api/strava/callback`;
     const authUrl = strava.getAuthorizationUrl(userId, redirectUri);
     res.redirect(302, authUrl);
@@ -65,7 +81,7 @@ export function registerStravaOAuthRoutes(app: Express) {
   // ── Check connection status ──
   app.get("/api/strava/status", async (req: Request, res: Response) => {
     try {
-      const userId = getUserId(req);
+      const userId = await getUserId(req);
       const status = await strava.getConnectionStatus(userId);
 
       if (status.connected) {
@@ -94,7 +110,7 @@ export function registerStravaOAuthRoutes(app: Express) {
   // ── Disconnect Strava ──
   app.post("/api/strava/disconnect", async (req: Request, res: Response) => {
     try {
-      const userId = getUserId(req);
+      const userId = await getUserId(req);
       await strava.disconnect(userId);
       res.json({ success: true });
     } catch (error) {
@@ -106,7 +122,7 @@ export function registerStravaOAuthRoutes(app: Express) {
   // ── Fetch activities ──
   app.get("/api/strava/activities", async (req: Request, res: Response) => {
     try {
-      const userId = getUserId(req);
+      const userId = await getUserId(req);
       const page = parseInt(req.query.page as string) || 1;
       const perPage = parseInt(req.query.per_page as string) || 30;
 

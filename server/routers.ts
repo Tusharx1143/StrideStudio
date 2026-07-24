@@ -22,13 +22,14 @@ export const appRouter = router({
   // ─── Strava Integration ───────────────────────────────────────────────
   strava: router({
     /** Check if the user has Strava connected */
-    status: publicProcedure.query(async () => {
-      const status = await strava.getConnectionStatus("default");
+    status: publicProcedure.query(async ({ ctx }) => {
+      const userId = ctx.user?.openId ?? "default";
+      const status = await strava.getConnectionStatus(userId);
       if (!status.connected) {
         return { connected: false, athlete: null };
       }
       try {
-        const athlete = await strava.getAthlete("default");
+        const athlete = await strava.getAthlete(userId);
         return {
           connected: true,
           athlete: {
@@ -57,11 +58,12 @@ export const appRouter = router({
             })
             .partial(),
         )
-        .query(async ({ input }) => {
+        .query(async ({ ctx, input }) => {
+          const userId = ctx.user?.openId ?? "default";
           const page = input.page ?? 1;
           const perPage = input.perPage ?? 30;
           const activities = await strava.getActivities(
-            "default",
+            userId,
             page,
             perPage,
           );
@@ -72,14 +74,16 @@ export const appRouter = router({
     /** Get a single activity by Strava ID */
     activityById: publicProcedure
       .input(z.object({ id: z.number() }))
-      .query(async ({ input }) => {
-        const activity = await strava.getActivityById("default", input.id);
+      .query(async ({ ctx, input }) => {
+        const userId = ctx.user?.openId ?? "default";
+        const activity = await strava.getActivityById(userId, input.id);
         return { activity };
       }),
 
     /** Get full athlete profile */
-    athlete: publicProcedure.query(async () => {
-      const athlete = await strava.getAthlete("default");
+    athlete: publicProcedure.query(async ({ ctx }) => {
+      const userId = ctx.user?.openId ?? "default";
+      const athlete = await strava.getAthlete(userId);
       return { athlete };
     }),
   }),
