@@ -108,8 +108,7 @@ describe("computeWeekStats", () => {
     expect(stats.activitiesCount).toBe(0);
   });
 
-  it("computes totals for activities this week", () => {
-    const today = new Date();
+  it("computes totals from the given activities without date filtering", () => {
     const activities = [
       makeActivity({ type: "run", distance: 5, duration: 25 }),
       makeActivity({ type: "run", distance: 3, duration: 15, id: "t2", stravaId: 101 }),
@@ -124,7 +123,6 @@ describe("computeWeekStats", () => {
   });
 
   it("counts workouts separately", () => {
-    const today = new Date();
     const activities = [
       makeActivity({ type: "workout", distance: 0, duration: 60, id: "w1", stravaId: 200 }),
     ];
@@ -133,11 +131,12 @@ describe("computeWeekStats", () => {
     expect(stats.totalKm).toBe(0);
   });
 
-  it("excludes activities from previous weeks", () => {
+  it("includes all activities regardless of date (caller must pre-filter)", () => {
     const lastWeek = new Date(Date.now() - 8 * 86400 * 1000).toISOString();
     const activities = [makeActivity({ startDate: lastWeek })];
     const stats = computeWeekStats(activities);
-    expect(stats.activitiesCount).toBe(0);
+    // computeWeekStats no longer filters by date — it trusts the caller
+    expect(stats.activitiesCount).toBe(1);
   });
 });
 

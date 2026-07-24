@@ -14,18 +14,19 @@ export function filterActivitiesByPeriod(activities: Activity[], period: PeriodI
   const today = now.toDateString();
   const monday = new Date(now);
   monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
-  const mondayStr = monday.toDateString();
+  monday.setHours(0, 0, 0, 0);
   return activities.filter((a) => {
     if (!a.startDate) return true;
-    const d = new Date(a.startDate).toDateString();
+    const d = new Date(a.startDate);
     switch (period) {
-      case "today": return d === today;
-      case "week": return d >= mondayStr;
+      case "today": return d.toDateString() === today;
+      case "week": {
+        const dStart = new Date(d);
+        dStart.setHours(0, 0, 0, 0);
+        return dStart.getTime() >= monday.getTime();
+      }
       case "month":
-        return (
-          new Date(a.startDate).getMonth() === now.getMonth() &&
-          new Date(a.startDate).getFullYear() === now.getFullYear()
-        );
+        return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
       default: return true;
     }
   });

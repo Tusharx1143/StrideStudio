@@ -96,7 +96,15 @@ export default function ProfileScreen() {
   const [notifications, setNotifications] = useState(true);
   const [connecting, setConnecting] = useState(false);
 
-  const weekStats = useMemo(() => computeWeekStats(activities), [activities]);
+  // Pre-filter to current week since computeWeekStats no longer does this internally
+  const weekActivities = useMemo(() => {
+    const now = new Date();
+    const monday = new Date(now);
+    monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
+    monday.setHours(0, 0, 0, 0);
+    return activities.filter((a) => a.startDate && new Date(a.startDate) >= monday);
+  }, [activities]);
+  const weekStats = useMemo(() => computeWeekStats(weekActivities), [weekActivities]);
   const achievements = useMemo(() => computeAchievements(activities), [activities]);
   const goalProgress = Math.min(weekStats.totalKm / WEEKLY_GOAL_KM, 1);
 

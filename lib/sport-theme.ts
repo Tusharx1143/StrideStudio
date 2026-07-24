@@ -147,7 +147,7 @@ export function getAnimationConfig(type: SportType): AnimationConfig {
   return ANIMATION_CONFIG[type] ?? ANIMATION_CONFIG.workout;
 }
 
-/** Compute weekly totals for goal tracking */
+/** Compute totals for the given set of activities (no date filtering — pass pre-filtered data as needed) */
 export interface WeekStats {
   totalKm: number;
   totalMinutes: number;
@@ -158,19 +158,12 @@ export interface WeekStats {
 }
 
 export function computeWeekStats(activities: Activity[]): WeekStats {
-  const now = new Date();
-  const monday = new Date(now);
-  monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
-  monday.setHours(0, 0, 0, 0);
-
-  const weekActs = activities.filter((a) => new Date(a.startDate) >= monday);
-
   return {
-    totalKm: weekActs.reduce((s, a) => s + a.distance, 0),
-    totalMinutes: weekActs.reduce((s, a) => s + a.duration, 0),
-    runKm: weekActs.filter((a) => a.type === "run").reduce((s, a) => s + a.distance, 0),
-    rideKm: weekActs.filter((a) => a.type === "ride").reduce((s, a) => s + a.distance, 0),
-    workoutCount: weekActs.filter((a) => a.type === "workout").length,
-    activitiesCount: weekActs.length,
+    totalKm: activities.reduce((s, a) => s + a.distance, 0),
+    totalMinutes: activities.reduce((s, a) => s + a.duration, 0),
+    runKm: activities.filter((a) => a.type === "run").reduce((s, a) => s + a.distance, 0),
+    rideKm: activities.filter((a) => a.type === "ride").reduce((s, a) => s + a.distance, 0),
+    workoutCount: activities.filter((a) => a.type === "workout").length,
+    activitiesCount: activities.length,
   };
 }

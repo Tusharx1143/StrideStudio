@@ -138,23 +138,29 @@ function EditorContent() {
   const canvasRef = useRef<any>(null);
   const scrollRef = useRef<ScrollView>(null);
   const filteredActivities = useMemo(
-    () => activities.filter((a) => {
-      if (periodFilter === "all") return true;
-      if (!a.startDate) return false;
-      const d = new Date(a.startDate);
+    () => {
       const now = new Date();
       const today = now.toDateString();
       const monday = new Date(now);
       monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
-      const mondayStr = monday.toDateString();
-      switch (periodFilter) {
-        case "today": return d.toDateString() === today;
-        case "week": return d.toDateString() >= mondayStr;
-        case "month":
-          return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-        default: return true;
-      }
-    }),
+      monday.setHours(0, 0, 0, 0);
+      return activities.filter((a) => {
+        if (periodFilter === "all") return true;
+        if (!a.startDate) return false;
+        const d = new Date(a.startDate);
+        switch (periodFilter) {
+          case "today": return d.toDateString() === today;
+          case "week": {
+            const dStart = new Date(d);
+            dStart.setHours(0, 0, 0, 0);
+            return dStart.getTime() >= monday.getTime();
+          }
+          case "month":
+            return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+          default: return true;
+        }
+      });
+    },
     [activities, periodFilter],
   );
   const totals = useMemo(() => computeWeekTotals(filteredActivities), [filteredActivities]);
