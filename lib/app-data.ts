@@ -1,11 +1,37 @@
 /**
  * Core types for the StrideStudio app.
- * Activities are now fetched live from Strava via the backend.
+ * Activities are now fetched live from Strava directly (client-side PKCE).
  * No mock data.
  */
 
-import type { Activity } from "@/shared/types";
-export type { Activity };
+// ── Activity (primary domain type) ──────────────────────────────────────────
+
+export interface Activity {
+  id: string;
+  stravaId: number;
+  type: "run" | "ride" | "workout";
+  title: string;
+  distance: number; // km
+  duration: number; // minutes (moving time)
+  elapsedTime: number; // minutes (total elapsed)
+  date: string;
+  startDate: string; // ISO 8601
+  pace?: number; // min/km
+  speed?: number; // km/h
+  maxSpeed?: number; // km/h
+  elevation?: number; // meters
+  heartRate?: number; // avg bpm
+  maxHeartRate?: number;
+  calories?: number;
+  averageTemp?: number;
+  hasHeartrate: boolean;
+  sufferScore?: number;
+  startLatlng?: [number, number];
+  summaryPolyline?: string;
+  deviceName?: string;
+}
+
+// ── Period + Filter ─────────────────────────────────────────────────────────
 
 export type PeriodId = "all" | "today" | "week" | "month";
 

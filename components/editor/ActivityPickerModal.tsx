@@ -13,7 +13,7 @@ import {
   StyleSheet,
 } from "react-native";
 import { typeEmoji } from "@/lib/templates/shared/helpers";
-import type { Activity } from "@/shared/types";
+import type { Activity } from "@/lib/app-data";
 import {
   EditorColors,
   EditorSemantic,

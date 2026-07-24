@@ -8,10 +8,10 @@
  * Auth flow:
  *   1. Check if Strava is already connected → redirect to /home
  *   2. Show landing page with "Connect with Strava" CTA
- *   3. Redirect to backend /api/strava/auth to initiate OAuth
+ *   3. Generate PKCE challenge + redirect to Strava OAuth directly
  */
 
-import { Text, View, TouchableOpacity, Platform, Linking } from "react-native";
+import { Text, View, TouchableOpacity, Platform } from "react-native";
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
@@ -22,9 +22,16 @@ import Animated, {
   FadeInUp,
 } from "react-native-reanimated";
 import Svg, { Circle, Line, Path, Polyline } from "react-native-svg";
+import * as Linking from "expo-linking";
 import { useApp } from "@/lib/app-context";
-import { API_BASE } from "@/lib/config";
 import { useColors } from "@/hooks/use-colors";
+import {
+  generateCodeVerifier,
+  generateCodeChallenge,
+  buildStravaAuthUrl,
+  storeCodeVerifier,
+  clearStoredCodeVerifier,
+} from "@/lib/strava-oauth";
 
 // ── Background Art ──────────────────────────────────────────────────────────
 // Abstract geometric composition suggesting movement, routes, and data.
@@ -174,19 +181,36 @@ export default function LandingPage() {
     return () => clearTimeout(t);
   }, [stravaConnected, loading, router]);
 
-  // ── Connect handler ──
+  // ── Connect handler (PKCE OAuth — no server needed) ──
   const handleConnect = useCallback(async () => {
     setConnecting(true);
     try {
+      // 1. Generate PKCE values
+      const codeVerifier = generateCodeVerifier();
+      const codeChallenge = await generateCodeChallenge(codeVerifier);
+
+      // 2. Store code_verifier (retrieved after Strava redirects back)
+      await storeCodeVerifier(codeVerifier);
+
+      // 3. Build the redirect URI (uses custom scheme on native, web URL on web)
+      const redirectUri = Linking.createURL("/oauth/callback");
+
+      // 4. Random state for CSRF protection
+      const state = generateCodeVerifier().slice(0, 32);
+
+      // 5. Build and open Strava authorization URL
+      const authUrl = buildStravaAuthUrl(codeChallenge, redirectUri, state);
+
       if (Platform.OS === "web") {
-        window.location.href = `${API_BASE}/api/strava/auth`;
+        window.location.href = authUrl;
       } else {
-        const supported = await Linking.canOpenURL(`${API_BASE}/api/strava/auth`);
-        if (supported) await Linking.openURL(`${API_BASE}/api/strava/auth`);
+        const supported = await Linking.canOpenURL(authUrl);
+        if (supported) await Linking.openURL(authUrl);
       }
     } catch (error) {
       console.error("[Landing] Failed to initiate Strava auth:", error);
     } finally {
+      // Don't reset connecting — the page will unmount when we redirect
       setConnecting(false);
     }
   }, []);

@@ -12,5 +12,11 @@ function getExtra(key: string, fallback: string): string {
   return fallback;
 }
 
-/** Backend API base URL (configurable via API_URL env var) */
-export const API_BASE = getExtra("apiUrl", "http://localhost:3000");
+/** Strava OAuth client ID (exposed via EXPO_PUBLIC_STRAVA_CLIENT_ID) */
+export function getStravaClientId(): string {
+  // Expo injects EXPO_PUBLIC_* vars at build time
+  const fromEnv = process.env.EXPO_PUBLIC_STRAVA_CLIENT_ID as string | undefined;
+  if (fromEnv && fromEnv.length > 0) return fromEnv;
+  // Fallback to extra field (for app.config.ts extra.stravaClientId)
+  return getExtra("stravaClientId", "267147");
+}

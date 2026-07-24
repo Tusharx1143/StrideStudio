@@ -1,7 +1,10 @@
 import * as SecureStore from "expo-secure-store";
 import { Platform } from "react-native";
-import { SESSION_TOKEN_KEY, USER_INFO_KEY } from "@/constants/oauth";
 import { logger } from "./logger";
+
+// Storage key constants (previously in constants/oauth.ts)
+export const SESSION_TOKEN_KEY = "app_session_token";
+export const USER_INFO_KEY = "manus-runtime-user-info";
 
 export type User = {
   id: number;

@@ -13,9 +13,17 @@
  */
 import React, { createContext, useContext, useCallback, useEffect, useState, type ReactNode } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import type { Activity } from "@/shared/types";
+import type { Activity } from "@/lib/app-data";
 import type { StravaDataSource } from "./strava-source";
-import { createTRPCStravaSource } from "./trpc-strava-source";
+import { createDirectStravaSource } from "./direct-strava-source";
+import { createMockStravaSource } from "./mock-strava-source";
+
+function createStravaSource() {
+  const useMock =
+    typeof process !== "undefined" &&
+    process.env?.EXPO_PUBLIC_USE_MOCK_STRAVA === "true";
+  return useMock ? createMockStravaSource() : createDirectStravaSource();
+}
 
 export interface StravaAthlete {
   id: number;
@@ -76,7 +84,7 @@ export function StravaDataProvider({
   /** Injectable data source — defaults to tRPC. Swap for tests. */
   source?: StravaDataSource;
 }) {
-  const ds = source ?? createTRPCStravaSource();
+  const ds = source ?? createStravaSource();
 
   const [cachedActivities, setCachedActivities] = useState<Activity[]>([]);
   const [cachedAthlete, setCachedAthlete] = useState<StravaAthlete | null>(null);

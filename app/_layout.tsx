@@ -16,7 +16,6 @@ import {
 } from "react-native-safe-area-context";
 import type { EdgeInsets, Metrics, Rect } from "react-native-safe-area-context";
 
-import { trpc, createTRPCClient } from "@/lib/trpc";
 import { AppProvider } from "@/lib/app-context";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { initManusRuntime, subscribeSafeAreaInsets } from "@/lib/_core/manus-runtime";
@@ -67,7 +66,7 @@ export default function RootLayout() {
     loadIconFonts();
   }, []);
 
-  // Create clients once and reuse them
+  // Create query client once and reuse it
   const [queryClient] = useState(
     () =>
       new QueryClient({
@@ -83,7 +82,6 @@ export default function RootLayout() {
         },
       }),
   );
-  const [trpcClient] = useState(() => createTRPCClient());
 
   // Ensure minimum 8px padding for top and bottom on mobile
   const providerInitialMetrics = useMemo(() => {
@@ -101,24 +99,22 @@ export default function RootLayout() {
   const content = (
     <ErrorBoundary>
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <trpc.Provider client={trpcClient} queryClient={queryClient}>
-        <QueryClientProvider client={queryClient}>
-          <AppProvider>
-          {/* Default to hiding native headers so raw route segments don't appear. */}
-          {/* If a screen needs the native header, explicitly enable it and set a human title via Stack.Screen options. */}
-          {/* Landing page uses fullScreenModal presentation so it doesn't interfere with tab switching on iOS. */}
-          <Stack screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="index" options={{ animation: "fade" }} />
-            <Stack.Screen name="home" />
-            <Stack.Screen name="profile-screen" options={{ animation: "slide_from_right" }} />
-            <Stack.Screen name="templates-gallery" options={{ animation: "slide_from_right" }} />
-            <Stack.Screen name="oauth/callback" />
-            <Stack.Screen name="settings" options={{ animation: "slide_from_right", title: "Settings" }} />
-          </Stack>
-          <StatusBar style="light" />
-          </AppProvider>
-        </QueryClientProvider>
-      </trpc.Provider>
+      <QueryClientProvider client={queryClient}>
+        <AppProvider>
+        {/* Default to hiding native headers so raw route segments don't appear. */}
+        {/* If a screen needs the native header, explicitly enable it and set a human title via Stack.Screen options. */}
+        {/* Landing page uses fullScreenModal presentation so it doesn't interfere with tab switching on iOS. */}
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="index" options={{ animation: "fade" }} />
+          <Stack.Screen name="home" />
+          <Stack.Screen name="profile-screen" options={{ animation: "slide_from_right" }} />
+          <Stack.Screen name="templates-gallery" options={{ animation: "slide_from_right" }} />
+          <Stack.Screen name="oauth/callback" />
+          <Stack.Screen name="settings" options={{ animation: "slide_from_right", title: "Settings" }} />
+        </Stack>
+        <StatusBar style="light" />
+        </AppProvider>
+      </QueryClientProvider>
     </GestureHandlerRootView>
     </ErrorBoundary>
   );
