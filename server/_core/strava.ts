@@ -1,4 +1,8 @@
+import { eq } from "drizzle-orm";
 import { ENV } from "./env";
+import { getDb } from "../db";
+import { stravaTokens } from "../../drizzle/schema";
+import type { Activity } from "../../shared/types";
 
 // ─── Types ───────────────────────────────────────────────────────────────
 
@@ -83,30 +87,9 @@ interface StravaApiActivity {
   suffer_score?: number;
 }
 
-export interface Activity {
-  id: string;
-  stravaId: number;
-  type: "run" | "ride" | "workout";
-  title: string;
-  distance: number; // km
-  duration: number; // minutes
-  date: string;
-  startDate: string; // ISO date
-  pace?: number; // min/km
-  speed?: number; // km/h
-  elevation?: number; // meters
-  heartRate?: number; // avg bpm
-  maxHeartRate?: number;
-  calories?: number;
-  averageTemp?: number;
-  hasHeartrate: boolean;
-  sufferScore?: number;
-  startLatlng?: [number, number];
-  summaryPolyline?: string;
-}
+// ─── Token Stores ───────────────────────────────────────────────────────
 
-// ─── In-memory token store (fallback when no DB) ────────────────────────
-
+/** In-memory fallback when no database is available. */
 class InMemoryTokenStore implements StravaTokenStore {
   private store = new Map<string, StravaTokenSet>();
 
@@ -123,8 +106,77 @@ class InMemoryTokenStore implements StravaTokenStore {
   }
 }
 
-// Pick the best available store
+/** Database-backed token store using the strava_tokens table. */
+class DrizzleTokenStore implements StravaTokenStore {
+  async get(userId: string): Promise<StravaTokenSet | null> {
+    try {
+      const db = await getDb();
+      if (!db) return null;
+      const rows = await db
+        .select()
+        .from(stravaTokens)
+        .where(eq(stravaTokens.userId, userId))
+        .limit(1);
+      if (rows.length === 0) return null;
+      return {
+        accessToken: rows[0].accessToken,
+        refreshToken: rows[0].refreshToken,
+        expiresAt: rows[0].expiresAt,
+        athleteId: rows[0].athleteId,
+      };
+    } catch (err) {
+      console.warn("[Strava] DB token read failed, falling back:", err);
+      return null;
+    }
+  }
+
+  async set(userId: string, tokens: StravaTokenSet): Promise<void> {
+    const db = await getDb();
+    if (!db) return;
+    await db
+      .insert(stravaTokens)
+      .values({
+        userId,
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+        expiresAt: tokens.expiresAt,
+        athleteId: tokens.athleteId,
+      })
+      .onDuplicateKeyUpdate({
+        set: {
+          accessToken: tokens.accessToken,
+          refreshToken: tokens.refreshToken,
+          expiresAt: tokens.expiresAt,
+          athleteId: tokens.athleteId,
+        },
+      });
+  }
+
+  async delete(userId: string): Promise<void> {
+    const db = await getDb();
+    if (!db) return;
+    await db.delete(stravaTokens).where(eq(stravaTokens.userId, userId));
+  }
+}
+
+// ── Store selection (lazy: tries DB on first use, keeps in-memory as fallback) ──
+
 let tokenStore: StravaTokenStore = new InMemoryTokenStore();
+let _storeProbed = false;
+
+async function _ensureDbStore(): Promise<void> {
+  if (_storeProbed) return;
+  _storeProbed = true;
+  try {
+    const db = await getDb();
+    if (db) {
+      tokenStore = new DrizzleTokenStore();
+      console.log("[Strava] Using database-backed token store");
+    }
+  } catch {
+    console.warn("[Strava] DB not available, keeping in-memory token store");
+  }
+}
 
 // ─── Helpers ─────────────────────────────────────────────────────────────
 
@@ -155,10 +207,12 @@ function toAppActivity(sa: StravaApiActivity): Activity {
     title: sa.name,
     distance: Math.round(distanceKm * 100) / 100,
     duration: Math.round(durationMin * 10) / 10,
+    elapsedTime: Math.round((sa.elapsed_time / 60) * 10) / 10,
     date: formatStravaDate(sa.start_date),
     startDate: sa.start_date,
     pace: pace ? Math.round(pace * 100) / 100 : undefined,
     speed: speedKmh > 0 ? Math.round(speedKmh * 100) / 100 : undefined,
+    maxSpeed: sa.max_speed > 0 ? Math.round(sa.max_speed * 3.6 * 100) / 100 : undefined,
     elevation: Math.round(sa.total_elevation_gain),
     heartRate: sa.average_heartrate ? Math.round(sa.average_heartrate) : undefined,
     maxHeartRate: sa.max_heartrate ? Math.round(sa.max_heartrate) : undefined,
@@ -168,6 +222,7 @@ function toAppActivity(sa: StravaApiActivity): Activity {
     sufferScore: sa.suffer_score,
     startLatlng: sa.start_latlng,
     summaryPolyline: sa.map?.summary_polyline,
+    deviceName: sa.device_name,
   };
 }
 
@@ -190,14 +245,43 @@ function formatStravaDate(iso: string): string {
   return `${months[d.getMonth()]} ${d.getDate()}`;
 }
 
-// ─── Strava SDK Class ────────────────────────────────────────────────────
+// ─── Strava Service Interface ────────────────────────────────────────────
 
-class StravaSDK {
+/**
+ * StravaService — seam between Strava API and the rest of the app.
+ *
+ * The interface exposes every operation the app needs against Strava.
+ * Multiple implementations allow testing without live credentials.
+ */
+export interface StravaService {
+  setStore(store: StravaTokenStore): void;
+  getAuthorizationUrl(userId: string, redirectUri: string): string;
+  exchangeCode(code: string, userId: string): Promise<StravaTokenSet>;
+  refreshToken(userId: string): Promise<StravaTokenSet>;
+  getAthlete(userId: string): Promise<StravaAthlete>;
+  getAthleteStats(userId: string, athleteId: number): Promise<Record<string, unknown>>;
+  getActivities(userId: string, page?: number, perPage?: number): Promise<Activity[]>;
+  getActivityById(userId: string, id: number): Promise<Activity>;
+  getConnectionStatus(userId: string): Promise<{ connected: boolean; athleteId: number | null }>;
+  disconnect(userId: string): Promise<void>;
+}
+
+/**
+ * Production Strava adapter — calls the live Strava API.
+ */
+export class ProdStrava implements StravaService {
   private readonly apiBase = "https://www.strava.com/api/v3";
   private readonly oauthBase = "https://www.strava.com/oauth";
 
+  /** Resolves the active token store, upgrading to DB on first call. */
+  private async _store(): Promise<StravaTokenStore> {
+    await _ensureDbStore();
+    return tokenStore;
+  }
+
   setStore(store: StravaTokenStore) {
     tokenStore = store;
+    _storeProbed = true; // manual override — don't auto-upgrade
   }
 
   // ── OAuth URL ──
@@ -243,14 +327,14 @@ class StravaSDK {
       athleteId: data.athlete.id,
     };
 
-    await tokenStore.set(userId, tokenSet);
+    await (await this._store()).set(userId, tokenSet);
     return tokenSet;
   }
 
   // ── Token Refresh ──
 
   async refreshToken(userId: string): Promise<StravaTokenSet> {
-    const existing = await tokenStore.get(userId);
+    const existing = await (await this._store()).get(userId);
     if (!existing) {
       throw new Error("No Strava tokens found for this user");
     }
@@ -279,14 +363,14 @@ class StravaSDK {
       athleteId: data.athlete.id,
     };
 
-    await tokenStore.set(userId, tokenSet);
+    await (await this._store()).set(userId, tokenSet);
     return tokenSet;
   }
 
   // ── Get Valid Token (auto-refresh if expired) ──
 
   private async getValidToken(userId: string): Promise<string> {
-    const tokens = await tokenStore.get(userId);
+    const tokens = await (await this._store()).get(userId);
     if (!tokens) {
       throw new Error("Strava not connected");
     }
@@ -387,7 +471,7 @@ class StravaSDK {
     athleteId: number | null;
   }> {
     try {
-      const tokens = await tokenStore.get(userId);
+      const tokens = await (await this._store()).get(userId);
       if (!tokens) {
         return { connected: false, athleteId: null };
       }
@@ -398,8 +482,53 @@ class StravaSDK {
   }
 
   async disconnect(userId: string): Promise<void> {
-    await tokenStore.delete(userId);
+    await (await this._store()).delete(userId);
   }
 }
 
-export const strava = new StravaSDK();
+export const strava: StravaService = new ProdStrava();
+
+// ─── Test / In-Memory Adapter ─────────────────────────────────────────
+
+/**
+ * In-memory Strava adapter for tests and demos.
+ * Returns fixture data without network calls.
+ */
+export class TestStrava implements StravaService {
+  private athlete: StravaAthlete = {
+    id: 12345,
+    firstname: "Test",
+    lastname: "User",
+    city: "Testville",
+    state: "TS",
+    country: "Testland",
+    sex: null,
+    premium: false,
+    profile: "",
+    profileMedium: "",
+  };
+
+  private activities: Activity[] = [];
+
+  setStore(_store: StravaTokenStore) {}
+  getAuthorizationUrl(_userId: string, _redirectUri: string): string { return "http://localhost/mock-auth"; }
+  async exchangeCode(_code: string, _userId: string): Promise<StravaTokenSet> {
+    return { accessToken: "mock", refreshToken: "mock", expiresAt: 9999999999, athleteId: 12345 };
+  }
+  async refreshToken(_userId: string): Promise<StravaTokenSet> {
+    return { accessToken: "mock", refreshToken: "mock", expiresAt: 9999999999, athleteId: 12345 };
+  }
+  async getAthlete(_userId: string): Promise<StravaAthlete> { return this.athlete; }
+  async getAthleteStats(_userId: string, _athleteId: number): Promise<Record<string, unknown>> { return {}; }
+  async getActivities(_userId: string, _page?: number, _perPage?: number): Promise<Activity[]> { return this.activities; }
+  async getActivityById(_userId: string, _id: number): Promise<Activity> {
+    return this.activities[0] ?? { id: "0", stravaId: 0, type: "run", title: "Test Run", distance: 5, duration: 30, elapsedTime: 35, date: "Today", startDate: new Date().toISOString(), pace: 6, speed: 10, elevation: 50, hasHeartrate: false };
+  }
+  async getConnectionStatus(_userId: string): Promise<{ connected: boolean; athleteId: number | null }> {
+    return { connected: true, athleteId: 12345 };
+  }
+  async disconnect(_userId: string): Promise<void> {}
+
+  /** Seed fixture activities for tests. */
+  setFixtureActivities(activities: Activity[]) { this.activities = activities; }
+}

@@ -7,7 +7,6 @@ import {
   Platform,
   Modal,
   Pressable,
-  ActivityIndicator,
   ImageBackground,
   Dimensions,
 } from "react-native";
@@ -28,6 +27,11 @@ import {
   CUSTOM_COLORS, FONT_FAMILIES, getFontFamily,
 } from "@/lib/color-presets";
 import { PHOTO_FILTERS, DEFAULT_FILTER } from "@/lib/photo-filters";
+import { useColors } from "@/hooks/use-colors";
+import { StrideButton } from "@/components/stride-button";
+import { AnimatedToast } from "@/components/animated-toast";
+import { ActivityListSkeleton } from "@/components/skeleton";
+import { SegmentedControl } from "@/components/segmented-control";
 
 const SCREEN_W = Dimensions.get("window").width;
 const DELETE_ZONE_SIZE = 60;
@@ -57,7 +61,6 @@ const PERIODS: { id: PeriodId; label: string }[] = [
 function filterActivitiesByPeriod(activities: any[], period: PeriodId): any[] {
   const now = new Date();
   const today = now.toDateString();
-  // Get the Monday of this week
   const monday = new Date(now);
   monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
   const mondayStr = monday.toDateString();
@@ -76,6 +79,7 @@ function filterActivitiesByPeriod(activities: any[], period: PeriodId): any[] {
 
 export default function EditorScreen() {
   const router = useRouter();
+  const colors = useColors();
   const { activities, loading, stravaConnected, selectedActivityId, selectActivity, getSelectedActivity, incrementSavedPosts } = useApp();
   const {
     layers, selectedLayerId, photoUri,
@@ -86,14 +90,13 @@ export default function EditorScreen() {
   const [tab, setTab] = useState<"activity" | "totals">("activity");
   const [pickerOpen, setPickerOpen] = useState(false);
   const [capturing, setCapturing] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [showGrid, setShowGrid] = useState(false);
   const [dragOverDelete, setDragOverDelete] = useState(false);
   const [draggingLayerId, setDraggingLayerId] = useState<string | null>(null);
   const [isVideoBg, setIsVideoBg] = useState(false);
 
-  // ── New state ──
   const [aspectRatio, setAspectRatio] = useState<AspectRatioId>("9:16");
   const [periodFilter, setPeriodFilter] = useState<PeriodId>("all");
   const [photoFilter, setPhotoFilter] = useState(DEFAULT_FILTER.id);
@@ -103,10 +106,7 @@ export default function EditorScreen() {
 
   const canvasRef = useRef<any>(null);
 
-  // Filtered activities by period
   const filteredActivities = useMemo(() => filterActivitiesByPeriod(activities, periodFilter), [activities, periodFilter]);
-
-  // Compute totals from filtered set
   const totals = useMemo(() => computeWeekTotals(filteredActivities), [filteredActivities]);
 
   const activity = getSelectedActivity();
@@ -117,8 +117,8 @@ export default function EditorScreen() {
   const videoPlayer = useVideoPlayer(photoUri ?? "", (player) => { player.loop = true; player.play(); });
   useEffect(() => { if (photoUri && isVideoBg) { videoPlayer.loop = true; videoPlayer.play(); } }, [photoUri, isVideoBg]);
 
-  const showToast = useCallback((msg: string) => {
-    setToast(msg); setTimeout(() => setToast(null), 1800);
+  const showToast = useCallback((message: string, type: "success" | "error" | "info" = "info") => {
+    setToast({ message, type });
   }, []);
 
   useEffect(() => { resetCanvas(); }, [selectedActivityId]);
@@ -127,7 +127,7 @@ export default function EditorScreen() {
   // ── Media picker ──
   const pickMedia = useCallback(async () => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!perm.granted) { showToast("Library permission needed"); return; }
+    if (!perm.granted) { showToast("Library permission needed", "error"); return; }
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images", "videos"], quality: 0.9 });
     if (!result.canceled && result.assets[0]) {
       setPhoto(result.assets[0].uri);
@@ -141,13 +141,13 @@ export default function EditorScreen() {
     setCapturing(true);
     try {
       const { status } = await MediaLibrary.requestPermissionsAsync();
-      if (status !== "granted") { showToast("Camera roll permission needed"); return; }
+      if (status !== "granted") { showToast("Camera roll permission needed", "error"); return; }
       const uri = await captureRef(canvasRef, { format: "png", quality: 1 });
       await MediaLibrary.saveToLibraryAsync(uri);
       incrementSavedPosts();
       if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      showToast("Saved to camera roll");
-    } catch { showToast("Failed to save"); }
+      showToast("Saved to camera roll", "success");
+    } catch { showToast("Failed to save", "error"); }
     finally { setCapturing(false); }
   }, [incrementSavedPosts, showToast]);
 
@@ -163,26 +163,22 @@ export default function EditorScreen() {
         await navigator.clipboard.write([
           new ClipboardItem({ "image/png": blob }),
         ]);
-        showToast("Copied composite to clipboard");
+        showToast("Copied composite to clipboard", "success");
       } else {
-        const resp = await fetch(uri);
-        const blob = await resp.blob();
-        // Fallback save
         const { status } = await MediaLibrary.requestPermissionsAsync();
         if (status === "granted") {
           await MediaLibrary.saveToLibraryAsync(uri);
-          showToast("Saved to camera roll");
+          showToast("Saved to camera roll", "success");
         }
       }
       incrementSavedPosts();
       if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch {
-      // Fallback: just save
       try {
         const uri = await captureRef(canvasRef, { format: "png", quality: 1 });
         const { status } = await MediaLibrary.requestPermissionsAsync();
-        if (status === "granted") { await MediaLibrary.saveToLibraryAsync(uri); showToast("Saved to camera roll"); }
-      } catch { showToast("Failed to copy"); }
+        if (status === "granted") { await MediaLibrary.saveToLibraryAsync(uri); showToast("Saved to camera roll", "success"); }
+      } catch { showToast("Failed to copy", "error"); }
     }
     finally { setCapturing(false); }
   }, [incrementSavedPosts, showToast]);
@@ -223,9 +219,9 @@ export default function EditorScreen() {
     }));
 
     const template = ALL_TEMPLATES.find((t) => t.id === layer.templateId);
-    const colors = resolveColors(layer.paletteId);
+    const palette = resolveColors(layer.paletteId);
     const layerFont = getFontFamily(layer.fontFamily);
-    const finalColors = { ...colors, fontFamily: layerFont.family };
+    const finalColors = { ...palette, fontFamily: layerFont.family };
     const isSelected = layer.id === selectedLayerId;
 
     return (
@@ -238,8 +234,7 @@ export default function EditorScreen() {
           minHeight: 130,
           borderRadius: 12, overflow: "hidden",
           borderWidth: isSelected ? 2 : 0,
-          borderColor: isSelected ? "#FF6B35" : "transparent",
-          borderStyle: isSelected ? ("dashed" as any) : "solid",
+          borderColor: isSelected ? colors.primary : "transparent",
         }, animatedStyle]}>
           {template && activity && (
             <View style={{ flex: 1, padding: 4 }}>
@@ -254,10 +249,9 @@ export default function EditorScreen() {
   // ── Loading / Empty states ──
   if (loading && activities.length === 0) {
     return (
-      <ScreenContainer className="p-0" containerClassName="bg-black">
-        <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#000" }}>
-          <ActivityIndicator size="large" color="#FFFFFF" />
-          <Text style={{ color: "#8E8E93", fontSize: 14, marginTop: 16 }}>Loading…</Text>
+      <ScreenContainer className="p-0">
+        <View style={{ flex: 1, backgroundColor: colors.background }}>
+          <ActivityListSkeleton count={2} />
         </View>
       </ScreenContainer>
     );
@@ -265,17 +259,18 @@ export default function EditorScreen() {
 
   if (activities.length === 0) {
     return (
-      <ScreenContainer className="p-0" containerClassName="bg-black">
-        <View style={{ flex: 1, justifyContent: "center", alignItems: "center", padding: 32, backgroundColor: "#000" }}>
+      <ScreenContainer className="p-0">
+        <View style={{ flex: 1, backgroundColor: colors.background, justifyContent: "center", alignItems: "center", padding: 32 }}>
           <Text style={{ fontSize: 48, marginBottom: 16 }}>🎨</Text>
-          <Text style={{ color: "#FFFFFF", fontSize: 20, fontWeight: "700" }}>
+          <Text style={{ color: colors.foreground, fontSize: 20, fontWeight: "700" }}>
             {stravaConnected ? "No activities yet" : "No data to share"}
           </Text>
           {!stravaConnected && (
-            <TouchableOpacity onPress={() => router.push("/(tabs)/profile")}
-              style={{ marginTop: 20, backgroundColor: "#FF6B35", borderRadius: 24, paddingHorizontal: 28, paddingVertical: 14 }}>
-              <Text style={{ color: "#FFFFFF", fontWeight: "700" }}>Connect Strava</Text>
-            </TouchableOpacity>
+            <View style={{ marginTop: 20 }}>
+              <StrideButton onPress={() => router.push("/(tabs)/profile")}>
+                Connect Strava
+              </StrideButton>
+            </View>
           )}
         </View>
       </ScreenContainer>
@@ -283,32 +278,51 @@ export default function EditorScreen() {
   }
 
   return (
-    <ScreenContainer className="p-0" containerClassName="bg-black">
-      <View style={{ flex: 1, backgroundColor: "#000000" }}>
+    <ScreenContainer className="p-0">
+      <View style={{ flex: 1, backgroundColor: colors.background }}>
         {/* ── Top bar ── */}
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 12, paddingVertical: 6 }}>
-          <TouchableOpacity onPress={goBack} style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: "#1C1C1E", alignItems: "center", justifyContent: "center" }}>
-            <Text style={{ color: "#FFFFFF", fontSize: 16 }}>‹</Text>
+          <TouchableOpacity
+            onPress={goBack}
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
+            style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: colors.surface, alignItems: "center", justifyContent: "center" }}
+          >
+            <Text style={{ color: colors.foreground, fontSize: 18 }}>‹</Text>
           </TouchableOpacity>
 
           {/* Aspect ratio selector */}
           <View style={{ flexDirection: "row", gap: 4 }}>
             {ASPECT_RATIOS.map((ar) => (
-              <TouchableOpacity key={ar.id} onPress={() => setAspectRatio(ar.id)}
-                style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, backgroundColor: aspectRatio === ar.id ? "#FF6B35" : "#2C2C2E" }}>
-                <Text style={{ color: "#FFFFFF", fontSize: 10, fontWeight: "600" }}>{ar.label}</Text>
+              <TouchableOpacity
+                key={ar.id}
+                onPress={() => setAspectRatio(ar.id)}
+                accessibilityRole="radio"
+                accessibilityLabel={`${ar.label} aspect ratio`}
+                accessibilityState={{ selected: aspectRatio === ar.id }}
+                style={{
+                  paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, minHeight: 32, justifyContent: "center",
+                  backgroundColor: aspectRatio === ar.id ? colors.primary : colors.border,
+                }}
+              >
+                <Text style={{ color: colors.foreground, fontSize: 10, fontWeight: "600" }}>{ar.label}</Text>
               </TouchableOpacity>
             ))}
           </View>
 
-          {selectedLayer && (
-            <TouchableOpacity onPress={() => setPaletteOpen(true)}
-              style={{ flexDirection: "row", alignItems: "center", backgroundColor: "#1C1C1E", borderRadius: 16, paddingHorizontal: 8, paddingVertical: 6, gap: 4 }}>
+          {selectedLayer ? (
+            <TouchableOpacity
+              onPress={() => setPaletteOpen(true)}
+              accessibilityRole="button"
+              accessibilityLabel="Open style editor"
+              style={{ flexDirection: "row", alignItems: "center", backgroundColor: colors.surface, borderRadius: 16, paddingHorizontal: 8, paddingVertical: 6, gap: 4, minHeight: 36 }}
+            >
               <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: resolveColors(selectedLayer.paletteId).accent }} />
-              <Text style={{ color: "#FFFFFF", fontSize: 10, fontWeight: "600" }}>Style</Text>
+              <Text style={{ color: colors.foreground, fontSize: 10, fontWeight: "600" }}>Style</Text>
             </TouchableOpacity>
+          ) : (
+            <View style={{ width: 44 }} />
           )}
-          {!selectedLayer && <View style={{ width: 36 }} />}
         </View>
 
         {/* ── Canvas ── */}
@@ -316,20 +330,32 @@ export default function EditorScreen() {
           {photoUri && isVideoBg ? (
             <View style={{ width: SCREEN_W, height: CANVAS_H }}>
               <VideoView player={videoPlayer} style={{ width: SCREEN_W, height: CANVAS_H }} contentFit="cover" />
-              <Pressable style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} onPress={() => selectLayer(null)}>
+              <Pressable
+                style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
+                onPress={() => selectLayer(null)}
+                accessibilityLabel="Template canvas with video background"
+              >
                 {layers.sort((a, b) => a.zIndex - b.zIndex).map((layer) => (<LayerGesture key={layer.id} layer={layer} />))}
               </Pressable>
             </View>
           ) : photoUri ? (
-            <ImageBackground source={{ uri: photoUri }} style={{ width: SCREEN_W, height: CANVAS_H, ...PHOTO_FILTERS.find((f) => f.id === photoFilter)?.style }} resizeMode="cover">
-              <Pressable style={{ flex: 1 }} onPress={() => selectLayer(null)}>
+            <ImageBackground
+              source={{ uri: photoUri }}
+              style={{ width: SCREEN_W, height: CANVAS_H, ...PHOTO_FILTERS.find((f) => f.id === photoFilter)?.style }}
+              resizeMode="cover"
+            >
+              <Pressable style={{ flex: 1 }} onPress={() => selectLayer(null)} accessibilityLabel="Template canvas. Tap background to deselect.">
                 {layers.sort((a, b) => a.zIndex - b.zIndex).map((layer) => (<LayerGesture key={layer.id} layer={layer} />))}
               </Pressable>
             </ImageBackground>
           ) : (
-            <Pressable style={{ width: SCREEN_W, height: CANVAS_H, backgroundColor: "#1C1C1E", justifyContent: "center", alignItems: "center" }} onPress={() => selectLayer(null)}>
+            <Pressable
+              style={{ width: SCREEN_W, height: CANVAS_H, backgroundColor: colors.surface, justifyContent: "center", alignItems: "center" }}
+              onPress={() => selectLayer(null)}
+              accessibilityLabel="Empty canvas. Select media to begin."
+            >
               <Text style={{ fontSize: 28, marginBottom: 6 }}>🖼️</Text>
-              <Text style={{ color: "#8E8E93", fontSize: 13, fontWeight: "600" }}>Tap Media to start</Text>
+              <Text style={{ color: colors.muted, fontSize: 13, fontWeight: "600" }}>Tap Media to start</Text>
               {layers.sort((a, b) => a.zIndex - b.zIndex).map((layer) => (<LayerGesture key={layer.id} layer={layer} />))}
             </Pressable>
           )}
@@ -337,30 +363,35 @@ export default function EditorScreen() {
           {/* Delete zone */}
           {draggingLayerId && (
             <View style={{ position: "absolute", bottom: 0, left: SCREEN_W / 2 - DELETE_ZONE_SIZE, width: DELETE_ZONE_SIZE * 2, height: DELETE_ZONE_SIZE + 8, alignItems: "center", justifyContent: "center" }}>
-              <View style={{ width: DELETE_ZONE_SIZE, height: DELETE_ZONE_SIZE, borderRadius: DELETE_ZONE_SIZE / 2, backgroundColor: dragOverDelete ? "#FF453A" : "#3A3A3C", alignItems: "center", justifyContent: "center", transform: [{ scale: dragOverDelete ? 1.2 : 1 }] }}>
+              <View style={{ width: DELETE_ZONE_SIZE, height: DELETE_ZONE_SIZE, borderRadius: DELETE_ZONE_SIZE / 2, backgroundColor: dragOverDelete ? colors.error : colors.border, alignItems: "center", justifyContent: "center", transform: [{ scale: dragOverDelete ? 1.2 : 1 }] }}>
                 <Text style={{ fontSize: 22 }}>🗑️</Text>
               </View>
-              <Text style={{ color: dragOverDelete ? "#FF453A" : "#8E8E93", fontSize: 8, fontWeight: "600", marginTop: 2 }}>{dragOverDelete ? "DROP" : "HERE"}</Text>
+              <Text style={{ color: dragOverDelete ? colors.error : colors.muted, fontSize: 8, fontWeight: "600", marginTop: 2 }}>
+                {dragOverDelete ? "DROP TO DELETE" : "DRAG HERE"}
+              </Text>
             </View>
           )}
         </View>
 
         {/* ── Layer controls ── */}
         {selectedLayer && (
-          <View style={{ paddingHorizontal: 12, paddingVertical: 4, borderBottomWidth: 1, borderBottomColor: "#1C1C1E" }}>
+          <View style={{ paddingHorizontal: 12, paddingVertical: 4, borderBottomWidth: 1, borderBottomColor: colors.border }}>
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-              <Text style={{ color: "#8E8E93", fontSize: 9, fontWeight: "600", flex: 1 }} numberOfLines={1}>
+              <Text style={{ color: colors.muted, fontSize: 9, fontWeight: "600", flex: 1 }} numberOfLines={1}>
                 {ALL_TEMPLATES.find((t) => t.id === selectedLayer.templateId)?.name ?? selectedLayer.templateId}
               </Text>
               <View style={{ flexDirection: "row", gap: 4 }}>
-                <TouchableOpacity onPress={() => sendBackward(selectedLayer.id)} style={{ backgroundColor: "#2C2C2E", borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3 }}>
-                  <Text style={{ color: "#FFFFFF", fontSize: 9, fontWeight: "600" }}>◀</Text>
+                <TouchableOpacity onPress={() => sendBackward(selectedLayer.id)} accessibilityRole="button" accessibilityLabel="Send backward"
+                  style={{ backgroundColor: colors.border, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3, minHeight: 32, justifyContent: "center" }}>
+                  <Text style={{ color: colors.foreground, fontSize: 9, fontWeight: "600" }}>◀</Text>
                 </TouchableOpacity>
-                <TouchableOpacity onPress={() => bringForward(selectedLayer.id)} style={{ backgroundColor: "#2C2C2E", borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3 }}>
-                  <Text style={{ color: "#FFFFFF", fontSize: 9, fontWeight: "600" }}>▶</Text>
+                <TouchableOpacity onPress={() => bringForward(selectedLayer.id)} accessibilityRole="button" accessibilityLabel="Bring forward"
+                  style={{ backgroundColor: colors.border, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3, minHeight: 32, justifyContent: "center" }}>
+                  <Text style={{ color: colors.foreground, fontSize: 9, fontWeight: "600" }}>▶</Text>
                 </TouchableOpacity>
-                <TouchableOpacity onPress={() => removeLayer(selectedLayer.id)} style={{ backgroundColor: "#3A1A1A", borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3 }}>
-                  <Text style={{ color: "#FF453A", fontSize: 10, fontWeight: "600" }}>✕</Text>
+                <TouchableOpacity onPress={() => removeLayer(selectedLayer.id)} accessibilityRole="button" accessibilityLabel="Remove layer"
+                  style={{ backgroundColor: colors.error + "20", borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3, minHeight: 32, justifyContent: "center" }}>
+                  <Text style={{ color: colors.error, fontSize: 10, fontWeight: "600" }}>✕</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -369,20 +400,25 @@ export default function EditorScreen() {
             <View style={{ flexDirection: "row", gap: 4, marginTop: 3 }}>
               {FONT_FAMILIES.map((ff) => (
                 <TouchableOpacity key={ff.id} onPress={() => updateLayer(selectedLayer.id, { fontFamily: ff.id })}
-                  style={{ paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8, backgroundColor: ff.id === selectedLayer.fontFamily ? "#FF6B35" : "#2C2C2E" }}>
-                  <Text style={{ color: "#FFFFFF", fontSize: 8, fontWeight: "600" }}>{ff.name}</Text>
+                  accessibilityRole="radio" accessibilityLabel={`${ff.name} font`} accessibilityState={{ selected: ff.id === selectedLayer.fontFamily }}
+                  style={{ paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8, minHeight: 24, justifyContent: "center",
+                    backgroundColor: ff.id === selectedLayer.fontFamily ? colors.primary : colors.border }}>
+                  <Text style={{ color: colors.foreground, fontSize: 8, fontWeight: ff.id === "bold-system" ? "900" : ff.id === "light-system" ? "300" : "600" }}>{ff.name}</Text>
                 </TouchableOpacity>
               ))}
             </View>
 
             {/* Color swatches */}
-            <View style={{ flexDirection: "row", gap: 4, marginTop: 3, flexWrap: "wrap" }}>
+            <View style={{ flexDirection: "row", gap: 4, marginTop: 3, flexWrap: "wrap", alignItems: "center" }}>
               {ALL_PRESETS.map((preset) => (
                 <TouchableOpacity key={preset.id} onPress={() => updateLayer(selectedLayer.id, { paletteId: preset.id })}
-                  style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: preset.colors.accent, borderWidth: preset.id === selectedLayer.paletteId ? 2 : 0, borderColor: "#FFFFFF" }} />
+                  accessibilityRole="radio" accessibilityLabel={`${preset.name} palette`} accessibilityState={{ selected: preset.id === selectedLayer.paletteId }}
+                  style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: preset.colors.accent, borderWidth: preset.id === selectedLayer.paletteId ? 2.5 : 0, borderColor: colors.foreground }} />
               ))}
-              <TouchableOpacity onPress={() => setPaletteOpen(true)} style={{ paddingHorizontal: 6, paddingVertical: 1, borderRadius: 8, backgroundColor: "#2C2C2E" }}>
-                <Text style={{ color: "#0A84FF", fontSize: 8, fontWeight: "600" }}>+</Text>
+              <TouchableOpacity onPress={() => setPaletteOpen(true)}
+                accessibilityRole="button" accessibilityLabel="More style options"
+                style={{ paddingHorizontal: 6, paddingVertical: 1, borderRadius: 8, backgroundColor: colors.border, minHeight: 24, justifyContent: "center" }}>
+                <Text style={{ color: colors.primary, fontSize: 8, fontWeight: "600" }}>+</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -392,31 +428,37 @@ export default function EditorScreen() {
         <View style={{ flexDirection: "row", paddingHorizontal: 12, paddingVertical: 4, gap: 4 }}>
           {PERIODS.map((p) => (
             <TouchableOpacity key={p.id} onPress={() => setPeriodFilter(p.id)}
-              style={{ paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10, backgroundColor: periodFilter === p.id ? "#FFFFFF" : "#2C2C2E" }}>
-              <Text style={{ color: periodFilter === p.id ? "#000000" : "#FFFFFF", fontSize: 9, fontWeight: "600" }}>{p.label}</Text>
+              accessibilityRole="radio" accessibilityLabel={`${p.label} period`} accessibilityState={{ selected: periodFilter === p.id }}
+              style={{ paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10, minHeight: 28, justifyContent: "center",
+                backgroundColor: periodFilter === p.id ? colors.foreground : colors.border }}>
+              <Text style={{ color: periodFilter === p.id ? colors.background : colors.foreground, fontSize: 9, fontWeight: "600" }}>{p.label}</Text>
             </TouchableOpacity>
           ))}
-          {/* Filter button */}
-          <TouchableOpacity onPress={() => setFilterOpen(true)} style={{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10, backgroundColor: "#2C2C2E" }}>
-            <Text style={{ color: "#0A84FF", fontSize: 9, fontWeight: "600" }}>🎨 Filter</Text>
+          <TouchableOpacity onPress={() => setFilterOpen(true)}
+            accessibilityRole="button" accessibilityLabel="Photo filters"
+            style={{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10, backgroundColor: colors.border, minHeight: 28, justifyContent: "center" }}>
+            <Text style={{ color: colors.primary, fontSize: 9, fontWeight: "600" }}>🎨 Filter</Text>
           </TouchableOpacity>
         </View>
 
         {/* ── Template grid toggle ── */}
         <TouchableOpacity onPress={() => setShowGrid(!showGrid)}
-          style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 12, paddingVertical: 4, borderBottomWidth: 1, borderBottomColor: "#1C1C1E" }}>
-          <Text style={{ color: "#8E8E93", fontSize: 10, fontWeight: "600" }}>
+          accessibilityRole="button" accessibilityLabel={`${showGrid ? "Hide" : "Show"} template grid`}
+          style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 12, paddingVertical: 4, borderBottomWidth: 1, borderBottomColor: colors.border, minHeight: 32 }}>
+          <Text style={{ color: colors.muted, fontSize: 10, fontWeight: "600" }}>
             Templates ({filteredTemplates.length}) · {showGrid ? "Hide" : "Show"}
           </Text>
-          <Text style={{ color: "#555", fontSize: 12 }}>{showGrid ? "▲" : "▼"}</Text>
+          <Text style={{ color: colors.muted, fontSize: 12 }}>{showGrid ? "▲" : "▼"}</Text>
         </TouchableOpacity>
 
         {/* Tabs */}
         <View style={{ flexDirection: "row", paddingHorizontal: 12, paddingVertical: 3, gap: 6 }}>
           {(["activity", "totals"] as const).map((t) => (
             <TouchableOpacity key={t} onPress={() => setTab(t)}
-              style={{ paddingHorizontal: 10, paddingVertical: 2, borderRadius: 10, backgroundColor: tab === t ? "#FFFFFF" : "#2C2C2E" }}>
-              <Text style={{ color: tab === t ? "#000" : "#FFF", fontSize: 9, fontWeight: "600", textTransform: "capitalize" }}>{t}</Text>
+              accessibilityRole="tab" accessibilityLabel={`${t} templates`} accessibilityState={{ selected: tab === t }}
+              style={{ paddingHorizontal: 10, paddingVertical: 2, borderRadius: 10, minHeight: 28, justifyContent: "center",
+                backgroundColor: tab === t ? colors.foreground : colors.border }}>
+              <Text style={{ color: tab === t ? colors.background : colors.foreground, fontSize: 9, fontWeight: "600", textTransform: "capitalize" }}>{t}</Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -426,10 +468,12 @@ export default function EditorScreen() {
           <View style={{ flex: 1, maxHeight: 120 }}>
             <ScrollView contentContainerStyle={{ paddingHorizontal: 8, paddingVertical: 3, flexDirection: "row", flexWrap: "wrap" }}>
               {filteredTemplates.map((tpl) => (
-                <TouchableOpacity key={tpl.id} onPress={() => { addLayer(tpl.id); if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
-                  style={{ width: "25%", height: 72, backgroundColor: "#0E0E10", borderRadius: 6, borderWidth: 1, borderColor: "#1C1C1E", padding: 2, justifyContent: "center", alignItems: "center", overflow: "hidden" }}>
+                <TouchableOpacity key={tpl.id}
+                  onPress={() => { addLayer(tpl.id); if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+                  accessibilityRole="button" accessibilityLabel={`Add ${tpl.name} template`}
+                  style={{ width: "25%", height: 72, backgroundColor: colors.surface, borderRadius: 6, borderWidth: 1, borderColor: colors.border, padding: 2, justifyContent: "center", alignItems: "center", overflow: "hidden" }}>
                   {activity && <View style={{ transform: [{ scale: 0.18 }], width: 400, height: 400, position: "absolute" }}>{tpl.render(activity, totals)}</View>}
-                  <Text style={{ color: "#FFF", fontSize: 6, fontWeight: "600", textAlign: "center", zIndex: 1, backgroundColor: "rgba(0,0,0,0.6)", borderRadius: 2, paddingHorizontal: 2, paddingVertical: 1 }} numberOfLines={2}>{tpl.name}</Text>
+                  <Text style={{ color: colors.foreground, fontSize: 6, fontWeight: "600", textAlign: "center", zIndex: 1, backgroundColor: "rgba(0,0,0,0.6)", borderRadius: 2, paddingHorizontal: 2, paddingVertical: 1 }} numberOfLines={2}>{tpl.name}</Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -437,34 +481,43 @@ export default function EditorScreen() {
         )}
 
         {/* ── Bottom bar ── */}
-        <View style={{ flexDirection: "row", paddingHorizontal: 12, paddingVertical: 6, gap: 6, borderTopWidth: 1, borderTopColor: "#1C1C1E" }}>
-          <TouchableOpacity onPress={pickMedia} style={{ flex: 1, backgroundColor: "#2C2C2E", borderRadius: 16, paddingVertical: 8, alignItems: "center" }}>
-            <Text style={{ color: "#FFF", fontSize: 12, fontWeight: "700" }}>{photoUri ? "🔄 Media" : "🖼 Media"}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={copyAll} disabled={capturing} style={{ flex: 1, backgroundColor: "#0A84FF", borderRadius: 16, paddingVertical: 8, alignItems: "center", opacity: capturing ? 0.5 : 1 }}>
-            <Text style={{ color: "#FFF", fontSize: 12, fontWeight: "700" }}>{capturing ? "…" : "📋 Copy All"}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={saveImage} disabled={capturing} style={{ flex: 1, backgroundColor: "#FF6B35", borderRadius: 16, paddingVertical: 8, alignItems: "center", opacity: capturing ? 0.5 : 1 }}>
-            <Text style={{ color: "#FFF", fontSize: 12, fontWeight: "700" }}>{capturing ? "…" : "💾 Save"}</Text>
-          </TouchableOpacity>
+        <View style={{ flexDirection: "row", paddingHorizontal: 12, paddingVertical: 6, gap: 6, borderTopWidth: 1, borderTopColor: colors.border }}>
+          <View style={{ flex: 1 }}>
+            <StrideButton variant="ghost" onPress={pickMedia} style={{ borderRadius: 16, paddingVertical: 8 }} textStyle={{ fontSize: 12 }}>
+              {photoUri ? "🔄 Media" : "🖼 Media"}
+            </StrideButton>
+          </View>
+          <View style={{ flex: 1 }}>
+            <StrideButton variant="secondary" onPress={copyAll} disabled={capturing} loading={capturing}
+              style={{ borderRadius: 16, paddingVertical: 8, backgroundColor: colors.primary }} textStyle={{ fontSize: 12 }}>
+              📋 Copy
+            </StrideButton>
+          </View>
+          <View style={{ flex: 1 }}>
+            <StrideButton onPress={saveImage} disabled={capturing} loading={capturing}
+              style={{ borderRadius: 16, paddingVertical: 8 }} textStyle={{ fontSize: 12 }}>
+              💾 Save
+            </StrideButton>
+          </View>
         </View>
 
-        {/* Toast */}
-        {toast && (
-          <View style={{ position: "absolute", bottom: 60, alignSelf: "center", backgroundColor: "#1C1C1E", borderRadius: 16, paddingHorizontal: 14, paddingVertical: 7 }}>
-            <Text style={{ color: "#FFF", fontSize: 11, fontWeight: "600" }}>{toast}</Text>
-          </View>
-        )}
+        <AnimatedToast
+          message={toast?.message ?? null}
+          type={toast?.type ?? "info"}
+          onDismiss={() => setToast(null)}
+        />
 
         {/* ── Activity picker modal ── */}
         <Modal visible={pickerOpen} transparent animationType="fade" onRequestClose={() => setPickerOpen(false)}>
           <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.7)", justifyContent: "center", padding: 24 }} onPress={() => setPickerOpen(false)}>
-            <View style={{ backgroundColor: "#1C1C1E", borderRadius: 16, overflow: "hidden" }}>
+            <View style={{ backgroundColor: colors.surface, borderRadius: 16, overflow: "hidden" }}>
               {activities.map((a, i) => (
                 <TouchableOpacity key={a.id} onPress={() => { selectActivity(a.id); setPickerOpen(false); }}
-                  style={{ padding: 14, borderBottomWidth: i < activities.length - 1 ? 1 : 0, borderBottomColor: "#2C2C2E", flexDirection: "row", justifyContent: "space-between" }}>
-                  <Text style={{ color: a.id === selectedActivityId ? "#0A84FF" : "#FFF", fontSize: 14, fontWeight: "600" }}>{a.distance.toFixed(1)} km {a.type}</Text>
-                  <Text style={{ color: "#8E8E93", fontSize: 12 }}>{a.date}</Text>
+                  accessibilityRole="button" accessibilityLabel={`${a.distance.toFixed(1)} km ${a.type}, ${a.date}`}
+                  accessibilityState={{ selected: a.id === selectedActivityId }}
+                  style={{ padding: 14, borderBottomWidth: i < activities.length - 1 ? 1 : 0, borderBottomColor: colors.border, flexDirection: "row", justifyContent: "space-between", minHeight: 48 }}>
+                  <Text style={{ color: a.id === selectedActivityId ? colors.primary : colors.foreground, fontSize: 14, fontWeight: "600" }}>{a.distance.toFixed(1)} km {a.type}</Text>
+                  <Text style={{ color: colors.muted, fontSize: 12 }}>{a.date}</Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -474,33 +527,38 @@ export default function EditorScreen() {
         {/* ── Style modal ── */}
         <Modal visible={paletteOpen} transparent animationType="fade" onRequestClose={() => setPaletteOpen(false)}>
           <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.7)", justifyContent: "center", padding: 24 }} onPress={() => setPaletteOpen(false)}>
-            <View style={{ backgroundColor: "#1C1C1E", borderRadius: 16, padding: 16, maxHeight: 360 }}>
-              <Text style={{ color: "#FFF", fontSize: 14, fontWeight: "700", marginBottom: 8 }}>Style</Text>
-              <Text style={{ color: "#8E8E93", fontSize: 9, fontWeight: "600", marginBottom: 4 }}>FONT</Text>
+            <View style={{ backgroundColor: colors.surface, borderRadius: 16, padding: 16, maxHeight: 360 }}>
+              <Text style={{ color: colors.foreground, fontSize: 14, fontWeight: "700", marginBottom: 8 }}>Style</Text>
+              <Text style={{ color: colors.muted, fontSize: 9, fontWeight: "600", marginBottom: 4 }}>FONT</Text>
               <View style={{ flexDirection: "row", gap: 4, flexWrap: "wrap", marginBottom: 8 }}>
                 {FONT_FAMILIES.map((ff) => (
                   <TouchableOpacity key={ff.id} onPress={() => { if (selectedLayer) updateLayer(selectedLayer.id, { fontFamily: ff.id }); }}
-                    style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10, backgroundColor: selectedLayer?.fontFamily === ff.id ? "#FF6B35" : "#2C2C2E" }}>
-                    <Text style={{ color: "#FFF", fontSize: 11, fontWeight: ff.id === "bold-system" ? "900" : ff.id === "light-system" ? "300" : "600" }}>{ff.name}</Text>
+                    accessibilityRole="radio" accessibilityLabel={`${ff.name} font`} accessibilityState={{ selected: selectedLayer?.fontFamily === ff.id }}
+                    style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10, minHeight: 32, justifyContent: "center",
+                      backgroundColor: selectedLayer?.fontFamily === ff.id ? colors.primary : colors.border }}>
+                    <Text style={{ color: colors.foreground, fontSize: 11, fontWeight: ff.id === "bold-system" ? "900" : ff.id === "light-system" ? "300" : "600" }}>{ff.name}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
-              <Text style={{ color: "#8E8E93", fontSize: 9, fontWeight: "600", marginBottom: 4 }}>COLORS</Text>
+              <Text style={{ color: colors.muted, fontSize: 9, fontWeight: "600", marginBottom: 4 }}>COLORS</Text>
               <View style={{ flexDirection: "row", gap: 6, marginBottom: 8 }}>
                 {ALL_PRESETS.map((preset) => (
-                  <TouchableOpacity key={preset.id} onPress={() => { if (selectedLayer) updateLayer(selectedLayer.id, { paletteId: preset.id }); }} style={{ alignItems: "center", gap: 2 }}>
-                    <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: preset.colors.accent, borderWidth: selectedLayer?.paletteId === preset.id ? 2 : 0, borderColor: "#FFF", alignItems: "center", justifyContent: "center" }}>
-                      {selectedLayer?.paletteId === preset.id && <Text style={{ color: "#FFF", fontSize: 9 }}>✓</Text>}
+                  <TouchableOpacity key={preset.id} onPress={() => { if (selectedLayer) updateLayer(selectedLayer.id, { paletteId: preset.id }); }}
+                    accessibilityRole="radio" accessibilityLabel={`${preset.name}`} accessibilityState={{ selected: selectedLayer?.paletteId === preset.id }}
+                    style={{ alignItems: "center", gap: 2, minWidth: 36 }}>
+                    <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: preset.colors.accent, borderWidth: selectedLayer?.paletteId === preset.id ? 2 : 0, borderColor: colors.foreground, alignItems: "center", justifyContent: "center" }}>
+                      {selectedLayer?.paletteId === preset.id && <Text style={{ color: colors.foreground, fontSize: 9 }}>✓</Text>}
                     </View>
-                    <Text style={{ color: "#8E8E93", fontSize: 6, fontWeight: "500" }}>{preset.name}</Text>
+                    <Text style={{ color: colors.muted, fontSize: 6, fontWeight: "500" }}>{preset.name}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
-              <Text style={{ color: "#8E8E93", fontSize: 9, fontWeight: "600", marginBottom: 4 }}>CUSTOM</Text>
+              <Text style={{ color: colors.muted, fontSize: 9, fontWeight: "600", marginBottom: 4 }}>CUSTOM</Text>
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 4 }}>
                 {CUSTOM_COLORS.map((hex) => (
                   <TouchableOpacity key={hex} onPress={() => { if (selectedLayer) updateLayer(selectedLayer.id, { paletteId: "custom" }); setPaletteOpen(false); }}
-                    style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: hex, borderWidth: 1, borderColor: "#555" }} />
+                    accessibilityRole="button" accessibilityLabel={`Custom color ${hex}`}
+                    style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: hex, borderWidth: 1, borderColor: colors.border }} />
                 ))}
               </View>
             </View>
@@ -510,13 +568,15 @@ export default function EditorScreen() {
         {/* ── Photo filter modal ── */}
         <Modal visible={filterOpen} transparent animationType="fade" onRequestClose={() => setFilterOpen(false)}>
           <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.7)", justifyContent: "center", padding: 32 }} onPress={() => setFilterOpen(false)}>
-            <View style={{ backgroundColor: "#1C1C1E", borderRadius: 16, padding: 16 }}>
-              <Text style={{ color: "#FFF", fontSize: 14, fontWeight: "700", marginBottom: 10 }}>Photo Filter</Text>
+            <View style={{ backgroundColor: colors.surface, borderRadius: 16, padding: 16 }}>
+              <Text style={{ color: colors.foreground, fontSize: 14, fontWeight: "700", marginBottom: 10 }}>Photo Filter</Text>
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
                 {PHOTO_FILTERS.map((f) => (
                   <TouchableOpacity key={f.id} onPress={() => { setPhotoFilter(f.id); setFilterOpen(false); }}
-                    style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 16, backgroundColor: photoFilter === f.id ? "#FF6B35" : "#2C2C2E" }}>
-                    <Text style={{ color: "#FFF", fontSize: 11, fontWeight: "600" }}>{f.name}</Text>
+                    accessibilityRole="radio" accessibilityLabel={`${f.name} filter`} accessibilityState={{ selected: photoFilter === f.id }}
+                    style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 16, minHeight: 36, justifyContent: "center",
+                      backgroundColor: photoFilter === f.id ? colors.primary : colors.border }}>
+                    <Text style={{ color: colors.foreground, fontSize: 11, fontWeight: "600" }}>{f.name}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
