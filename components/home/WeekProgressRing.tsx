@@ -7,21 +7,13 @@
  */
 
 import { View, Text } from "react-native";
-import { useEffect, useMemo } from "react";
+import { useMemo } from "react";
 import Svg, { Circle } from "react-native-svg";
-import Animated, {
-  useSharedValue,
-  useAnimatedProps,
-  withTiming,
-  Easing,
-  createAnimatedComponent,
-} from "react-native-reanimated";
+import Animated from "react-native-reanimated";
 import { useColors } from "@/hooks/use-colors";
 import { useApp } from "@/lib/app-context";
 import { computeWeekStats } from "@/lib/sport-theme";
 import { AnimatedCountUp, headerEnter } from "@/lib/animations";
-
-const AnimatedCircle = createAnimatedComponent(Circle);
 
 const WEEKLY_GOAL = 40; // km
 
@@ -51,23 +43,9 @@ export function WeekProgressRing({ entranceDelay = 100, activities: propActiviti
   const runRatio = weekStats.runKm / totalKm;
   const rideRatio = weekStats.rideKm / totalKm;
 
-  // Animated progress
-  const animatedProgress = useSharedValue(0);
-
-  useEffect(() => {
-    animatedProgress.value = withTiming(progress, {
-      duration: 1200,
-      easing: Easing.out(Easing.cubic),
-    });
-  }, [progress]);
-
-  // Animated stroke-dashoffset for the main ring fill
-  const ringProps = useAnimatedProps(() => {
-    const fillLength = animatedProgress.value * circumference;
-    return {
-      strokeDashoffset: circumference - fillLength,
-    };
-  });
+  // Static progress (no reanimated SVG — avoids Android bridge type issues)
+  const fillLength = progress * circumference;
+  const dashOffset = circumference - fillLength;
 
   if (activities.length === 0) return null;
 
@@ -149,14 +127,14 @@ export function WeekProgressRing({ entranceDelay = 100, activities: propActiviti
           </Svg>
         )}
 
-        {/* Animated progress ring */}
+        {/* Progress ring (static — no reanimated SVG on Android) */}
         <Svg
           width={size}
           height={size}
           viewBox={`0 0 ${size} ${size}`}
           style={{ position: "absolute", transform: [{ rotate: "-90deg" }] }}
         >
-          <AnimatedCircle
+          <Circle
             cx={center}
             cy={center}
             r={radius}
@@ -164,8 +142,8 @@ export function WeekProgressRing({ entranceDelay = 100, activities: propActiviti
             strokeWidth={strokeWidth}
             fill="none"
             strokeDasharray={[circumference, circumference]}
+            strokeDashoffset={dashOffset}
             strokeLinecap="round"
-            animatedProps={ringProps}
           />
         </Svg>
 
