@@ -196,8 +196,15 @@ export default function LandingPage() {
     }
   }, [router]);
 
-  // ── Don't render anything if redirecting ──
-  if (stravaConnected || USE_MOCK_STRAVA) return null;
+  // ── Splash while redirecting ──
+  // Never return null — Expo Router needs a component in the slot.
+  if (!ready && (loading || USE_MOCK_STRAVA)) {
+    return (
+      <View style={{ flex: 1, backgroundColor: "#090D14", justifyContent: "center", alignItems: "center" }}>
+        <Text style={{ color: "#64748B", fontSize: 14, fontWeight: "500" }}>Loading...</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={{ flex: 1, backgroundColor: "#090D14" }}>
