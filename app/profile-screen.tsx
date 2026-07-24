@@ -1,4 +1,4 @@
-import { ScrollView, Text, View, TouchableOpacity, Switch, Platform, Linking, Image, ActivityIndicator, Alert } from "react-native";
+import { ScrollView, Text, View, TouchableOpacity, Switch, Platform, Linking, Image, ActivityIndicator, Alert, RefreshControl } from "react-native";
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "expo-router";
 import { ScreenContainer } from "@/components/screen-container";
@@ -159,7 +159,40 @@ export default function ProfileScreen() {
   return (
     <ScreenContainer className="p-0">
       <View style={{ backgroundColor: colors.background, flex: 1 }}>
-        <ScrollView showsVerticalScrollIndicator={false}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={loading}
+              onRefresh={refresh}
+              tintColor={colors.primary}
+              colors={[colors.primary]}
+            />
+          }
+        >
+          {/* Back button */}
+          <TouchableOpacity
+            onPress={() => router.push("/")}
+            accessibilityRole="button"
+            accessibilityLabel="Go back to home"
+            style={{
+              position: "absolute",
+              top: 12,
+              left: 12,
+              zIndex: 10,
+              width: 40,
+              height: 40,
+              borderRadius: 20,
+              backgroundColor: colors.surface,
+              borderWidth: 1,
+              borderColor: colors.border,
+              justifyContent: "center",
+              alignItems: "center",
+            }}
+          >
+            <IconSymbol name="chevron.left" size={20} color={colors.foreground} />
+          </TouchableOpacity>
+
           {/* Profile Header */}
           <View style={{ alignItems: "center", paddingVertical: 32, borderBottomWidth: 1, borderBottomColor: colors.border }}>
             {athlete?.profile ? (

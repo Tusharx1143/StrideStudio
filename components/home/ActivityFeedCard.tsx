@@ -6,7 +6,7 @@
  * and sport-colored accent border.
  */
 
-import { View, Text, TouchableOpacity } from "react-native";
+import { View, Text, TouchableOpacity, Pressable } from "react-native";
 import { useCallback } from "react";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
@@ -399,23 +399,25 @@ export function ActivityFeedCard({
                   </View>
                 )}
               </View>
-              <TouchableOpacity
-                onPress={handleShare}
-                accessibilityRole="button"
-                accessibilityLabel={`Share ${activity.title}`}
-                style={{
+              <Pressable
+                onPress={(e) => {
+                  e.stopPropagation();
+                  handleShare();
+                }}
+                style={({ pressed }) => ({
                   backgroundColor: colors.primary,
                   borderRadius: 14,
                   paddingHorizontal: 16,
                   paddingVertical: 8,
                   minHeight: 36,
                   justifyContent: "center",
-                }}
+                  opacity: pressed ? 0.7 : 1,
+                })}
               >
                 <Text style={{ color: "#FFF", fontSize: 13, fontWeight: "700" }}>
                   Share
                 </Text>
-              </TouchableOpacity>
+              </Pressable>
             </View>
           </View>
         </Animated.View>
