@@ -76,15 +76,20 @@ export function AdjustmentSlider({
   // Thumb position
   const thumbX = trackWidth > 0 ? fraction * trackWidth : 0;
 
-  // Handle track tap
-  const handleTrackPress = useCallback(
-    (pageX: number) => {
-      if (trackWidth === 0) return;
-      // We need the track's screen position. Use a simpler approach:
-      // The PanResponder gives us dx relative to the track.
-    },
-    [trackWidth, min, max, onChange, adjustment.id],
-  );
+  // Refs for values the PanResponder needs — avoids stale closure
+  const fractionRef = useRef(fraction);
+  const trackWidthRef = useRef(trackWidth);
+  const minRef = useRef(min);
+  const maxRef = useRef(max);
+  const adjIdRef = useRef(adjustment.id);
+  const onChangeRef = useRef(onChange);
+  // Keep refs current every render
+  fractionRef.current = fraction;
+  trackWidthRef.current = trackWidth;
+  minRef.current = min;
+  maxRef.current = max;
+  adjIdRef.current = adjustment.id;
+  onChangeRef.current = onChange;
 
   // Pan responder for the thumb
   const panResponder = useRef(
@@ -97,10 +102,11 @@ export function AdjustmentSlider({
         }
       },
       onPanResponderMove: (_, gestureState) => {
-        if (trackWidth === 0) return;
+        const tw = trackWidthRef.current;
+        if (tw === 0) return;
         const dx = gestureState.dx;
-        const newFraction = Math.max(0, Math.min(1, fraction + dx / trackWidth));
-        const newValue = min + newFraction * (max - min);
+        const newFraction = Math.max(0, Math.min(1, fractionRef.current + dx / tw));
+        const newValue = minRef.current + newFraction * (maxRef.current - minRef.current);
         const rounded = Math.round(newValue);
 
         // Haptic tick every 5 units
@@ -110,10 +116,10 @@ export function AdjustmentSlider({
           lastHapticRef.current = tick;
         }
 
-        onChange(adjustment.id, rounded);
+        onChangeRef.current(adjIdRef.current, rounded);
       },
       onPanResponderRelease: () => {
-        lastHapticRef.current = Math.round(value / 5);
+        lastHapticRef.current = Math.round(fractionRef.current * (maxRef.current - minRef.current) + minRef.current / 5);
       },
     }),
   ).current;

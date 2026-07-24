@@ -14,6 +14,7 @@ import { useCanvas } from "@/lib/canvas-state";
 import { resolveColors, getFontFamily } from "@/lib/color-presets";
 import { useColors } from "@/hooks/use-colors";
 import { EditorColors, EditorRadius } from "@/constants/editor-theme";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 const SCREEN_W = Dimensions.get("window").width;
 
@@ -88,9 +89,9 @@ export const LayerGesture = React.memo(function LayerGesture({ layer, canvasH, o
       <Animated.View style={[{
         position: "absolute",
         left: layer.x * SCREEN_W - (SCREEN_W * 0.75) / 2,
-        top: layer.y * canvasH - 65,
+        top: layer.y * canvasH - canvasH * 0.15,
         width: SCREEN_W * 0.75,
-        minHeight: 180,
+        minHeight: Math.min(180, canvasH * 0.45),
         borderRadius: EditorRadius.card,
         overflow: "visible",
         borderWidth: isSelected ? 2 : 1,
@@ -105,7 +106,9 @@ export const LayerGesture = React.memo(function LayerGesture({ layer, canvasH, o
       }, animatedStyle]}>
         {template && activity && (
           <View style={{ flex: 1, padding: 4 }}>
-            {template.render(activity, totals, finalColors)}
+            <ErrorBoundary>
+              {template.render(activity, totals, finalColors)}
+            </ErrorBoundary>
           </View>
         )}
       </Animated.View>

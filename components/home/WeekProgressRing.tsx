@@ -28,11 +28,14 @@ const WEEKLY_GOAL = 40; // km
 interface WeekProgressRingProps {
   /** Delay entrance animation by this many ms */
   entranceDelay?: number;
+  /** Optional filtered activities — uses all from context if omitted */
+  activities?: any[];
 }
 
-export function WeekProgressRing({ entranceDelay = 100 }: WeekProgressRingProps) {
+export function WeekProgressRing({ entranceDelay = 100, activities: propActivities }: WeekProgressRingProps) {
   const colors = useColors();
-  const { activities } = useApp();
+  const { activities: allActivities } = useApp();
+  const activities = propActivities ?? allActivities;
   const weekStats = useMemo(() => computeWeekStats(activities), [activities]);
   const progress = Math.min(weekStats.totalKm / WEEKLY_GOAL, 1);
 

@@ -6,6 +6,7 @@
  */
 import React, { Component, type ReactNode } from "react";
 import { Text, View, TouchableOpacity } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useColors } from "@/hooks/use-colors";
 
 interface Props {
@@ -61,7 +62,7 @@ function DefaultFallback({ error, onReset }: { error: Error; onReset: () => void
         minHeight: 160,
       }}
     >
-      <Text style={{ fontSize: 36, marginBottom: 12 }}>⚠️</Text>
+      <Ionicons name="alert-circle-outline" size={36} color={colors.error || colors.foreground} style={{ marginBottom: 12 }} />
       <Text style={{ color: colors.foreground, fontSize: 16, fontWeight: "700", marginBottom: 8 }}>
         Something went wrong
       </Text>

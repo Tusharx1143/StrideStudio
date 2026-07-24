@@ -6,7 +6,7 @@
  */
 import React, { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import type { Activity, StatToggles } from "@/lib/app-data";
+import type { Activity, StatToggles, PeriodId } from "@/lib/app-data";
 import { useStravaData } from "./strava-data";
 
 // ── Types ──
@@ -16,11 +16,13 @@ export interface PersistedUIState {
   selectedTemplateId: string;
   statToggles: StatToggles;
   savedPostsCount: number;
+  periodFilter: PeriodId;
   selectActivity: (id: string) => void;
   selectTemplate: (id: string) => void;
   setStatToggle: (key: keyof StatToggles, value: boolean) => void;
   incrementSavedPosts: () => void;
   getSelectedActivity: () => Activity;
+  setPeriodFilter: (period: PeriodId) => void;
 }
 
 // ── Constants ──
@@ -47,6 +49,7 @@ export function PersistentStateProvider({ children }: { children: ReactNode }) {
   const [selectedTemplateId, setSelectedTemplateId] = useState("1");
   const [statToggles, setStatToggles] = useState<StatToggles>(DEFAULT_TOGGLES);
   const [savedPostsCount, setSavedPostsCount] = useState(0);
+  const [periodFilter, setPeriodFilter] = useState<PeriodId>("all");
   const [loaded, setLoaded] = useState(false);
 
   // Auto-select first activity when data arrives
@@ -68,6 +71,7 @@ export function PersistentStateProvider({ children }: { children: ReactNode }) {
           if (data.selectedActivityId && activities.some((a) => a.id === data.selectedActivityId)) {
             setSelectedActivityId(data.selectedActivityId);
           }
+          if (data.periodFilter) setPeriodFilter(data.periodFilter);
         }
       })
       .catch(() => {})
@@ -80,20 +84,22 @@ export function PersistentStateProvider({ children }: { children: ReactNode }) {
     const timer = setTimeout(() => {
       AsyncStorage.setItem(
         STORAGE_KEY,
-        JSON.stringify({ selectedActivityId, selectedTemplateId, statToggles, savedPostsCount }),
+        JSON.stringify({ selectedActivityId, selectedTemplateId, statToggles, savedPostsCount, periodFilter }),
       ).catch(() => {});
     }, 300);
     return () => clearTimeout(timer);
-  }, [loaded, selectedActivityId, selectedTemplateId, statToggles, savedPostsCount]);
+  }, [loaded, selectedActivityId, selectedTemplateId, statToggles, savedPostsCount, periodFilter]);
 
   const value: PersistedUIState = {
     selectedActivityId,
     selectedTemplateId,
     statToggles,
     savedPostsCount,
+    periodFilter,
     selectActivity: setSelectedActivityId,
     selectTemplate: setSelectedTemplateId,
     setStatToggle: (key, v) => setStatToggles((prev) => ({ ...prev, [key]: v })),
+    setPeriodFilter: setPeriodFilter,
     incrementSavedPosts: () => setSavedPostsCount((c) => c + 1),
     getSelectedActivity: () => {
       if (activities.length === 0) {

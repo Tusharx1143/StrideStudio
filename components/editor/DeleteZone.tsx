@@ -4,6 +4,7 @@
  */
 import React from "react";
 import { Text, View, Dimensions } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import Animated, { FadeIn } from "react-native-reanimated";
 import {
   EditorColors,
@@ -12,7 +13,7 @@ import {
 } from "@/constants/editor-theme";
 
 const SCREEN_W = Dimensions.get("window").width;
-const DELETE_ZONE_SIZE = 64;
+const DELETE_ZONE_SIZE = Math.min(64, SCREEN_W * 0.17);
 
 interface DeleteZoneProps {
   visible: boolean;
@@ -37,11 +38,11 @@ export function DeleteZone({ visible, dragOver }: DeleteZoneProps) {
         borderColor: dragOver ? EditorColors.destructive : EditorSemantic.glassBorder,
         transform: [{ scale: dragOver ? 1.15 : 1 }],
       }}>
-        <Text style={{ fontSize: 22 }}>🗑️</Text>
+        <Ionicons name="trash-outline" size={Math.min(24, SCREEN_W * 0.06)} color={dragOver ? EditorColors.destructive : EditorColors.mutedText} />
       </View>
       <Text style={{
         color: dragOver ? EditorColors.destructive : EditorColors.mutedText,
-        fontSize: 9, fontWeight: "700", marginTop: 6,
+        fontSize: Math.min(9, SCREEN_W * 0.024), fontWeight: "700", marginTop: 6,
         letterSpacing: 1.5,
       }}>
         {dragOver ? "RELEASE TO DELETE" : "DRAG TO DELETE"}

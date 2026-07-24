@@ -17,11 +17,14 @@ import { staggeredEnter } from "@/lib/animations";
 
 interface QuickStatsRowProps {
   entranceDelay?: number;
+  /** Optional filtered activities — uses all from context if omitted */
+  activities?: any[];
 }
 
-export function QuickStatsRow({ entranceDelay = 180 }: QuickStatsRowProps) {
+export function QuickStatsRow({ entranceDelay = 180, activities: propActivities }: QuickStatsRowProps) {
   const colors = useColors();
-  const { activities } = useApp();
+  const { activities: allActivities } = useApp();
+  const activities = propActivities ?? allActivities;
   const weekStats = useMemo(() => computeWeekStats(activities), [activities]);
   const achievements = useMemo(() => computeAchievements(activities), [activities]);
 

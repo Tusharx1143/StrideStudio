@@ -85,10 +85,16 @@ export function CanvasProvider({ children }: { children: React.ReactNode }) {
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
 
+  /** Deep-clone layers safely with JSON fallback */
+  const cloneLayers = useCallback((l: CanvasLayer[]) => {
+    try { return JSON.parse(JSON.stringify(l)); }
+    catch { return l.map(ol => ({ ...ol })); } // shallow copy fallback
+  }, []);
+
   /** Snapshot current canvas state before mutation */
   const pushHistory = useCallback(() => {
     pastRef.current.push({
-      layers: JSON.parse(JSON.stringify(layers)),
+      layers: cloneLayers(layers),
       selectedLayerId,
       photoUri,
     });
@@ -97,33 +103,33 @@ export function CanvasProvider({ children }: { children: React.ReactNode }) {
     futureRef.current = [];
     setCanUndo(true);
     setCanRedo(false);
-  }, [layers, selectedLayerId, photoUri]);
+  }, [layers, selectedLayerId, photoUri, cloneLayers]);
 
   const undo = useCallback(() => {
     const prev = pastRef.current.pop();
     if (!prev) return;
     // Save current state to future stack
-    futureRef.current.push({ layers: JSON.parse(JSON.stringify(layers)), selectedLayerId, photoUri });
+    futureRef.current.push({ layers: cloneLayers(layers), selectedLayerId, photoUri });
     setLayers(prev.layers);
     setSelectedLayerId(prev.selectedLayerId);
     setPhotoUri(prev.photoUri);
     setCanUndo(pastRef.current.length > 0);
     setCanRedo(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [layers, selectedLayerId, photoUri]);
+  }, [layers, selectedLayerId, photoUri, cloneLayers]);
 
   const redo = useCallback(() => {
     const next = futureRef.current.pop();
     if (!next) return;
     // Save current state to past stack
-    pastRef.current.push({ layers: JSON.parse(JSON.stringify(layers)), selectedLayerId, photoUri });
+    pastRef.current.push({ layers: cloneLayers(layers), selectedLayerId, photoUri });
     setLayers(next.layers);
     setSelectedLayerId(next.selectedLayerId);
     setPhotoUri(next.photoUri);
     setCanUndo(true);
     setCanRedo(futureRef.current.length > 0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [layers, selectedLayerId, photoUri]);
+  }, [layers, selectedLayerId, photoUri, cloneLayers]);
 
   const addLayer = useCallback((templateId: string) => {
     const id = genId();

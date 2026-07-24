@@ -6,7 +6,7 @@
  * can import `useStravaData` or `usePersistentState` directly.
  */
 import React, { createContext, useContext, type ReactNode } from "react";
-import type { Activity, StatToggles } from "./app-data";
+import type { Activity, StatToggles, PeriodId } from "./app-data";
 import { StravaDataProvider, useStravaData, type StravaAthlete } from "./providers/strava-data";
 import { PersistentStateProvider, usePersistentState, type PersistedUIState } from "./providers/persistent-state";
 
@@ -29,11 +29,13 @@ export interface AppState {
   selectedTemplateId: string;
   statToggles: StatToggles;
   savedPostsCount: number;
+  periodFilter: PeriodId;
   selectActivity: (id: string) => void;
   selectTemplate: (id: string) => void;
   setStatToggle: (key: keyof StatToggles, value: boolean) => void;
   incrementSavedPosts: () => void;
   getSelectedActivity: () => Activity;
+  setPeriodFilter: (period: PeriodId) => void;
 }
 
 // ── Merged context ──
@@ -57,11 +59,13 @@ function AppStateProvider({ children }: { children: ReactNode }) {
     selectedTemplateId: ui.selectedTemplateId,
     statToggles: ui.statToggles,
     savedPostsCount: ui.savedPostsCount,
+    periodFilter: ui.periodFilter,
     selectActivity: ui.selectActivity,
     selectTemplate: ui.selectTemplate,
     setStatToggle: ui.setStatToggle,
     incrementSavedPosts: ui.incrementSavedPosts,
     getSelectedActivity: ui.getSelectedActivity,
+    setPeriodFilter: ui.setPeriodFilter,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

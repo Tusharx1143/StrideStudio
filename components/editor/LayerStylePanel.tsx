@@ -7,6 +7,7 @@
  */
 import React from "react";
 import { View, Text, TouchableOpacity } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import {
   ALL_PRESETS,
   CUSTOM_COLORS, FONT_FAMILIES,
@@ -30,11 +31,11 @@ interface LayerStylePanelProps {
   onClose: () => void;
 }
 
-const BACKGROUND_OPTIONS: { id: LayerBackground; label: string; icon: string; desc: string }[] = [
-  { id: 'none',     label: 'None',    icon: '∅', desc: 'Transparent' },
-  { id: 'glass',    label: 'Glass',   icon: '▣', desc: 'Frosted' },
-  { id: 'solid',    label: 'Solid',   icon: '■', desc: 'Opaque' },
-  { id: 'outlined', label: 'Outline', icon: '□', desc: 'Border only' },
+const BACKGROUND_OPTIONS: { id: LayerBackground; label: string; icon: React.ReactNode; desc: string }[] = [
+  { id: 'none',     label: 'None',    icon: <Ionicons name="close-circle-outline" size={18} color={EditorColors.foreground} />, desc: 'Transparent' },
+  { id: 'glass',    label: 'Glass',   icon: <Ionicons name="square-outline" size={18} color={EditorColors.foreground} />, desc: 'Frosted' },
+  { id: 'solid',    label: 'Solid',   icon: <Ionicons name="square" size={18} color={EditorColors.foreground} />, desc: 'Opaque' },
+  { id: 'outlined', label: 'Outline', icon: <Ionicons name="square" size={18} color={EditorColors.foreground} />, desc: 'Border only' },
 ];
 
 function LayerStylePanelInner({
@@ -80,6 +81,7 @@ function LayerStylePanelInner({
               <Text style={{
                 color: layer.fontFamily === ff.id ? "#fff" : EditorColors.foreground,
                 fontSize: EditorType.caption.size,
+                fontFamily: ff.family,
                 fontWeight: ff.id === "bebas-neue" || ff.id === "din-condensed" || ff.id === "league-spartan" ? "900" : ff.id === "oswald" ? "600" : "500",
               }}>
                 {ff.name}
@@ -166,7 +168,7 @@ function LayerStylePanelInner({
                   minHeight: 56, justifyContent: "center",
                 }}
               >
-                <Text style={{ fontSize: 16 }}>{opt.icon}</Text>
+                {typeof opt.icon === "string" ? <Text style={{ fontSize: 16 }}>{opt.icon}</Text> : opt.icon}
                 <Text style={{ color: isActive ? EditorColors.primary : EditorColors.foreground, fontSize: 9, fontWeight: isActive ? "800" : "600" }}>
                   {opt.label}
                 </Text>
@@ -186,21 +188,23 @@ function LayerStylePanelInner({
         </Text>
         <View style={{ flexDirection: "row", gap: 8 }}>
           {[
-            { label: "◀ Back", action: () => onSendBackward(layer.id), color: EditorColors.foreground, bg: EditorColors.card },
-            { label: "Forward ▶", action: () => onBringForward(layer.id), color: EditorColors.foreground, bg: EditorColors.card },
-            { label: "✕ Remove", action: () => { onRemoveLayer(layer.id); onClose(); }, color: EditorColors.destructive, bg: EditorColors.destructive + "20" },
+            { icon: "chevron-back-outline" as const, text: "Back", action: () => onSendBackward(layer.id), color: EditorColors.foreground, bg: EditorColors.card },
+            { icon: "chevron-forward-outline" as const, text: "Fwd", action: () => onBringForward(layer.id), color: EditorColors.foreground, bg: EditorColors.card },
+            { icon: "trash-outline" as const, text: "Remove", action: () => { onRemoveLayer(layer.id); onClose(); }, color: EditorColors.destructive, bg: EditorColors.destructive + "20" },
           ].map((btn) => (
             <TouchableOpacity
-              key={btn.label}
+              key={btn.text}
               onPress={btn.action}
               style={{
                 flex: 1, paddingVertical: 10, borderRadius: EditorRadius.card,
-                backgroundColor: btn.bg, alignItems: "center",
+                backgroundColor: btn.bg, alignItems: "center", gap: 4,
                 minHeight: EditorTouch.buttonSm, justifyContent: "center",
+                flexDirection: "row",
               }}
             >
+              <Ionicons name={btn.icon} size={14} color={btn.color} />
               <Text style={{ color: btn.color, fontSize: EditorType.caption.size, fontWeight: "700" }}>
-                {btn.label}
+                {btn.text}
               </Text>
             </TouchableOpacity>
           ))}
