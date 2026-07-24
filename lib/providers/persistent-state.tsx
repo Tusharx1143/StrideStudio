@@ -74,13 +74,16 @@ export function PersistentStateProvider({ children }: { children: ReactNode }) {
       .finally(() => setLoaded(true));
   }, [activities]);
 
-  // Persist selected state to AsyncStorage on change
+  // Persist selected state to AsyncStorage on change (300ms debounce)
   useEffect(() => {
     if (!loaded) return;
-    AsyncStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({ selectedActivityId, selectedTemplateId, statToggles, savedPostsCount }),
-    ).catch(() => {});
+    const timer = setTimeout(() => {
+      AsyncStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({ selectedActivityId, selectedTemplateId, statToggles, savedPostsCount }),
+      ).catch(() => {});
+    }, 300);
+    return () => clearTimeout(timer);
   }, [loaded, selectedActivityId, selectedTemplateId, statToggles, savedPostsCount]);
 
   const value: PersistedUIState = {
@@ -92,7 +95,17 @@ export function PersistentStateProvider({ children }: { children: ReactNode }) {
     selectTemplate: setSelectedTemplateId,
     setStatToggle: (key, v) => setStatToggles((prev) => ({ ...prev, [key]: v })),
     incrementSavedPosts: () => setSavedPostsCount((c) => c + 1),
-    getSelectedActivity: () => activities.find((a) => a.id === selectedActivityId) ?? activities[0],
+    getSelectedActivity: () => {
+      const found = activities.find((a) => a.id === selectedActivityId);
+      if (found) return found;
+      if (activities.length > 0) {
+        console.warn(
+          `[PersistentState] Selected activity "${selectedActivityId}" not found in ${activities.length} activities, falling back to first.`,
+        );
+        return activities[0];
+      }
+      throw new Error("[PersistentState] getSelectedActivity called with no activities available");
+    },
   };
 
   return <PersistentStateContext.Provider value={value}>{children}</PersistentStateContext.Provider>;
