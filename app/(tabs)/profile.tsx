@@ -1,5 +1,6 @@
 import { ScrollView, Text, View, TouchableOpacity, Switch, Platform, Linking, Image, ActivityIndicator } from "react-native";
 import { useState, useEffect, useMemo } from "react";
+import { useRouter } from "expo-router";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
 import { IconSymbol } from "@/components/ui/icon-symbol";
@@ -89,6 +90,7 @@ function SportBreakdownBar({ runKm, rideKm, workoutCount }: { runKm: number; rid
 }
 
 export default function ProfileScreen() {
+  const router = useRouter();
   const colors = useColors();
   const { activities, savedPostsCount, stravaConnected, athlete, loading, refresh } = useApp();
   const totalDistance = activities.reduce((sum, a) => sum + a.distance, 0);
@@ -248,13 +250,17 @@ export default function ProfileScreen() {
                 <Switch value={notifications} onValueChange={setNotifications} trackColor={{ false: colors.border, true: colors.primary }}
                   accessibilityRole="switch" accessibilityLabel="Notifications" accessibilityState={{ checked: notifications }} />
               </View>
-              {[["Privacy Policy"], ["Support"]].map(([label]) => (
-                <TouchableOpacity key={label} style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: 16, minHeight: 48, borderBottomWidth: 1, borderBottomColor: colors.border }}
-                  accessibilityRole="button" accessibilityLabel={label}>
-                  <Text style={{ color: colors.foreground, fontSize: 14 }}>{label}</Text>
-                  <IconSymbol name="chevron.right" size={18} color={colors.muted} />
-                </TouchableOpacity>
-              ))}
+              <TouchableOpacity
+                onPress={() => router.push("/settings")}
+                style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: 16, minHeight: 48 }}
+                accessibilityRole="button" accessibilityLabel="Open full settings"
+              >
+                <View>
+                  <Text style={{ color: colors.foreground, fontSize: 14 }}>All Settings</Text>
+                  <Text style={{ color: colors.muted, fontSize: 11, marginTop: 1 }}>Appearance, privacy, account</Text>
+                </View>
+                <IconSymbol name="chevron.right" size={18} color={colors.muted} />
+              </TouchableOpacity>
             </View>
           </View>
 
