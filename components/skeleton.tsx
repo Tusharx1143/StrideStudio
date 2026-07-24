@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { View, type ViewStyle } from "react-native";
+import { View, type ViewStyle, type DimensionValue } from "react-native";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -12,7 +12,7 @@ import { useColors } from "@/hooks/use-colors";
 
 interface SkeletonCardProps {
   /** Width of the skeleton block */
-  width?: number | string;
+  width?: DimensionValue;
   /** Height of the skeleton block */
   height?: number;
   /** Border radius */
@@ -48,7 +48,7 @@ export function SkeletonBlock({
     <Animated.View
       style={[
         {
-          width: width as any,
+          width,
           height,
           borderRadius,
           backgroundColor: colors.border,

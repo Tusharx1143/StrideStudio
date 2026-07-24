@@ -17,9 +17,9 @@ export function createTRPCStravaSource(): StravaDataSource {
         });
 
       return {
-        data: data as any,
+        data,
         isLoading,
-        error: error ? new Error("Failed to load Strava status") : null,
+        error: error ? new Error(error.message ?? "Failed to load Strava status") : null,
         refetch,
       };
     },
@@ -37,9 +37,9 @@ export function createTRPCStravaSource(): StravaDataSource {
         );
 
       return {
-        data: data as any,
+        data,
         isLoading,
-        error: error ? new Error("Failed to load activities from Strava") : null,
+        error: error ? new Error(error.message ?? "Failed to load activities from Strava") : null,
         refetch,
       };
     },

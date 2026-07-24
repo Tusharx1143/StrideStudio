@@ -127,7 +127,8 @@ export function FilterCarousel({
                     style={[
                       styles.previewImage,
                       // Apply CSS filter on web for live preview
-                      filter.cssFilter ? { filter: filter.cssFilter } : undefined,
+                      // CSS filter property only applies on web; RN ImageStyle doesn't type it
+                      filter.cssFilter ? ({ filter: filter.cssFilter } as Record<string, unknown>) : undefined,
                     ]}
                     resizeMode="cover"
                   />
