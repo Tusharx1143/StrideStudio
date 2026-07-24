@@ -1,4 +1,4 @@
-import { ScrollView, Text, View, TouchableOpacity, Switch, Platform, Linking } from "react-native";
+import { ScrollView, Text, View, TouchableOpacity, Switch, Platform, Linking, Image, ActivityIndicator } from "react-native";
 import { useState, useEffect, useMemo } from "react";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
@@ -6,7 +6,6 @@ import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useApp } from "@/lib/app-context";
 import { StrideButton } from "@/components/stride-button";
 import { computeWeekStats, computeAchievements, getSportColor } from "@/lib/sport-theme";
-import { ActivityIndicator } from "react-native";
 import Svg, { Circle } from "react-native-svg";
 
 const API_BASE = "http://localhost:3000";
@@ -143,7 +142,7 @@ export default function ProfileScreen() {
           <View style={{ alignItems: "center", paddingVertical: 32, borderBottomWidth: 1, borderBottomColor: colors.border }}>
             {athlete?.profile ? (
               <View style={{ width: 80, height: 80, borderRadius: 40, marginBottom: 12, overflow: "hidden", backgroundColor: colors.surface }}>
-                <img src={athlete.profile} alt="" style={{ width: 80, height: 80, borderRadius: 40 }} onError={(e: any) => { e.target.style.display = "none"; }} />
+                <Image source={{ uri: athlete.profile }} style={{ width: 80, height: 80, borderRadius: 40 }} />
               </View>
             ) : (
               <View style={{ width: 80, height: 80, borderRadius: 40, backgroundColor: colors.primary, justifyContent: "center", alignItems: "center", marginBottom: 12 }}>

@@ -10,6 +10,9 @@ import { DEFAULT_PRESET_ID, DEFAULT_FONT_FAMILY, type FontFamily } from "./color
 
 // ── Types ──
 
+/** Background style for the layer card behind the template */
+export type LayerBackground = 'none' | 'glass' | 'solid' | 'outlined';
+
 export interface CanvasLayer {
   id: string;
   templateId: string;
@@ -27,6 +30,8 @@ export interface CanvasLayer {
   fontFamily: FontFamily;
   /** Layer ordering (higher = on top) */
   zIndex: number;
+  /** Background card style behind the template */
+  backgroundStyle: LayerBackground;
 }
 
 interface CanvasState {
@@ -77,6 +82,7 @@ export function CanvasProvider({ children }: { children: React.ReactNode }) {
       paletteId: DEFAULT_PRESET_ID,
       fontFamily: DEFAULT_FONT_FAMILY,
       zIndex: maxZ + 1,
+      backgroundStyle: 'glass',
     };
     setLayers((prev) => [...prev, newLayer]);
     setSelectedLayerId(id);
