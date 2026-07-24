@@ -4,27 +4,7 @@
  * No mock data.
  */
 
-export interface Activity {
-  id: string;
-  stravaId: number;
-  type: "run" | "ride" | "workout";
-  title: string;
-  distance: number; // km
-  duration: number; // minutes
-  date: string;
-  startDate: string; // ISO 8601
-  pace?: number; // min/km
-  speed?: number; // km/h
-  elevation?: number; // meters
-  heartRate?: number; // avg bpm
-  maxHeartRate?: number;
-  calories?: number;
-  averageTemp?: number;
-  hasHeartrate: boolean;
-  sufferScore?: number;
-  startLatlng?: [number, number];
-  summaryPolyline?: string;
-}
+export type { Activity } from "@/shared/types";
 
 export interface StatToggles {
   distance: boolean;
