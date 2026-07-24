@@ -201,7 +201,7 @@ export default function LandingPage() {
 
       {/* Subtle top-to-bottom gradient vignette */}
       <LinearGradient
-        colors={["#090D14", "transparent", "transparent", "#090D14"] as any}
+        colors={["#090D14", "transparent", "transparent", "#090D14"]}
         style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
         pointerEvents="none"
       />
