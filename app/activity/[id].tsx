@@ -9,7 +9,7 @@ import { StrideButton } from "@/components/stride-button";
 import { ActivityCardSkeleton } from "@/components/skeleton";
 import { getSportConfig, relativeTime, computeAchievements } from "@/lib/sport-theme";
 import { polylineToSvgPath } from "@/lib/map-utils";
-import { IconSymbol } from "@/components/ui/icon-symbol";
+import { IconSymbol, type IconSymbolName } from "@/components/ui/icon-symbol";
 import { ActivityAnimatedIcon } from "@/components/activity-animated-icon";
 import Svg, { Polyline, Circle } from "react-native-svg";
 
@@ -44,7 +44,7 @@ function RouteMapWidget({ polyline, sportColor }: { polyline: string; sportColor
 }
 
 // ── Stat Icon Card ──
-function StatIconCard({ icon, label, value, color }: { icon: string; label: string; value: string; color: string }) {
+function StatIconCard({ icon, label, value, color }: { icon: IconSymbolName; label: string; value: string; color: string }) {
   const colors = useColors();
   return (
     <View
@@ -58,7 +58,7 @@ function StatIconCard({ icon, label, value, color }: { icon: string; label: stri
         marginBottom: 8,
       }}
     >
-      <IconSymbol name={icon as any} size={18} color={color} />
+      <IconSymbol name={icon} size={18} color={color} />
       <Text style={{ color: colors.foreground, fontSize: 22, fontWeight: "800", marginTop: 6 }}>{value}</Text>
       <Text style={{ color: colors.muted, fontSize: 11, fontWeight: "600", marginTop: 2, textTransform: "uppercase", letterSpacing: 0.5 }}>{label}</Text>
     </View>
@@ -133,7 +133,7 @@ export default function ActivityDetailsScreen() {
     router.push("/editor");
   };
 
-  const statCards = [
+  const statCards: Array<{ icon: IconSymbolName; label: string; value: string; color: string }> = [
     { icon: "speedometer", label: "Distance", value: `${activity.distance.toFixed(2)} km`, color: sport.color },
     { icon: "clock.fill", label: "Duration", value: formatDuration(activity.duration), color: colors.foreground },
     ...(activity.pace != null

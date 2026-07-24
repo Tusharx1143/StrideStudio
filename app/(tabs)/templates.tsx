@@ -13,6 +13,10 @@ import { AnimatedToast } from "@/components/animated-toast";
 import { TemplateCardSkeleton } from "@/components/skeleton";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
+/** Module-level cache for template view refs (captureRef targets). */
+type CaptureTarget = Parameters<typeof captureRef>[0];
+const templateRefs = new Map<string, CaptureTarget>();
+
 export default function TemplatesScreen() {
   const router = useRouter();
   const colors = useColors();
@@ -62,7 +66,7 @@ export default function TemplatesScreen() {
     capturingId.current = templateId;
     await new Promise((r) => setTimeout(r, 100));
     try {
-      const ref = (globalThis as any).__templateRefs?.get(templateId);
+      const ref = templateRefs.get(templateId);
       if (!ref) { showToast("Template not ready", "error"); return; }
       const uri = await captureRef(ref, { format: "png", quality: 1 });
       if (Platform.OS === "web") {
@@ -261,8 +265,7 @@ export default function TemplatesScreen() {
                   }}
                   ref={(el) => {
                     if (el) {
-                      if (!(globalThis as any).__templateRefs) (globalThis as any).__templateRefs = new Map();
-                      (globalThis as any).__templateRefs.set(t.id, el);
+                      templateRefs.set(t.id, el);
                     }
                   }}
                 >
