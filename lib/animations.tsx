@@ -11,8 +11,7 @@
  * Motion durations from editor-theme.ts: fast=150, normal=250, slow=350
  */
 
-import { useEffect, useState, useCallback } from "react";
-import { Text } from "react-native";
+import { useEffect, useState } from "react";
 import Animated, {
   FadeInUp,
   FadeInDown,
@@ -137,3 +136,7 @@ export function AnimatedCountUp({
     </Animated.Text>
   );
 }
+
+/** Touch target minimum size (44×44pt accessibility guideline). */
+export const TOUCH_MIN = { minHeight: 44, minWidth: 44 } as const;
+
