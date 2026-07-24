@@ -21,6 +21,7 @@ const MAPPING = {
   "person.fill": "person",
   "paperplane.fill": "send",
   "chevron.left.forwardslash.chevron.right": "code",
+  "chevron.left": "chevron-left",
   "chevron.right": "chevron-right",
   "gear": "settings",
   "heart.fill": "favorite",

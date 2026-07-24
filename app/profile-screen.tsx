@@ -170,29 +170,6 @@ export default function ProfileScreen() {
             />
           }
         >
-          {/* Back button */}
-          <TouchableOpacity
-            onPress={() => router.push("/")}
-            accessibilityRole="button"
-            accessibilityLabel="Go back to home"
-            style={{
-              position: "absolute",
-              top: 12,
-              left: 12,
-              zIndex: 10,
-              width: 40,
-              height: 40,
-              borderRadius: 20,
-              backgroundColor: colors.surface,
-              borderWidth: 1,
-              borderColor: colors.border,
-              justifyContent: "center",
-              alignItems: "center",
-            }}
-          >
-            <IconSymbol name="chevron.left" size={20} color={colors.foreground} />
-          </TouchableOpacity>
-
           {/* Profile Header */}
           <View style={{ alignItems: "center", paddingVertical: 32, borderBottomWidth: 1, borderBottomColor: colors.border }}>
             {athlete?.profile ? (
@@ -322,6 +299,28 @@ export default function ProfileScreen() {
             <StrideButton variant="secondary" onPress={refresh} loading={loading}>Refresh from Strava</StrideButton>
           </View>
         </ScrollView>
+
+        {/* Back button — outside ScrollView to avoid aria-hidden conflicts */}
+        <TouchableOpacity
+          onPress={() => router.push("/")}
+          accessibilityRole="button"
+          accessibilityLabel="Go back to home"
+          style={{
+            position: "absolute",
+            top: 12,
+            left: 12,
+            width: 40,
+            height: 40,
+            borderRadius: 20,
+            backgroundColor: colors.surface,
+            borderWidth: 1,
+            borderColor: colors.border,
+            justifyContent: "center",
+            alignItems: "center",
+          }}
+        >
+          <IconSymbol name="chevron.left" size={20} color={colors.foreground} />
+        </TouchableOpacity>
       </View>
     </ScreenContainer>
   );
