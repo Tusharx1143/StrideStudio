@@ -11,4 +11,7 @@ export const ENV = {
   // Strava OAuth
   stravaClientId: process.env.STRAVA_CLIENT_ID ?? "",
   stravaClientSecret: process.env.STRAVA_CLIENT_SECRET ?? "",
+
+  // Dev mode — uses mock Strava data instead of real API
+  useMockStrava: process.env.USE_MOCK_STRAVA === "true",
 };

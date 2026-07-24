@@ -488,8 +488,6 @@ export class ProdStrava implements StravaService {
   }
 }
 
-export const strava: StravaService = new ProdStrava();
-
 // ─── Test / In-Memory Adapter ─────────────────────────────────────────
 
 /**
@@ -533,4 +531,179 @@ export class TestStrava implements StravaService {
 
   /** Seed fixture activities for tests. */
   setFixtureActivities(activities: Activity[]) { this.activities = activities; }
+
+  /** Seed athlete profile. */
+  setAthlete(athlete: StravaAthlete) { this.athlete = athlete; }
+}
+
+// ─── Mock Data Factory ─────────────────────────────────────────────────
+
+/**
+ * Build a pre-seeded TestStrava instance with realistic fixture data.
+ * Dates are computed relative to "now" so the data always looks recent.
+ */
+function createSeededMockStrava(): TestStrava {
+  const mock = new TestStrava();
+
+  mock.setAthlete({
+    id: 47291834,
+    firstname: "Alex",
+    lastname: "Runner",
+    city: "San Francisco",
+    state: "California",
+    country: "United States",
+    sex: "M",
+    premium: true,
+    profile: "",
+    profileMedium: "",
+    stats: {
+      recentRunTotal: 186420,
+      recentRideTotal: 0,
+      allRunTotals: 5432000,
+      allRideTotals: 823000,
+    },
+  });
+
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const YESTERDAY = new Date(today.getTime() - 86400000);
+  const DAY2 = new Date(today.getTime() - 2 * 86400000);
+  const DAY3 = new Date(today.getTime() - 3 * 86400000);
+  const DAY4 = new Date(today.getTime() - 4 * 86400000);
+  const DAY5 = new Date(today.getTime() - 5 * 86400000);
+  const DAY7 = new Date(today.getTime() - 7 * 86400000);
+  const DAY10 = new Date(today.getTime() - 10 * 86400000);
+  const DAY14 = new Date(today.getTime() - 14 * 86400000);
+
+  function ts(d: Date, hour: number, min: number): string {
+    const dt = new Date(d);
+    dt.setHours(hour, min, 0, 0);
+    return dt.toISOString();
+  }
+
+  const mockActivities: Activity[] = [
+    {
+      id: "mock-1", stravaId: 10001, type: "run",
+      title: "Morning Tempo Run",
+      distance: 8.34, duration: 38.5, elapsedTime: 42.0,
+      date: "Today", startDate: ts(today, 7, 15),
+      pace: 4.62, speed: 13.0, maxSpeed: 15.2,
+      elevation: 85, heartRate: 152, maxHeartRate: 171,
+      calories: 520, hasHeartrate: true, sufferScore: 45,
+      deviceName: "Garmin Forerunner 265",
+    },
+    {
+      id: "mock-2", stravaId: 10002, type: "run",
+      title: "Easy Recovery Jog",
+      distance: 5.21, duration: 30.0, elapsedTime: 31.5,
+      date: "Yesterday", startDate: ts(YESTERDAY, 18, 30),
+      pace: 5.76, speed: 10.4, maxSpeed: 11.8,
+      elevation: 32, heartRate: 135, maxHeartRate: 148,
+      calories: 310, hasHeartrate: true, sufferScore: 18,
+      deviceName: "Garmin Forerunner 265",
+    },
+    {
+      id: "mock-3", stravaId: 10003, type: "run",
+      title: "Interval Session — 6×800m",
+      distance: 10.05, duration: 52.0, elapsedTime: 58.0,
+      date: formatStravaDate(ts(DAY2, 6, 45)), startDate: ts(DAY2, 6, 45),
+      pace: 5.17, speed: 11.6, maxSpeed: 17.9,
+      elevation: 120, heartRate: 163, maxHeartRate: 184,
+      calories: 680, hasHeartrate: true, sufferScore: 92,
+      deviceName: "Garmin Forerunner 265",
+    },
+    {
+      id: "mock-4", stravaId: 10004, type: "run",
+      title: "Long Run — Golden Gate Park",
+      distance: 21.1, duration: 105.0, elapsedTime: 112.0,
+      date: formatStravaDate(ts(DAY3, 7, 0)), startDate: ts(DAY3, 7, 0),
+      pace: 4.98, speed: 12.1, maxSpeed: 14.3,
+      elevation: 245, heartRate: 158, maxHeartRate: 174,
+      calories: 1350, hasHeartrate: true, sufferScore: 78,
+      startLatlng: [37.7694, -122.4862],
+      summaryPolyline: "}z~eFp~m_V",
+      deviceName: "Garmin Forerunner 265",
+    },
+    {
+      id: "mock-5", stravaId: 10005, type: "ride",
+      title: "Marin Headlands Loop",
+      distance: 45.8, duration: 132.0, elapsedTime: 145.0,
+      date: formatStravaDate(ts(DAY4, 8, 30)), startDate: ts(DAY4, 8, 30),
+      speed: 20.8, maxSpeed: 52.4,
+      elevation: 680, heartRate: 145, maxHeartRate: 168,
+      calories: 1620, hasHeartrate: true, sufferScore: 65,
+      deviceName: "Wahoo ELEMNT ROAM",
+    },
+    {
+      id: "mock-6", stravaId: 10006, type: "run",
+      title: "Hill Repeats — Twin Peaks",
+      distance: 7.62, duration: 45.0, elapsedTime: 50.0,
+      date: formatStravaDate(ts(DAY5, 6, 0)), startDate: ts(DAY5, 6, 0),
+      pace: 5.91, speed: 10.2, maxSpeed: 13.5,
+      elevation: 310, heartRate: 161, maxHeartRate: 179,
+      calories: 490, hasHeartrate: true, sufferScore: 72,
+      deviceName: "Garmin Forerunner 265",
+    },
+    {
+      id: "mock-7", stravaId: 10007, type: "run",
+      title: "Progression Run",
+      distance: 12.45, duration: 56.0, elapsedTime: 58.5,
+      date: formatStravaDate(ts(DAY7, 7, 30)), startDate: ts(DAY7, 7, 30),
+      pace: 4.5, speed: 13.3, maxSpeed: 15.8,
+      elevation: 95, heartRate: 156, maxHeartRate: 175,
+      calories: 780, hasHeartrate: true, sufferScore: 55,
+      deviceName: "Apple Watch Ultra 2",
+    },
+    {
+      id: "mock-8", stravaId: 10008, type: "ride",
+      title: "Commute — Downtown Loop",
+      distance: 18.3, duration: 48.0, elapsedTime: 52.0,
+      date: formatStravaDate(ts(DAY7, 17, 0)), startDate: ts(DAY7, 17, 0),
+      speed: 22.9, maxSpeed: 38.6,
+      elevation: 120, heartRate: 132, maxHeartRate: 155,
+      calories: 480, hasHeartrate: true, sufferScore: 22,
+      deviceName: "Wahoo ELEMNT ROAM",
+    },
+    {
+      id: "mock-9", stravaId: 10009, type: "run",
+      title: "Trail Run — Muir Woods",
+      distance: 14.8, duration: 85.0, elapsedTime: 92.0,
+      date: formatStravaDate(ts(DAY10, 8, 0)), startDate: ts(DAY10, 8, 0),
+      pace: 5.74, speed: 10.5, maxSpeed: 12.1,
+      elevation: 420, heartRate: 149, maxHeartRate: 167,
+      calories: 920, hasHeartrate: true, sufferScore: 60,
+      startLatlng: [37.8922, -122.5713],
+      deviceName: "Garmin Forerunner 265",
+    },
+    {
+      id: "mock-10", stravaId: 10010, type: "run",
+      title: "5K Race Simulation",
+      distance: 5.0, duration: 19.5, elapsedTime: 20.0,
+      date: formatStravaDate(ts(DAY14, 7, 0)), startDate: ts(DAY14, 7, 0),
+      pace: 3.9, speed: 15.4, maxSpeed: 17.2,
+      elevation: 28, heartRate: 171, maxHeartRate: 192,
+      calories: 340, hasHeartrate: true, sufferScore: 95,
+      deviceName: "Garmin Forerunner 265",
+    },
+  ];
+
+  mock.setFixtureActivities(mockActivities);
+  return mock;
+}
+
+// ─── Service Selection ─────────────────────────────────────────────────
+
+/**
+ * The active Strava service instance.
+ *
+ * When USE_MOCK_STRAVA=true, returns a pre-seeded TestStrava with
+ * realistic fixture data — no real Strava credentials needed.
+ * Otherwise uses the production Strava API adapter.
+ */
+export const strava: StravaService = ENV.useMockStrava
+  ? createSeededMockStrava()
+  : new ProdStrava();
+
+if (ENV.useMockStrava) {
+  console.log("[Strava] 🧪 Using MOCK Strava — fixture data, no API calls");
 }

@@ -23,7 +23,7 @@ import Animated, {
 } from "react-native-reanimated";
 import Svg, { Circle, Line, Path, Polyline } from "react-native-svg";
 import { useApp } from "@/lib/app-context";
-import { API_BASE } from "@/lib/config";
+import { API_BASE, USE_MOCK_STRAVA } from "@/lib/config";
 import { useColors } from "@/hooks/use-colors";
 
 // ── Background Art ──────────────────────────────────────────────────────────
@@ -157,7 +157,7 @@ export default function LandingPage() {
   const router = useRouter();
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { stravaConnected, loading } = useApp();
+  const { stravaConnected, loading, refresh } = useApp();
   const [connecting, setConnecting] = useState(false);
   const [ready, setReady] = useState(false);
 
@@ -178,6 +178,13 @@ export default function LandingPage() {
   const handleConnect = useCallback(async () => {
     setConnecting(true);
     try {
+      if (USE_MOCK_STRAVA) {
+        // Mock mode: skip real OAuth — the server's TestStrava always
+        // returns connected=true. Just refresh and the auth gate will
+        // redirect to /home.
+        await refresh();
+        return;
+      }
       if (Platform.OS === "web") {
         window.location.href = `${API_BASE}/api/strava/auth`;
       } else {
@@ -189,7 +196,7 @@ export default function LandingPage() {
     } finally {
       setConnecting(false);
     }
-  }, []);
+  }, [refresh]);
 
   // ── Don't render anything if redirecting ──
   if (stravaConnected) return null;
@@ -317,7 +324,7 @@ export default function LandingPage() {
                     }}
                   >
                     {/* Runner icon */}
-                    <Text style={{ fontSize: 20, fontWeight: "800" }}>🏃</Text>
+                    <Text style={{ fontSize: 20, fontWeight: "800" }}>{USE_MOCK_STRAVA ? "🚀" : "🏃"}</Text>
                     <Text
                       style={{
                         color: "#FFF",
@@ -326,7 +333,7 @@ export default function LandingPage() {
                         letterSpacing: -0.2,
                       }}
                     >
-                      {connecting ? "Connecting..." : "Connect with Strava"}
+                      {connecting ? "Connecting..." : USE_MOCK_STRAVA ? "Explore Demo" : "Connect with Strava"}
                     </Text>
                   </LinearGradient>
                 </TouchableOpacity>

@@ -63,6 +63,10 @@ async function startServer() {
   if (ENV.stravaClientId && ENV.stravaClientSecret) {
     registerStravaOAuthRoutes(app);
     console.log("[Strava] OAuth routes registered");
+  } else if (ENV.useMockStrava) {
+    // Mock mode: register routes anyway — OAuth endpoints will use TestStrava
+    registerStravaOAuthRoutes(app);
+    console.log("[Strava] OAuth routes registered (mock mode — no real credentials)");
   } else {
     console.warn(
       "[Strava] Skipping OAuth routes — set STRAVA_CLIENT_ID and STRAVA_CLIENT_SECRET in .env"

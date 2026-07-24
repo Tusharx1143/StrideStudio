@@ -5,7 +5,7 @@ import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useApp } from "@/lib/app-context";
-import { API_BASE } from "@/lib/config";
+import { API_BASE, USE_MOCK_STRAVA } from "@/lib/config";
 import { StrideButton } from "@/components/stride-button";
 import { computeWeekStats, computeAchievements, getSportColor } from "@/lib/sport-theme";
 import Svg, { Circle } from "react-native-svg";
@@ -121,6 +121,11 @@ export default function ProfileScreen() {
   const connectStrava = async () => {
     setConnecting(true);
     try {
+      if (USE_MOCK_STRAVA) {
+        // Mock mode: skip real OAuth — server always reports connected
+        await refresh();
+        return;
+      }
       if (Platform.OS === "web") {
         window.location.href = `${API_BASE}/api/strava/auth`;
       } else {
