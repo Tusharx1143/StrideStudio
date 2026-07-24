@@ -1,7 +1,11 @@
 import { ThemedView } from "@/components/themed-view";
-import * as Api from "@/lib/_core/api";
 import * as Auth from "@/lib/_core/auth";
 import { logger } from "@/lib/_core/logger";
+import {
+  exchangeCodeForToken,
+  getStoredCodeVerifier,
+  clearStoredCodeVerifier,
+} from "@/lib/strava-oauth";
 import * as Linking from "expo-linking";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
@@ -31,6 +35,32 @@ export default function OAuthCallback() {
         user: params.user ? "present" : "missing",
       });
       try {
+        // ── Strava PKCE callback ──────────────────────────────────────────
+        // Strava redirects back with ?code=...&state=...&scope=...activity...
+        // Detect it by the presence of "activity" in the scope param.
+        // Strava PKCE callback is identified by the scope param containing "activity"
+        const scope = (params as Record<string, string>).scope;
+        if (params.code && scope?.includes("activity")) {
+          logger.log("[OAuth] Detected Strava PKCE callback");
+
+          const codeVerifier = await getStoredCodeVerifier();
+          if (!codeVerifier) {
+            setStatus("error");
+            setErrorMessage("Missing code verifier. Please try connecting again.");
+            return;
+          }
+
+          await exchangeCodeForToken(params.code, codeVerifier);
+          await clearStoredCodeVerifier();
+
+          setStatus("success");
+          logger.log("[OAuth] Strava PKCE exchange successful, redirecting to home...");
+          setTimeout(() => {
+            router.replace("/home");
+          }, 1000);
+          return;
+        }
+
         // Check for sessionToken in params first (web OAuth callback from server redirect)
         if (params.sessionToken) {
           logger.log("[OAuth] Session token found in params (web callback)");
@@ -165,7 +195,8 @@ export default function OAuthCallback() {
           return;
         }
 
-        // Otherwise, exchange code for session token
+        // If we have code + state but no sessionToken and it's not a Strava PKCE
+        // callback, the server-based OAuth flow is no longer available.
         if (!code || !state) {
           logger.error("[OAuth] Missing code or state parameter", {
             hasCode: !!code,
@@ -176,53 +207,12 @@ export default function OAuthCallback() {
           return;
         }
 
-        // Exchange code for session token
-        logger.log("[OAuth] Exchanging code for session token...", {
-          code: code.substring(0, 20) + "...",
-          state: state.substring(0, 20) + "...",
-        });
-        const result = await Api.exchangeOAuthCode(code, state);
-        logger.log("[OAuth] Exchange result:", {
-          hasSessionToken: !!result.sessionToken,
-          hasUser: !!result.user,
-        });
-
-        if (result.sessionToken) {
-          logger.log("[OAuth] Session token received, storing...");
-          // Store session token
-          await Auth.setSessionToken(result.sessionToken);
-          logger.log("[OAuth] Session token stored successfully");
-
-          // Store user info if available
-          if (result.user) {
-            logger.log("[OAuth] User data received:", result.user);
-            const userInfo: Auth.User = {
-              id: result.user.id,
-              openId: result.user.openId,
-              name: result.user.name,
-              email: result.user.email,
-              loginMethod: result.user.loginMethod,
-              lastSignedIn: new Date(result.user.lastSignedIn || Date.now()),
-            };
-            await Auth.setUserInfo(userInfo);
-            logger.log("[OAuth] User info stored:", userInfo);
-          } else {
-            logger.log("[OAuth] No user data in result");
-          }
-
-          setStatus("success");
-          logger.log("[OAuth] Authentication successful, redirecting to home...");
-
-          // Redirect to home after a short delay
-          setTimeout(() => {
-            logger.log("[OAuth] Executing redirect...");
-            router.replace("/home");
-          }, 1000);
-        } else {
-          logger.error("[OAuth] No session token in result:", result);
-          setStatus("error");
-          setErrorMessage("No session token received");
-        }
+        // Server-side OAuth code exchange is no longer available.
+        // Strava auth uses PKCE (handled above). Other auth methods
+        // should go through the client-side flow.
+        setStatus("error");
+        setErrorMessage("Server-based authentication is no longer available.");
+        return;
       } catch (error) {
         logger.error("[OAuth] Callback error:", error);
         setStatus("error");

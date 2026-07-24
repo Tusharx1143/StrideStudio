@@ -128,6 +128,7 @@ const config: ExpoConfig = {
   extra: {
     apiUrl: process.env.API_URL ?? "http://localhost:3000",
     useMockStrava: process.env.USE_MOCK_STRAVA === "true",
+    stravaClientId: process.env.EXPO_PUBLIC_STRAVA_CLIENT_ID ?? process.env.STRAVA_CLIENT_ID ?? "",
   },
 };
 

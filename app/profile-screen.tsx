@@ -1,11 +1,18 @@
-import { ScrollView, Text, View, TouchableOpacity, Switch, Platform, Linking, Image, ActivityIndicator, Alert } from "react-native";
-import { useState, useEffect, useMemo } from "react";
+import { ScrollView, Text, View, TouchableOpacity, Switch, Platform, Image, ActivityIndicator, Alert } from "react-native";
+import { useState, useMemo } from "react";
 import { useRouter } from "expo-router";
+import * as Linking from "expo-linking";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useApp } from "@/lib/app-context";
-import { API_BASE, USE_MOCK_STRAVA } from "@/lib/config";
+import { stravaApi } from "@/lib/strava-api";
+import {
+  generateCodeVerifier,
+  generateCodeChallenge,
+  buildStravaAuthUrl,
+  storeCodeVerifier,
+} from "@/lib/strava-oauth";
 import { StrideButton } from "@/components/stride-button";
 import { computeWeekStats, computeAchievements, getSportColor } from "@/lib/sport-theme";
 import Svg, { Circle } from "react-native-svg";
@@ -108,29 +115,30 @@ export default function ProfileScreen() {
   const achievements = useMemo(() => computeAchievements(activities), [activities]);
   const goalProgress = Math.min(weekStats.totalKm / WEEKLY_GOAL_KM, 1);
 
-  useEffect(() => {
-    if (Platform.OS === "web" && typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      if (params.get("strava") === "connected") {
-        refresh();
-        window.history.replaceState({}, "", window.location.pathname);
-      }
-    }
-  }, [refresh]);
-
   const connectStrava = async () => {
     setConnecting(true);
     try {
-      if (USE_MOCK_STRAVA) {
-        // Mock mode: skip real OAuth — server always reports connected
-        await refresh();
-        return;
-      }
+      // 1. Generate PKCE values
+      const codeVerifier = generateCodeVerifier();
+      const codeChallenge = await generateCodeChallenge(codeVerifier);
+
+      // 2. Store code_verifier (retrieved after Strava redirects back)
+      await storeCodeVerifier(codeVerifier);
+
+      // 3. Build the redirect URI
+      const redirectUri = Linking.createURL("/oauth/callback");
+
+      // 4. Random state for CSRF protection
+      const state = generateCodeVerifier().slice(0, 32);
+
+      // 5. Build and open Strava authorization URL
+      const authUrl = buildStravaAuthUrl(codeChallenge, redirectUri, state);
+
       if (Platform.OS === "web") {
-        window.location.href = `${API_BASE}/api/strava/auth`;
+        window.location.href = authUrl;
       } else {
-        const supported = await Linking.canOpenURL(`${API_BASE}/api/strava/auth`);
-        if (supported) await Linking.openURL(`${API_BASE}/api/strava/auth`);
+        const supported = await Linking.canOpenURL(authUrl);
+        if (supported) await Linking.openURL(authUrl);
       }
     } catch (error) {
       console.error("[Strava] Failed to connect:", error);
@@ -150,8 +158,8 @@ export default function ProfileScreen() {
           style: "destructive",
           onPress: async () => {
             try {
-              const resp = await fetch(`${API_BASE}/api/strava/disconnect`, { method: "POST" });
-              if (resp.ok) refresh();
+              await stravaApi.disconnect();
+              refresh();
             } catch (error) {
               console.error("[Strava] Disconnect failed:", error);
             }

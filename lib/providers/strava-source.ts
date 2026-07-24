@@ -8,7 +8,7 @@
  * One real implementation + one test implementation = real seam.
  */
 
-import type { Activity } from "@/shared/types";
+import type { Activity } from "@/lib/app-data";
 import type { StravaAthlete } from "./strava-data";
 
 // ── Types ──────────────────────────────────────────────────────────────────
