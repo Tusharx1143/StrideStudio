@@ -20,6 +20,7 @@ import { trpc, createTRPCClient } from "@/lib/trpc";
 import { AppProvider } from "@/lib/app-context";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { initManusRuntime, subscribeSafeAreaInsets } from "@/lib/_core/manus-runtime";
+import { MaterialIcons, Ionicons } from "@expo/vector-icons";
 
 const DEFAULT_WEB_INSETS: EdgeInsets = { top: 0, right: 0, bottom: 0, left: 0 };
 const DEFAULT_WEB_FRAME: Rect = { x: 0, y: 0, width: 0, height: 0 };
@@ -46,6 +47,25 @@ export default function RootLayout() {
     const unsubscribe = subscribeSafeAreaInsets(handleSafeAreaUpdate);
     return () => unsubscribe();
   }, [handleSafeAreaUpdate]);
+
+  // Preload icon fonts on web to prevent the silent font-loading failure
+  // in @expo/vector-icons' createIconSet componentDidMount.
+  // On web, expo-font's loadSingleFontAsync can silently swallow errors
+  // when the TTF asset has a downloadAsync method (Expo Asset object),
+  // leaving icons permanently in the empty <Text /> fallback state.
+  useEffect(() => {
+    const loadIconFonts = async () => {
+      try {
+        await Promise.all([
+          MaterialIcons.loadFont(),
+          Ionicons.loadFont(),
+        ]);
+      } catch (err) {
+        console.warn("[StrideStudio] Icon font preload failed:", err);
+      }
+    };
+    loadIconFonts();
+  }, []);
 
   // Create clients once and reuse them
   const [queryClient] = useState(
