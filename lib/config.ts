@@ -4,19 +4,22 @@
  */
 import Constants from "expo-constants";
 
-function getExtra(key: string, fallback: string): string;
-function getExtra(key: string, fallback: boolean): boolean;
-function getExtra(key: string, fallback: string | boolean): string | boolean {
-  const extras = Constants.expoConfig?.extra as Record<string, unknown> | undefined;
+function getExtra(key: string, fallback: string): string {
+  const extras = Constants.expoConfig?.extra as Record<string, string> | undefined;
   const value = extras?.[key];
   // Guard against empty string placeholders
   if (typeof value === "string" && value.length > 0) return value;
-  if (typeof value === "boolean") return value;
   return fallback;
 }
 
 /** Backend API base URL (configurable via API_URL env var) */
-export const API_BASE = getExtra("apiUrl", "http://localhost:3000") as string;
+export const API_BASE = getExtra("apiUrl", "http://localhost:3000");
 
-/** Whether mock Strava mode is enabled (no real OAuth needed) */
-export const USE_MOCK_STRAVA = getExtra("useMockStrava", false) as boolean;
+/**
+ * Whether mock Strava mode is enabled (no real OAuth needed).
+ * Uses EXPO_PUBLIC_ prefix so Metro inlines it into the client bundle.
+ * Falls back to extra field (from app.config.ts) for compatibility.
+ */
+export const USE_MOCK_STRAVA: boolean =
+  process.env.EXPO_PUBLIC_USE_MOCK_STRAVA === "true" ||
+  (Constants.expoConfig?.extra as Record<string, unknown> | undefined)?.useMockStrava === true;
