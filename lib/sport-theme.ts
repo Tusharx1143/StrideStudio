@@ -127,6 +127,26 @@ export function computeAchievements(activities: Activity[]): Achievement[] {
   return badges;
 }
 
+// ── Animation Config ──
+
+export interface AnimationConfig {
+  /** Duration of one full animation cycle in ms */
+  cycleMs: number;
+  /** Intensity of the movement (0-1, higher = more energetic) */
+  intensity: number;
+}
+
+export const ANIMATION_CONFIG: Record<SportType, AnimationConfig> = {
+  run: { cycleMs: 600, intensity: 0.8 },
+  ride: { cycleMs: 720, intensity: 0.6 },
+  workout: { cycleMs: 900, intensity: 0.5 },
+};
+
+/** Get animation config for a sport type */
+export function getAnimationConfig(type: SportType): AnimationConfig {
+  return ANIMATION_CONFIG[type] ?? ANIMATION_CONFIG.workout;
+}
+
 /** Compute weekly totals for goal tracking */
 export interface WeekStats {
   totalKm: number;

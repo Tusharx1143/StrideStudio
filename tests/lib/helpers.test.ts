@@ -83,10 +83,8 @@ describe("formatDuration", () => {
 
   it("rounds fractional minutes", () => {
     expect(formatDuration(59.4)).toBe("59 min");
-    // 59.6 rounds to 60 minutes, but formatDuration checks h > 0 first,
-    // so m=60 with h=0 gives "60 min" (not "1h 0m")
-    // Bug note: when m rounds to 60, it should reflow to 1h 0m
-    expect(formatDuration(59.6)).toBe("60 min");
+    // 59.6 rounds to 60, which now correctly reflows to 1h 0m
+    expect(formatDuration(59.6)).toBe("1h 0m");
     // True hour boundary works correctly
     expect(formatDuration(60)).toBe("1h 0m");
   });

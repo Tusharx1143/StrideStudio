@@ -27,6 +27,7 @@ import {
   Dimensions,
   ActivityIndicator,
   StyleSheet,
+  Share,
 } from "react-native";
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
@@ -236,7 +237,7 @@ export default function EditorScreen() {
     }
   }, [incrementSavedPosts, showToast]);
 
-  // Copy composite
+  // Share / Copy composite
   const copyAll = useCallback(async () => {
     if (!canvasRef.current) return;
     setCopying(true);
@@ -248,18 +249,14 @@ export default function EditorScreen() {
         await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
         showToast("Copied to clipboard", "success");
       } else {
-        const { status } = await MediaLibrary.requestPermissionsAsync();
-        if (status === "granted") {
-          await MediaLibrary.saveToLibraryAsync(uri);
-          showToast("Saved to camera roll", "success");
-        }
+        await Share.share({ url: uri });
       }
       incrementSavedPosts();
       if (Platform.OS !== "web") {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
     } catch {
-      showToast("Failed to copy", "error");
+      showToast("Failed to share", "error");
     } finally {
       setCopying(false);
     }
@@ -1069,14 +1066,14 @@ export default function EditorScreen() {
             disabled={copying}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             accessibilityRole="button"
-            accessibilityLabel="Copy post"
+            accessibilityLabel="Share post"
             style={localStyles.copyButton}
           >
             {copying && (
               <ActivityIndicator size="small" color={EditorColors.foreground} />
             )}
             <Text style={localStyles.copyButtonText}>
-              {copying ? "Copying…" : "📋 Copy"}
+              {copying ? "Sharing…" : "📤 Share"}
             </Text>
           </TouchableOpacity>
 

@@ -1,15 +1,14 @@
-import { ScrollView, Text, View, TouchableOpacity, Switch, Platform, Linking, Image, ActivityIndicator } from "react-native";
+import { ScrollView, Text, View, TouchableOpacity, Switch, Platform, Linking, Image, ActivityIndicator, Alert } from "react-native";
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "expo-router";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useApp } from "@/lib/app-context";
+import { API_BASE } from "@/lib/config";
 import { StrideButton } from "@/components/stride-button";
 import { computeWeekStats, computeAchievements, getSportColor } from "@/lib/sport-theme";
 import Svg, { Circle } from "react-native-svg";
-
-const API_BASE = "http://localhost:3000";
 const WEEKLY_GOAL_KM = 40; // Default weekly goal
 
 // ── Progress Ring ──
@@ -127,13 +126,26 @@ export default function ProfileScreen() {
     }
   };
 
-  const disconnectStrava = async () => {
-    try {
-      const resp = await fetch(`${API_BASE}/api/strava/disconnect`, { method: "POST" });
-      if (resp.ok) refresh();
-    } catch (error) {
-      console.error("[Strava] Disconnect failed:", error);
-    }
+  const disconnectStrava = () => {
+    Alert.alert(
+      "Disconnect Strava?",
+      "Your activity data and posts won't be deleted, but new activities won't sync until you reconnect.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Disconnect",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              const resp = await fetch(`${API_BASE}/api/strava/disconnect`, { method: "POST" });
+              if (resp.ok) refresh();
+            } catch (error) {
+              console.error("[Strava] Disconnect failed:", error);
+            }
+          },
+        },
+      ],
+    );
   };
 
   return (

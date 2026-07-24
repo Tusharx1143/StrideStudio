@@ -23,9 +23,8 @@ import Animated, {
 } from "react-native-reanimated";
 import Svg, { Circle, Line, Path, Polyline } from "react-native-svg";
 import { useApp } from "@/lib/app-context";
+import { API_BASE } from "@/lib/config";
 import { useColors } from "@/hooks/use-colors";
-
-const API_BASE = "http://localhost:3000";
 
 // ── Background Art ──────────────────────────────────────────────────────────
 // Abstract geometric composition suggesting movement, routes, and data.

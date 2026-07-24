@@ -1,5 +1,5 @@
 import { ScrollView, Text, View, TouchableOpacity, Platform, TextInput } from "react-native";
-import { useState, useRef, useCallback, useMemo } from "react";
+import { useState, useRef, useCallback, useMemo, useEffect } from "react";
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { captureRef } from "react-native-view-shot";
@@ -19,16 +19,23 @@ export default function TemplatesScreen() {
   const { activities, loading, stravaConnected, getSelectedActivity } = useApp();
   const [filter, setFilter] = useState<"all" | "activity" | "totals">("all");
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [sortBy, setSortBy] = useState<"default" | "name-asc" | "name-desc">("default");
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
   const capturingId = useRef<string | null>(null);
+
+  // Debounce search input to avoid filtering on every keystroke
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search), 200);
+    return () => clearTimeout(timer);
+  }, [search]);
 
   const activity = getSelectedActivity();
   const totals = computeWeekTotals(activities);
   const templates = useMemo(() => {
     let filtered = ALL_TEMPLATES.filter((t) => filter === "all" || t.tab === filter);
-    if (search.trim()) {
-      const q = search.toLowerCase().trim();
+    if (debouncedSearch.trim()) {
+      const q = debouncedSearch.toLowerCase().trim();
       filtered = filtered.filter(
         (t) => t.name.toLowerCase().includes(q) || t.description.toLowerCase().includes(q),
       );
@@ -39,7 +46,7 @@ export default function TemplatesScreen() {
       filtered = [...filtered].sort((a, b) => b.name.localeCompare(a.name));
     }
     return filtered;
-  }, [filter, search, sortBy]);
+  }, [filter, debouncedSearch, sortBy]);
 
   const showToast = useCallback((message: string, type: "success" | "error" | "info" = "info") => {
     setToast({ message, type });

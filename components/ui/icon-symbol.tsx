@@ -7,6 +7,7 @@ import { OpaqueColorValue, type StyleProp, type TextStyle } from "react-native";
 
 type IconMapping = Record<SymbolViewProps["name"], ComponentProps<typeof MaterialIcons>["name"]>;
 type IconSymbolName = keyof typeof MAPPING;
+export type { IconSymbolName };
 
 /**
  * Add your SF Symbols to Material Icons mappings here.
@@ -36,6 +37,8 @@ const MAPPING = {
   "clock.fill": "access-time",
   "mountain.2.fill": "terrain",
   "speedometer": "speed",
+  // Trophy / achievement
+  "trophy.fill": "emoji-events",
 } as IconMapping;
 
 /**
