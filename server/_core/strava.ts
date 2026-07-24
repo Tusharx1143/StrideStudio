@@ -4,6 +4,8 @@ import { getDb } from "../db";
 import { stravaTokens } from "../../drizzle/schema";
 import type { Activity } from "../../shared/types";
 
+const isDev = process.env.NODE_ENV !== "production";
+
 // ─── Types ───────────────────────────────────────────────────────────────
 
 interface StravaTokenSet {
@@ -125,7 +127,7 @@ class DrizzleTokenStore implements StravaTokenStore {
         athleteId: rows[0].athleteId,
       };
     } catch (err) {
-      console.warn("[Strava] DB token read failed, falling back:", err);
+      if (isDev) console.warn("[Strava] DB token read failed, falling back:", err);
       return null;
     }
   }
@@ -171,10 +173,10 @@ async function _ensureDbStore(): Promise<void> {
     const db = await getDb();
     if (db) {
       tokenStore = new DrizzleTokenStore();
-      console.log("[Strava] Using database-backed token store");
+      if (isDev) console.log("[Strava] Using database-backed token store");
     }
   } catch {
-    console.warn("[Strava] DB not available, keeping in-memory token store");
+    if (isDev) console.warn("[Strava] DB not available, keeping in-memory token store");
   }
 }
 

@@ -73,13 +73,13 @@ export const LayerGesture = React.memo(function LayerGesture({ layer, canvasH, o
   const finalColors = { ...palette, fontFamily: layerFont.family };
   const isSelected = layer.id === selectedLayerId;
 
-  // Background style map
+  // Background style map — lightened for contrast against dark canvas (#1A1534)
   const bgStyle = layer.backgroundStyle ?? 'glass';
   const bgColors: Record<string, { bg: string; border: string }> = {
     none:      { bg: 'transparent',                 border: 'transparent' },
-    glass:     { bg: 'rgba(15, 23, 42, 0.55)',      border: 'rgba(255,255,255,0.08)' },
-    solid:     { bg: '#0F172A',                      border: 'rgba(255,255,255,0.12)' },
-    outlined:  { bg: 'rgba(15, 23, 42, 0.15)',      border: 'rgba(255,255,255,0.25)' },
+    glass:     { bg: 'rgba(30, 41, 59, 0.65)',      border: 'rgba(255,255,255,0.12)' },
+    solid:     { bg: '#1E293B',                      border: 'rgba(255,255,255,0.15)' },
+    outlined:  { bg: 'rgba(30, 41, 59, 0.30)',      border: 'rgba(255,255,255,0.30)' },
   };
   const bg = bgColors[bgStyle] ?? bgColors.glass;
 
@@ -87,20 +87,20 @@ export const LayerGesture = React.memo(function LayerGesture({ layer, canvasH, o
     <GestureDetector gesture={composed}>
       <Animated.View style={[{
         position: "absolute",
-        left: layer.x * SCREEN_W - (SCREEN_W * 0.4) / 2,
+        left: layer.x * SCREEN_W - (SCREEN_W * 0.75) / 2,
         top: layer.y * canvasH - 65,
-        width: SCREEN_W * 0.4,
-        minHeight: 130,
+        width: SCREEN_W * 0.75,
+        minHeight: 180,
         borderRadius: EditorRadius.card,
-        overflow: "hidden",
-        borderWidth: isSelected ? 2 : bgStyle === 'outlined' ? 1 : 0,
+        overflow: "visible",
+        borderWidth: isSelected ? 2 : 1,
         borderColor: isSelected ? EditorColors.primary : bg.border,
         backgroundColor: bg.bg,
-        // Glow effect when selected
-        shadowColor: isSelected ? EditorColors.primary : "#000",
+        // Glow effect — subtle border-glow on dark canvas even when unselected
+        shadowColor: isSelected ? EditorColors.primary : "rgba(255,255,255,0.06)",
         shadowOffset: { width: 0, height: isSelected ? 0 : 2 },
-        shadowOpacity: isSelected ? 0.5 : 0.15,
-        shadowRadius: isSelected ? 16 : 6,
+        shadowOpacity: isSelected ? 0.5 : 0.08,
+        shadowRadius: isSelected ? 16 : 8,
         elevation: isSelected ? 12 : 4,
       }, animatedStyle]}>
         {template && activity && (

@@ -39,7 +39,7 @@ import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 import { ScreenContainer } from "@/components/screen-container";
 import { useApp } from "@/lib/app-context";
 import { ALL_TEMPLATES, computeWeekTotals } from "@/lib/templates";
-import { useCanvas } from "@/lib/canvas-state";
+import { useCanvas, CanvasProvider } from "@/lib/canvas-state";
 import {
   ALL_PRESETS, resolveColors,
   CUSTOM_COLORS, FONT_FAMILIES, getFontFamily,
@@ -130,10 +130,18 @@ function filterActivitiesByPeriod(activities: any[], period: PeriodId): any[] {
 }
 
 // ════════════════════════════════════════════════════════════════
-// Main Screen
+// Main Screen — CanvasProvider scoped to editor to prevent state leaks
 // ════════════════════════════════════════════════════════════════
 
 export default function EditorScreen() {
+  return (
+    <CanvasProvider>
+      <EditorContent />
+    </CanvasProvider>
+  );
+}
+
+function EditorContent() {
   const router = useRouter();
   const colors = useColors();
   const {
