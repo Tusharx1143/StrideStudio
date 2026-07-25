@@ -77,7 +77,8 @@ export function AnimatedToast({
 
   return (
     <Animated.View
-      pointerEvents="none"
+      accessibilityLiveRegion="assertive"
+      accessibilityRole="alert"
       style={[
         {
           position: "absolute",
@@ -95,6 +96,7 @@ export function AnimatedToast({
           shadowOpacity: 0.2,
           shadowRadius: 8,
           elevation: 6,
+          opacity: message ? 1 : 0,
         },
         animatedStyle,
       ]}

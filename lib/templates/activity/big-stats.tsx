@@ -13,33 +13,13 @@ import React from "react";
 import { Text, View } from "react-native";
 import { Activity, formatDuration } from "../../app-data";
 import { alpha, BRIGHT_WHITE, type TemplateColors } from "../../color-presets";
+import type { WeekTotals, TemplateDef } from "../shared/types";
 import { analyseFields, heroField, type AvailableField } from "../shared/analyse-fields";
 import { ts, ff, typeEmoji, typeLabel } from "../shared/styling";
 import { fmtDateShort, fmtDateFull, fmtTime12, fmtWeekday, paceStr, timeStr } from "../shared/helpers";
 
-// ── Types ──
-
-export interface WeekTotals {
-  runKm: number;
-  otherKm: number;
-  totalKm: number;
-  totalMinutes: number;
-  items: { day: string; km: number; type: string }[];
-}
-
-export interface TemplateDef {
-  id: string;
-  name: string;
-  tab: "activity" | "totals";
-  fullWidth?: boolean;
-  badge?: "New" | "Dynamic" | "Auto" | "Customize";
-  lightCard?: boolean;
-  description: string;
-  render: (a: Activity, totals: WeekTotals, colors?: TemplateColors) => React.ReactNode;
-}
-
-/** @deprecated Use TemplateDef instead */
-export type { TemplateDef as DynamicTemplateDef };
+/** @deprecated Use TemplateDef from shared/types instead */
+export type DynamicTemplateDef = TemplateDef;
 
 // ── Inline style tokens (used by template renders) ──
 const serif = { fontFamily: "Georgia" as const };

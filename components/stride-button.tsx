@@ -12,11 +12,13 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
-  withTiming,
+  type WithSpringConfig,
 } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 import { Platform } from "react-native";
 import { useColors } from "@/hooks/use-colors";
+import { Typography } from "@/lib/_core/theme";
+import { BUTTON_SPRING, useReducedMotion, getSpringConfig } from "@/lib/animations";
 import { cn } from "@/lib/utils";
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -42,12 +44,6 @@ export interface StrideButtonProps extends Omit<PressableProps, "style"> {
   minHeight?: number;
 }
 
-const SPRING_CONFIG = {
-  damping: 12,
-  stiffness: 200,
-  mass: 0.8,
-};
-
 export function StrideButton({
   variant = "primary",
   children,
@@ -62,9 +58,12 @@ export function StrideButton({
   ...props
 }: StrideButtonProps) {
   const colors = useColors();
+  const reducedMotion = useReducedMotion();
   const scale = useSharedValue(1);
 
   const isDisabled = disabled || loading;
+
+  const springConfig = getSpringConfig(BUTTON_SPRING, reducedMotion);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
@@ -94,22 +93,24 @@ export function StrideButton({
   const handlePressIn = useCallback(
     (e: any) => {
       if (isDisabled) return;
-      scale.value = withSpring(0.96, SPRING_CONFIG);
+      if (reducedMotion) return;
+      scale.value = withSpring(0.96, springConfig as WithSpringConfig);
       if (Platform.OS !== "web") {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       }
       onPressIn?.(e);
     },
-    [isDisabled, scale, onPressIn],
+    [isDisabled, reducedMotion, scale, springConfig, onPressIn],
   );
 
   const handlePressOut = useCallback(
     (e: any) => {
       if (isDisabled) return;
-      scale.value = withSpring(1, SPRING_CONFIG);
+      if (reducedMotion) return;
+      scale.value = withSpring(1, springConfig as WithSpringConfig);
       onPressOut?.(e);
     },
-    [isDisabled, scale, onPressOut],
+    [isDisabled, reducedMotion, scale, springConfig, onPressOut],
   );
 
   return (
@@ -148,9 +149,9 @@ export function StrideButton({
       ) : null}
       <Text
         style={[
+          Typography.body,
           {
             color: textColorMap[variant],
-            fontSize: 15,
             fontWeight: "700",
             textAlign: "center",
           },

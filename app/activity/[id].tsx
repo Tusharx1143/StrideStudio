@@ -11,6 +11,9 @@ import { getSportConfig, relativeTime, computeAchievements } from "@/lib/sport-t
 import { polylineToSvgPath } from "@/lib/map-utils";
 import { IconSymbol, type IconSymbolName } from "@/components/ui/icon-symbol";
 import { ActivityAnimatedIcon } from "@/components/activity-animated-icon";
+import { StatCard } from "@/components/stat-card";
+import { BackButton } from "@/components/back-button";
+import { Typography } from "@/lib/_core/theme";
 import Svg, { Polyline, Circle } from "react-native-svg";
 
 // ── Route Map Widget ──
@@ -43,27 +46,6 @@ function RouteMapWidget({ polyline, sportColor }: { polyline: string; sportColor
   );
 }
 
-// ── Stat Icon Card ──
-function StatIconCard({ icon, label, value, color }: { icon: IconSymbolName; label: string; value: string; color: string }) {
-  const colors = useColors();
-  return (
-    <View
-      style={{
-        width: "48%",
-        backgroundColor: colors.surface,
-        borderRadius: 12,
-        padding: 14,
-        borderWidth: 1,
-        borderColor: colors.border,
-        marginBottom: 8,
-      }}
-    >
-      <IconSymbol name={icon} size={18} color={color} />
-      <Text style={{ color: colors.foreground, fontSize: 22, fontWeight: "800", marginTop: 6 }}>{value}</Text>
-      <Text style={{ color: colors.muted, fontSize: 11, fontWeight: "600", marginTop: 2, textTransform: "uppercase", letterSpacing: 0.5 }}>{label}</Text>
-    </View>
-  );
-}
 
 // ── Achievement Chip ──
 function AchievementChip({ label, value, emoji }: { label: string; value: string; emoji: string }) {
@@ -154,14 +136,7 @@ export default function ActivityDetailsScreen() {
       <View style={{ flex: 1, backgroundColor: colors.background }}>
         {/* Header bar */}
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingVertical: 8 }}>
-          <TouchableOpacity
-            onPress={() => router.back()}
-            accessibilityRole="button"
-            accessibilityLabel="Go back"
-            style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: colors.surface, alignItems: "center", justifyContent: "center" }}
-          >
-            <Text style={{ color: colors.foreground, fontSize: 20 }}>‹</Text>
-          </TouchableOpacity>
+          <BackButton />
 
           <TouchableOpacity
             onPress={onShare}
@@ -203,7 +178,14 @@ export default function ActivityDetailsScreen() {
           {/* Stat cards grid */}
           <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" }}>
             {statCards.map((sc, i) => (
-              <StatIconCard key={i} icon={sc.icon} label={sc.label} value={sc.value} color={sc.color} />
+              <StatCard
+                key={i}
+                icon={<IconSymbol name={sc.icon} size={18} color={sc.color} />}
+                label={sc.label}
+                value={sc.value}
+                color={sc.color}
+                style={{ width: "48%", marginBottom: 8 }}
+              />
             ))}
           </View>
 

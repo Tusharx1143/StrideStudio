@@ -104,6 +104,9 @@ function StatPill({ data }: { data: StatPillData }) {
 
   return (
     <View
+      accessible
+      accessibilityRole="text"
+      accessibilityLabel={`${data.label}: ${data.value}`}
       style={{
         backgroundColor: colors.surface,
         borderRadius: 14,

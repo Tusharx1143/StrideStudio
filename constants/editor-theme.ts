@@ -1,23 +1,20 @@
 /**
  * Editor-specific design tokens — Photo Editor & Filters palette.
  *
- * These complement the global fitness theme (Energy Orange) with a
- * dedicated dark-editor identity: violet primary + cyan accent on
- * deep OLED backgrounds. Use only within editor surfaces; the rest
- * of the app keeps the fitness theme.
- *
- * Source: UI/UX Pro Max — Photo Editor & Filters category
+ * Uses the unified StrideStudio Energy Orange palette to maintain
+ * visual consistency across the entire app. Previously used a
+ * standalone violet/cyan theme; now aligned with the global theme.
  */
 
-// ── Core Palette ──
+// ── Core Palette (unified with global Energy Orange theme) ──
 
 export const EditorColors = {
-  /** Violet — primary actions, selected states, sliders */
-  primary: "#7C3AED",
-  /** Indigo — secondary elements, hover states */
-  secondary: "#6366F1",
-  /** Cyan — accents, filter badges, adjustment icons */
-  accent: "#0891B2",
+  /** Energy Orange — primary actions, selected states, sliders */
+  primary: "#F97316",
+  /** Darker orange — secondary elements, hover states */
+  secondary: "#EA580C",
+  /** Amber — accents, filter badges, adjustment icons */
+  accent: "#F59E0B",
   /** Deep navy — main editor background */
   background: "#0F172A",
   /** Slightly lighter — card surfaces, panels */
@@ -26,8 +23,8 @@ export const EditorColors = {
   card: "#1E293B",
   /** White — primary text */
   foreground: "#FFFFFF",
-  /** Muted purple — subtle backgrounds */
-  muted: "#171939",
+  /** Muted surface — subtle backgrounds */
+  muted: "#1A1F2E",
   /** Muted text — secondary labels, hints */
   mutedText: "#94A3B8",
   /** Semi-transparent border */
@@ -37,22 +34,22 @@ export const EditorColors = {
   /** Destructive / delete */
   destructive: "#DC2626",
   /** Focus ring */
-  ring: "#7C3AED",
+  ring: "#F97316",
 } as const;
 
 // ── Semantic Tokens ──
 
 export const EditorSemantic = {
   /** Canvas area when no media is selected */
-  canvasEmpty: "#1A1534",
+  canvasEmpty: "#1A1F2E",
   /** Filter carousel background strip */
   filterStripBg: "rgba(15, 23, 42, 0.95)",
   /** Selected filter indicator */
-  filterSelected: "#7C3AED",
+  filterSelected: "#F97316",
   /** Slider track (inactive portion) */
   sliderTrack: "rgba(255,255,255,0.12)",
   /** Slider track (active / filled portion) */
-  sliderTrackActive: "#7C3AED",
+  sliderTrackActive: "#F97316",
   /** Slider thumb */
   sliderThumb: "#FFFFFF",
   /** Tool panel handle / grabber */

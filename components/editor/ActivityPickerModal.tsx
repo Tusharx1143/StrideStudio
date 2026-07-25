@@ -52,34 +52,45 @@ export function ActivityPickerModal({
           <View style={styles.modalHandle} />
           <Text style={styles.modalTitle}>Select Activity</Text>
           <ScrollView bounces={false}>
-            {activities.map((a, i) => (
-              <TouchableOpacity
-                key={a.id}
-                onPress={() => onSelect(a.id)}
-                style={[
-                  styles.modalItem,
-                  i < activities.length - 1 && { borderBottomWidth: 0.5, borderBottomColor: EditorColors.border },
-                ]}
-              >
-                <View style={[
-                  styles.modalItemIcon,
-                  a.id === selectedActivityId && {
-                    backgroundColor: EditorColors.primary,
-                  },
-                ]}>
-                  <Text style={{ fontSize: 16 }}>{typeEmoji(a.type)}</Text>
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.modalItemTitle}>
-                    {a.distance.toFixed(1)} km · {a.type}
-                  </Text>
-                  <Text style={styles.modalItemSubtitle}>{a.date}</Text>
-                </View>
-                {a.id === selectedActivityId && (
-                  <Text style={{ color: EditorColors.primary, fontSize: 16 }}>✓</Text>
-                )}
-              </TouchableOpacity>
-            ))}
+            {activities.length === 0 ? (
+              <View style={{ padding: 40, alignItems: "center" }}>
+                <Text style={{ color: EditorColors.mutedText, fontSize: 14, textAlign: "center" }}>
+                  No activities found.{"\n"}Sync your Strava data first.
+                </Text>
+              </View>
+            ) : (
+              activities.map((a, i) => (
+                <TouchableOpacity
+                  key={a.id}
+                  onPress={() => onSelect(a.id)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${a.type}: ${a.distance.toFixed(1)} km`}
+                  accessibilityState={{ selected: a.id === selectedActivityId }}
+                  style={[
+                    styles.modalItem,
+                    i < activities.length - 1 && { borderBottomWidth: 0.5, borderBottomColor: EditorColors.border },
+                  ]}
+                >
+                  <View style={[
+                    styles.modalItemIcon,
+                    a.id === selectedActivityId && {
+                      backgroundColor: EditorColors.primary,
+                    },
+                  ]}>
+                    <Text style={{ fontSize: 16 }}>{typeEmoji(a.type)}</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.modalItemTitle}>
+                      {a.distance.toFixed(1)} km · {a.type}
+                    </Text>
+                    <Text style={styles.modalItemSubtitle}>{a.date}</Text>
+                  </View>
+                  {a.id === selectedActivityId && (
+                    <Text style={{ color: EditorColors.primary, fontSize: 16 }}>✓</Text>
+                  )}
+                </TouchableOpacity>
+              ))
+            )}
           </ScrollView>
         </Pressable>
       </Pressable>

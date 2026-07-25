@@ -22,9 +22,11 @@ import { useState, useCallback } from "react";
 import { useRouter } from "expo-router";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
+import { Typography } from "@/lib/_core/theme";
 import { useApp } from "@/lib/app-context";
 import { API_BASE } from "@/lib/config";
 import { StrideButton } from "@/components/stride-button";
+import { BackButton } from "@/components/back-button";
 import { useThemeContext } from "@/lib/theme-provider";
 
 interface SettingRowProps {
@@ -52,11 +54,11 @@ function SettingRow({ label, subtitle, right, onPress, last, danger }: SettingRo
       }}
     >
       <View style={{ flex: 1 }}>
-        <Text style={{ color: danger ? colors.error : colors.foreground, fontSize: 14, fontWeight: "500" }}>
+        <Text style={[Typography.bodySmall, { color: danger ? colors.error : colors.foreground, fontWeight: "500" }]}>
           {label}
         </Text>
         {subtitle && (
-          <Text style={{ color: colors.muted, fontSize: 11, marginTop: 2 }}>{subtitle}</Text>
+          <Text style={[Typography.caption, { color: colors.muted, marginTop: 2 }]}>{subtitle}</Text>
         )}
       </View>
       {right}
@@ -78,15 +80,10 @@ function SettingGroup({ title, children }: { title: string; children: React.Reac
   return (
     <View style={{ paddingHorizontal: 16, paddingVertical: 8 }}>
       <Text
-        style={{
-          color: colors.muted,
-          fontSize: 11,
-          fontWeight: "700",
-          letterSpacing: 1,
-          textTransform: "uppercase",
-          marginBottom: 8,
-          paddingHorizontal: 4,
-        }}
+        style={[
+          Typography.statLabel,
+          { color: colors.muted, marginBottom: 8, paddingHorizontal: 4 },
+        ]}
       >
         {title}
       </Text>
@@ -166,16 +163,8 @@ export default function SettingsScreen() {
             borderBottomColor: colors.border,
           }}
         >
-          <TouchableOpacity
-            onPress={() => router.back()}
-            accessibilityRole="button"
-            accessibilityLabel="Go back"
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center" }}
-          >
-            <Text style={{ color: colors.foreground, fontSize: 24 }}>‹</Text>
-          </TouchableOpacity>
-          <Text style={{ color: colors.foreground, fontSize: 18, fontWeight: "700", flex: 1 }}>
+          <BackButton />
+          <Text style={[Typography.h3, { color: colors.foreground, flex: 1 }]}>
             Settings
           </Text>
         </View>

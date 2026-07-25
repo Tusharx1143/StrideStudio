@@ -17,8 +17,9 @@ import Animated, {
   createAnimatedComponent,
 } from "react-native-reanimated";
 import { useColors } from "@/hooks/use-colors";
+import { Typography } from "@/lib/_core/theme";
 import { useApp } from "@/lib/app-context";
-import { computeWeekStats } from "@/lib/sport-theme";
+import { computeWeekStats, getSportColor } from "@/lib/sport-theme";
 import { AnimatedCountUp, headerEnter } from "@/lib/animations";
 
 const AnimatedCircle = createAnimatedComponent(Circle);
@@ -75,6 +76,10 @@ export function WeekProgressRing({ entranceDelay = 100, activities: propActiviti
     <Animated.View
       entering={headerEnter(entranceDelay)}
       style={{ alignItems: "center", marginBottom: 20 }}
+      accessible
+      accessibilityRole="progressbar"
+      accessibilityLabel={`Weekly progress: ${weekStats.totalKm.toFixed(1)} of ${WEEKLY_GOAL} kilometers, ${Math.round(progress * 100)} percent complete`}
+      accessibilityValue={{ min: 0, max: WEEKLY_GOAL, now: weekStats.totalKm }}
     >
       {/* Ring container */}
       <View
@@ -114,7 +119,7 @@ export function WeekProgressRing({ entranceDelay = 100, activities: propActiviti
               cx={center}
               cy={center}
               r={radius}
-              stroke="#FF6B35"
+              stroke={getSportColor("run")}
               strokeWidth={strokeWidth}
               fill="none"
               strokeDasharray={`${circumference * runRatio * progress} ${circumference}`}
@@ -139,7 +144,7 @@ export function WeekProgressRing({ entranceDelay = 100, activities: propActiviti
               cx={center}
               cy={center}
               r={radius}
-              stroke="#0A84FF"
+              stroke={getSportColor("ride")}
               strokeWidth={strokeWidth}
               fill="none"
               strokeDasharray={`${circumference * rideRatio * progress} ${circumference}`}
@@ -173,12 +178,10 @@ export function WeekProgressRing({ entranceDelay = 100, activities: propActiviti
         <View style={{ alignItems: "center" }}>
           <AnimatedCountUp
             value={weekStats.totalKm}
-            style={{
-              color: colors.foreground,
-              fontSize: 38,
-              fontWeight: "900",
-              letterSpacing: -1,
-            }}
+            style={[
+              Typography.hero,
+              { color: colors.foreground, letterSpacing: -1 },
+            ]}
             duration={1200}
           />
           <Text
@@ -204,10 +207,10 @@ export function WeekProgressRing({ entranceDelay = 100, activities: propActiviti
           }}
         >
           {weekStats.runKm > 0 && (
-            <LegendDot color="#FF6B35" label={`${weekStats.runKm.toFixed(0)} km run`} />
+            <LegendDot color={getSportColor("run")} label={`${weekStats.runKm.toFixed(0)} km run`} />
           )}
           {weekStats.rideKm > 0 && (
-            <LegendDot color="#0A84FF" label={`${weekStats.rideKm.toFixed(0)} km ride`} />
+            <LegendDot color={getSportColor("ride")} label={`${weekStats.rideKm.toFixed(0)} km ride`} />
           )}
           <Text style={{ color: colors.muted, fontSize: 12, fontWeight: "500" }}>
             {weekStats.activitiesCount} activities · {Math.round(weekStats.totalMinutes)} min

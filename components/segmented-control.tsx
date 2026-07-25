@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { Text, TouchableOpacity, View, LayoutChangeEvent } from "react-native";
+import { Text, Pressable, View, LayoutChangeEvent } from "react-native";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -84,7 +84,7 @@ export function SegmentedControl<T extends string>({
       )}
 
       {segments.map((seg, i) => (
-        <TouchableOpacity
+        <Pressable
           key={seg.id}
           onPress={() => handleSelect(seg.id, i)}
           accessibilityRole="radio"
@@ -110,7 +110,7 @@ export function SegmentedControl<T extends string>({
           >
             {seg.label}
           </Text>
-        </TouchableOpacity>
+        </Pressable>
       ))}
     </View>
   );

@@ -72,6 +72,9 @@ export function ToolPanel({
 }: ToolPanelProps) {
   const animValue = useRef(new Animated.Value(visible ? 1 : 0)).current;
   const heightValue = useRef(new Animated.Value(minHeight)).current;
+  const hasEverOpened = useRef(visible);
+
+  if (visible) hasEverOpened.current = true;
 
   // Animate in/out
   useEffect(() => {
@@ -113,8 +116,8 @@ export function ToolPanel({
     outputRange: [0, 1],
   });
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  if (!visible && (animValue as unknown as { _value: number })._value === 0) return null;
+  // Avoid rendering when panel has never been opened (perf optimization)
+  if (!visible && !hasEverOpened.current) return null;
 
   return (
     <View style={styles.wrapper} pointerEvents="box-none">

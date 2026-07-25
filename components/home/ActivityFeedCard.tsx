@@ -16,6 +16,7 @@ import Animated, {
 } from "react-native-reanimated";
 import Svg, { Polyline } from "react-native-svg";
 import { useColors } from "@/hooks/use-colors";
+import { Typography } from "@/lib/_core/theme";
 import { Activity, formatDuration } from "@/lib/app-data";
 import { getSportConfig, relativeTime } from "@/lib/sport-theme";
 import { polylineToSvgPath } from "@/lib/map-utils";
@@ -324,13 +325,15 @@ export function ActivityFeedCard({
                   {activity.pace != null ? "Pace" : "Speed"}
                 </Text>
                 <Text
-                  style={{
-                    color: colors.foreground,
-                    fontSize: 16,
-                    fontWeight: "700",
-                    marginTop: 2,
-                    fontFamily: "Courier",
-                  }}
+                  style={[
+                    Typography.body,
+                    {
+                      color: colors.foreground,
+                      fontWeight: "700",
+                      marginTop: 2,
+                      fontFamily: "monospace",
+                    },
+                  ]}
                 >
                   {paceOrSpeed ?? "--"}
                 </Text>
@@ -348,13 +351,15 @@ export function ActivityFeedCard({
                   Elevation
                 </Text>
                 <Text
-                  style={{
-                    color: colors.foreground,
-                    fontSize: 16,
-                    fontWeight: "700",
-                    marginTop: 2,
-                    fontFamily: "Courier",
-                  }}
+                  style={[
+                    Typography.body,
+                    {
+                      color: colors.foreground,
+                      fontWeight: "700",
+                      marginTop: 2,
+                      fontFamily: "monospace",
+                    },
+                  ]}
                 >
                   {activity.elevation ? `${activity.elevation}m` : "--"}
                 </Text>

@@ -90,3 +90,101 @@ export const Fonts = Platform.select({
     mono: "SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
   },
 });
+
+// ── Typography Scale ──
+// Barlow Condensed for display/stats, Barlow for body text.
+// Uses Major Third ratio (1.250) from 16px base.
+
+export const Typography = {
+  /** 48px — hero title, landing page brand */
+  hero: {
+    fontFamily: FONT_DISPLAY,
+    fontSize: 48,
+    fontWeight: "900" as const,
+    lineHeight: 52,
+  },
+  /** 32px — screen titles */
+  h1: {
+    fontFamily: FONT_DISPLAY,
+    fontSize: 32,
+    fontWeight: "700" as const,
+    lineHeight: 38,
+  },
+  /** 24px — section headers */
+  h2: {
+    fontFamily: FONT_DISPLAY,
+    fontSize: 24,
+    fontWeight: "700" as const,
+    lineHeight: 30,
+  },
+  /** 20px — card titles, panel headers */
+  h3: {
+    fontFamily: FONT_DISPLAY,
+    fontSize: 20,
+    fontWeight: "600" as const,
+    lineHeight: 26,
+  },
+  /** 16px — body text */
+  body: {
+    fontFamily: FONT_BODY,
+    fontSize: 16,
+    fontWeight: "400" as const,
+    lineHeight: 24,
+  },
+  /** 14px — secondary body, list items */
+  bodySmall: {
+    fontFamily: FONT_BODY,
+    fontSize: 14,
+    fontWeight: "400" as const,
+    lineHeight: 20,
+  },
+  /** 12px — captions, labels, helper text */
+  caption: {
+    fontFamily: FONT_BODY,
+    fontSize: 12,
+    fontWeight: "500" as const,
+    lineHeight: 16,
+  },
+  /** 10px — micro-copy, badges */
+  micro: {
+    fontFamily: FONT_BODY,
+    fontSize: 10,
+    fontWeight: "600" as const,
+    lineHeight: 14,
+  },
+  /** 28px — big stat numbers (distance, time) */
+  stat: {
+    fontFamily: FONT_DISPLAY,
+    fontSize: 28,
+    fontWeight: "700" as const,
+    lineHeight: 34,
+  },
+  /** 12px — stat label above/below numbers */
+  statLabel: {
+    fontFamily: FONT_BODY,
+    fontSize: 12,
+    fontWeight: "500" as const,
+    lineHeight: 16,
+    letterSpacing: 1.2,
+    textTransform: "uppercase" as const,
+  },
+} as const;
+
+// ── Spacing Scale (8pt grid) ──
+
+export const Spacing = {
+  /** 4px */
+  xs: 4,
+  /** 8px */
+  sm: 8,
+  /** 16px */
+  md: 16,
+  /** 24px */
+  lg: 24,
+  /** 32px */
+  xl: 32,
+  /** 48px */
+  "2xl": 48,
+  /** 64px */
+  "3xl": 64,
+} as const;

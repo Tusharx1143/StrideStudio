@@ -25,6 +25,7 @@ import Svg, { Circle, Line, Path, Polyline } from "react-native-svg";
 import { useApp } from "@/lib/app-context";
 import { API_BASE } from "@/lib/config";
 import { useColors } from "@/hooks/use-colors";
+import { Typography, Fonts } from "@/lib/_core/theme";
 
 // ── Background Art ──────────────────────────────────────────────────────────
 // Abstract geometric composition suggesting movement, routes, and data.
@@ -120,30 +121,25 @@ function BackgroundArt() {
 // ── Stat Preview ────────────────────────────────────────────────────────────
 
 function StatItem({ value, label, delay }: { value: string; label: string; delay: number }) {
+  const colors = useColors();
   return (
     <Animated.View
       entering={FadeInUp.delay(delay).springify().damping(15)}
       style={{ alignItems: "center", gap: 2 }}
     >
       <Text
-        style={{
-          color: "#F8FAFC",
-          fontSize: 26,
-          fontWeight: "900",
-          letterSpacing: -0.5,
-          fontFamily: "Courier",
-        }}
+        style={[
+          Typography.stat,
+          { color: colors.foreground, fontFamily: Fonts.display },
+        ]}
       >
         {value}
       </Text>
       <Text
-        style={{
-          color: "#64748B",
-          fontSize: 10,
-          fontWeight: "600",
-          textTransform: "uppercase",
-          letterSpacing: 1.2,
-        }}
+        style={[
+          Typography.statLabel,
+          { color: colors.muted },
+        ]}
       >
         {label}
       </Text>
@@ -195,13 +191,13 @@ export default function LandingPage() {
   if (stravaConnected) return null;
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#090D14" }}>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
       {/* Decorative background */}
       <BackgroundArt />
 
       {/* Subtle top-to-bottom gradient vignette */}
       <LinearGradient
-        colors={["#090D14", "transparent", "transparent", "#090D14"]}
+        colors={[colors.background, "transparent", "transparent", colors.background]}
         style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
         pointerEvents="none"
       />
@@ -232,7 +228,7 @@ export default function LandingPage() {
                   width: 36,
                   height: 3,
                   borderRadius: 2,
-                  backgroundColor: "#F97316",
+                  backgroundColor: colors.primary,
                   marginBottom: 28,
                 }}
               />
@@ -241,12 +237,13 @@ export default function LandingPage() {
               <Animated.Text
                 entering={FadeInDown.delay(180).springify().damping(15)}
                 style={{
-                  color: "#F8FAFC",
+                  color: colors.foreground,
                   fontSize: 58,
                   fontWeight: "900",
                   letterSpacing: -1.5,
                   textAlign: "center",
                   lineHeight: 58,
+                  fontFamily: Fonts.display,
                 }}
               >
                 STRIDE{"\n"}STUDIO
@@ -255,15 +252,16 @@ export default function LandingPage() {
               {/* Tagline */}
               <Animated.Text
                 entering={FadeInDown.delay(300).springify().damping(15)}
-                style={{
-                  color: "#64748B",
-                  fontSize: 15,
-                  fontWeight: "500",
-                  textAlign: "center",
-                  marginTop: 18,
-                  lineHeight: 23,
-                  letterSpacing: 0.2,
-                }}
+                style={[
+                  Typography.body,
+                  {
+                    color: colors.muted,
+                    textAlign: "center",
+                    marginTop: 18,
+                    lineHeight: 23,
+                    letterSpacing: 0.2,
+                  },
+                ]}
               >
                 Turn your workouts{"\n"}into art worth sharing.
               </Animated.Text>
@@ -286,9 +284,9 @@ export default function LandingPage() {
                 }}
               >
                 <StatItem value="150+" label="km / wk" delay={460} />
-                <View style={{ width: 1, height: "100%", backgroundColor: "#334155" }} />
+                <View style={{ width: 1, height: "100%", backgroundColor: colors.border }} />
                 <StatItem value="12" label="activities" delay={540} />
-                <View style={{ width: 1, height: "100%", backgroundColor: "#334155" }} />
+                <View style={{ width: 1, height: "100%", backgroundColor: colors.border }} />
                 <StatItem value="3.2k" label="elev (m)" delay={620} />
               </Animated.View>
 
@@ -303,7 +301,7 @@ export default function LandingPage() {
                   style={{ minHeight: 56 }}
                 >
                   <LinearGradient
-                    colors={["#F97316", "#EA580C"]}
+                    colors={[colors.primary, "#EA580C"]}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 0 }}
                     style={{
@@ -336,15 +334,15 @@ export default function LandingPage() {
               <Animated.View entering={FadeIn.delay(780)}>
                 <Text
                   style={{
-                    color: "#475569",
+                    color: colors.muted,
                     fontSize: 11,
                     textAlign: "center",
                     lineHeight: 16,
                   }}
                 >
                   Powered by Strava.{" "}
-                  <Text style={{ color: "#64748B" }}>Terms</Text> ·{" "}
-                  <Text style={{ color: "#64748B" }}>Privacy</Text>
+                  <Text style={{ color: colors.muted }}>Terms</Text> ·{" "}
+                  <Text style={{ color: colors.muted }}>Privacy</Text>
                 </Text>
               </Animated.View>
             </>

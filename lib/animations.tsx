@@ -12,6 +12,7 @@
  */
 
 import { useEffect, useState } from "react";
+import { AccessibilityInfo, Platform } from "react-native";
 import Animated, {
   FadeInUp,
   FadeInDown,
@@ -139,4 +140,48 @@ export function AnimatedCountUp({
 
 /** Touch target minimum size (44×44pt accessibility guideline). */
 export const TOUCH_MIN = { minHeight: 44, minWidth: 44 } as const;
+
+// ── Reduced Motion ──
+
+/**
+ * Hook that reads the OS-level "Reduce Motion" accessibility setting.
+ * When true, all non-essential animations should be disabled or
+ * replaced with instant (duration: 0) transitions.
+ */
+export function useReducedMotion(): boolean {
+  const [reduced, setReduced] = useState(false);
+
+  useEffect(() => {
+    if (Platform.OS === "web") {
+      // On web, check the prefers-reduced-motion media query
+      const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+      setReduced(mq.matches);
+      const handler = (e: MediaQueryListEvent) => setReduced(e.matches);
+      mq.addEventListener("change", handler);
+      return () => mq.removeEventListener("change", handler);
+    }
+
+    // On native, use AccessibilityInfo
+    AccessibilityInfo.isReduceMotionEnabled().then(setReduced);
+    const sub = AccessibilityInfo.addEventListener(
+      "reduceMotionChanged",
+      setReduced,
+    );
+    return () => sub.remove();
+  }, []);
+
+  return reduced;
+}
+
+/**
+ * Returns a spring config that respects the user's reduced-motion preference.
+ * When reduced motion is active, returns { duration: 0 } for instant transitions.
+ */
+export function getSpringConfig(
+  spring: WithSpringConfig,
+  reducedMotion: boolean,
+): WithSpringConfig | { duration: number } {
+  if (reducedMotion) return { duration: 0 };
+  return spring;
+}
 

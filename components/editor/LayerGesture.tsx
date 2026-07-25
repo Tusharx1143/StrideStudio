@@ -74,7 +74,7 @@ export const LayerGesture = React.memo(function LayerGesture({ layer, canvasH, o
   const finalColors = { ...palette, fontFamily: layerFont.family };
   const isSelected = layer.id === selectedLayerId;
 
-  // Background style map — lightened for contrast against dark canvas (#1A1534)
+  // Background style map — lightened for contrast against dark canvas
   const bgStyle = layer.backgroundStyle ?? 'glass';
   const bgColors: Record<string, { bg: string; border: string }> = {
     none:      { bg: 'transparent',                 border: 'transparent' },

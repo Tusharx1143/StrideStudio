@@ -4,7 +4,7 @@
  * Features:
  * - Horizontal scroll with snap
  * - Live preview thumbnails (filter applied to a miniature of the photo)
- * - Selected state with violet ring + label highlight
+ * - Selected state with orange ring + label highlight
  * - Haptic feedback on selection
  * - Touch-friendly 68px tap targets
  * - Smooth animated transitions
