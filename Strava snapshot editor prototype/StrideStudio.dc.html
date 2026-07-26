@@ -1,0 +1,1313 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&family=IBM+Plex+Mono:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<script src="./stickers.js"></script>
+<style>
+  body { margin:0; background:#0A0A0B; font-family:'Archivo',system-ui,sans-serif; -webkit-font-smoothing:antialiased; }
+  a { color:#FF6B35; text-decoration:none; } a:hover { color:#FF8A5F; }
+  * { scrollbar-width:none; -ms-overflow-style:none; }
+  *::-webkit-scrollbar { width:0; height:0; display:none; }
+  @keyframes strideSpin { to { transform:rotate(360deg); } }
+  @keyframes strideRise { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:none; } }
+  @keyframes stridePulse { 0%,100% { opacity:.35; } 50% { opacity:1; } }
+  @keyframes strideSweep { from { transform:translateX(-100%); } to { transform:translateX(220%); } }
+</style>
+</helmet>
+
+<div style="min-height:100vh;padding:34px 28px 60px;display:flex;flex-direction:column;align-items:center;gap:22px;background:radial-gradient(1100px 620px at 50% -10%,#191418 0%,#0A0A0B 62%);">
+
+  <div style="display:flex;flex-direction:column;gap:8px;align-items:center;text-align:center;max-width:760px;">
+    <div style="font:700 10px/1 'Archivo';letter-spacing:.34em;color:#FF6B35;text-transform:uppercase;">StrideStudio · Android · Interactive prototype</div>
+    <div style="font:800 27px/1.1 'Archivo';letter-spacing:-.02em;color:#fff;">Snapchat-style workout story editor</div>
+    <div style="font:500 13.5px/1.55 'Archivo';color:rgba(255,255,255,.55);text-wrap:pretty;">Capture or pick a shot, drop live Strava stat stickers on it, drag / pinch / rotate / layer them, then export. Tap the rail below to jump to any screen — every control on the editor works.</div>
+  </div>
+
+  <div style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;max-width:720px;">
+    <sc-for list="{{ screenChips }}" as="chip" hint-placeholder-count="13">
+      <div data-go="{{ chip.id }}" onClick="{{ nav }}" style="{{ chip.style }}">{{ chip.label }}</div>
+    </sc-for>
+  </div>
+
+  <x-import component-from-global-scope="AndroidDevice" from="./android-frame.jsx" dark="{{ true }}" hint-size="412px,892px">
+
+    <div style="height:100%;background:#000;position:relative;overflow:hidden;font-family:'Archivo',system-ui,sans-serif;">
+
+      <!-- ══════════ SPLASH ══════════ -->
+      <sc-if value="{{ isSplash }}" hint-placeholder-val="{{ true }}">
+        <div data-screen-label="01 Splash" style="height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:26px;background:radial-gradient(420px 420px at 50% 38%,#2A150C 0%,#000 72%);">
+          <div style="width:74px;height:74px;border-radius:22px;background:#FF6B35;display:flex;align-items:center;justify-content:center;box-shadow:0 18px 50px rgba(255,107,53,.34);">
+            <div style="width:26px;height:26px;border-radius:50%;border:5px solid #0B0B0C;border-right-color:transparent;transform:rotate(-38deg);"></div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:10px;">
+            <div style="font:900 34px/1 'Archivo';letter-spacing:-.035em;color:#fff;">STRIDESTUDIO</div>
+            <div style="font:700 9.5px/1 'Archivo';letter-spacing:.3em;color:rgba(255,255,255,.5);text-align:center;">TRAINING IS ART · THIS IS THE TOOL</div>
+          </div>
+          <div style="width:132px;height:2px;background:rgba(255,255,255,.14);border-radius:2px;overflow:hidden;position:relative;">
+            <div style="position:absolute;inset:0;width:45%;background:#FF6B35;animation:strideSweep 1.5s ease-in-out infinite;"></div>
+          </div>
+          <div data-go="auth" onClick="{{ nav }}" style="position:absolute;bottom:30px;font:700 10px/1 'Archivo';letter-spacing:.24em;color:rgba(255,255,255,.42);padding:14px 22px;cursor:pointer;">TAP TO CONTINUE</div>
+        </div>
+      </sc-if>
+
+      <!-- ══════════ AUTH ══════════ -->
+      <sc-if value="{{ isAuth }}" hint-placeholder-val="{{ true }}">
+        <div data-screen-label="02 Authorization" style="height:100%;display:flex;flex-direction:column;padding:26px 22px 22px;box-sizing:border-box;background:linear-gradient(180deg,#150D09 0%,#000 46%);">
+          <div style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;gap:10px;padding-bottom:26px;">
+            <div style="width:40px;height:40px;border-radius:12px;background:#FF6B35;margin-bottom:10px;"></div>
+            <div style="font:900 32px/1.02 'Archivo';letter-spacing:-.035em;color:#fff;">MAKE YOUR<br>MILES LOOK<br>UNREASONABLE.</div>
+            <div style="font:500 13px/1.5 'Archivo';color:rgba(255,255,255,.52);max-width:280px;text-wrap:pretty;">Sign in, connect Strava, and every run turns into story-ready art in about nine seconds.</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:9px;">
+            <div data-go="strava" onClick="{{ nav }}" style="height:52px;border-radius:26px;background:#fff;display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;">
+              <div style="width:16px;height:16px;border-radius:50%;background:#0B0B0C;"></div>
+              <span style="font:700 14px/1 'Archivo';color:#0B0B0C;">Continue with Google</span>
+            </div>
+            <div data-go="strava" onClick="{{ nav }}" style="height:52px;border-radius:26px;background:#16161A;border:1px solid rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;">
+              <div style="width:14px;height:16px;border-radius:7px 7px 5px 5px;background:#fff;"></div>
+              <span style="font:700 14px/1 'Archivo';color:#fff;">Continue with Apple</span>
+            </div>
+            <div data-go="strava" onClick="{{ nav }}" style="height:52px;border-radius:26px;background:transparent;border:1px solid rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;cursor:pointer;">
+              <span style="font:700 14px/1 'Archivo';color:rgba(255,255,255,.8);">Sign up with email</span>
+            </div>
+            <div style="display:flex;justify-content:center;gap:6px;padding-top:8px;">
+              <span style="font:500 11.5px/1 'Archivo';color:rgba(255,255,255,.4);">Already training with us?</span>
+              <span data-go="strava" onClick="{{ nav }}" style="font:700 11.5px/1 'Archivo';color:#FF6B35;cursor:pointer;">Sign in</span>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ══════════ STRAVA CONNECT ══════════ -->
+      <sc-if value="{{ isStrava }}" hint-placeholder-val="{{ true }}">
+        <div data-screen-label="03 Connect Strava" style="height:100%;display:flex;flex-direction:column;padding:22px;box-sizing:border-box;">
+          <div data-go="auth" onClick="{{ nav }}" style="width:38px;height:38px;border-radius:19px;background:#16161A;display:flex;align-items:center;justify-content:center;font:600 18px/1 'Archivo';color:#fff;cursor:pointer;">‹</div>
+          <div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:20px;">
+            <div style="display:flex;align-items:center;gap:12px;">
+              <div style="width:52px;height:52px;border-radius:16px;background:#FC4C02;"></div>
+              <div style="width:22px;height:1px;background:rgba(255,255,255,.2);"></div>
+              <div style="width:52px;height:52px;border-radius:16px;background:#FF6B35;"></div>
+            </div>
+            <div style="font:900 27px/1.06 'Archivo';letter-spacing:-.03em;color:#fff;">CONNECT<br>YOUR STRAVA</div>
+            <div style="display:flex;flex-direction:column;gap:12px;">
+              <sc-for list="{{ stravaScopes }}" as="s" hint-placeholder-count="4">
+                <div style="display:flex;gap:11px;align-items:flex-start;">
+                  <div style="width:18px;height:18px;border-radius:9px;background:rgba(255,107,53,.16);border:1px solid #FF6B35;display:flex;align-items:center;justify-content:center;font:700 10px/1 'Archivo';color:#FF6B35;flex:none;margin-top:1px;">✓</div>
+                  <div style="display:flex;flex-direction:column;gap:2px;">
+                    <div style="font:700 13px/1.2 'Archivo';color:#fff;">{{ s.title }}</div>
+                    <div style="font:500 11.5px/1.4 'Archivo';color:rgba(255,255,255,.45);">{{ s.body }}</div>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+            <div style="font:500 11px/1.5 'IBM Plex Mono';color:rgba(255,255,255,.32);">We never post to Strava. Read-only access, revocable any time in Settings.</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:9px;">
+            <div data-go="sync" onClick="{{ nav }}" style="height:54px;border-radius:27px;background:#FC4C02;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 14px 34px rgba(252,76,2,.28);">
+              <span style="font:800 14px/1 'Archivo';letter-spacing:.02em;color:#fff;">CONNECT WITH STRAVA</span>
+            </div>
+            <div data-go="home" onClick="{{ nav }}" style="height:48px;display:flex;align-items:center;justify-content:center;cursor:pointer;">
+              <span style="font:600 12.5px/1 'Archivo';color:rgba(255,255,255,.45);">Skip for now</span>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ══════════ SYNC ══════════ -->
+      <sc-if value="{{ isSync }}" hint-placeholder-val="{{ true }}">
+        <div data-screen-label="04 Activity sync" style="height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;padding:26px;box-sizing:border-box;">
+          <div style="width:88px;height:88px;border-radius:50%;border:3px solid rgba(255,255,255,.1);border-top-color:#FF6B35;animation:strideSpin 1s linear infinite;"></div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:7px;">
+            <div style="font:800 19px/1 'Archivo';color:#fff;">PULLING YOUR ACTIVITIES</div>
+            <div style="font:600 12px/1 'IBM Plex Mono';color:#FF6B35;">{{ syncCount }} of 5 imported</div>
+          </div>
+          <div style="width:100%;max-width:260px;display:flex;flex-direction:column;gap:7px;">
+            <sc-for list="{{ syncRows }}" as="r" hint-placeholder-count="5">
+              <div style="{{ r.style }}">
+                <span style="font:600 11px/1 'IBM Plex Mono';color:rgba(255,255,255,.6);">{{ r.title }}</span>
+                <span style="font:700 11px/1 'IBM Plex Mono';color:#32D74B;">{{ r.mark }}</span>
+              </div>
+            </sc-for>
+          </div>
+          <div data-go="home" onClick="{{ nav }}" style="position:absolute;bottom:34px;height:48px;padding:0 34px;border-radius:24px;background:#fff;display:flex;align-items:center;cursor:pointer;">
+            <span style="font:800 13px/1 'Archivo';color:#0B0B0C;">START CREATING</span>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ══════════ HOME / LANDING ══════════ -->
+      <sc-if value="{{ isHome }}" hint-placeholder-val="{{ true }}">
+        <div data-screen-label="05 Home feed" style="height:100%;display:flex;flex-direction:column;">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px 8px;">
+            <div style="display:flex;flex-direction:column;gap:1px;">
+              <div style="font:900 25px/1 'Archivo';letter-spacing:-.03em;color:#fff;">StrideStudio</div>
+              <div style="font:600 9.5px/1 'IBM Plex Mono';letter-spacing:.1em;color:#FF6B35;">{{ streakLine }}</div>
+            </div>
+            <div data-go="profile" onClick="{{ nav }}" style="width:38px;height:38px;border-radius:19px;background:linear-gradient(150deg,#FF6B35,#7A2F14);display:flex;align-items:center;justify-content:center;font:800 13px/1 'Archivo';color:#fff;cursor:pointer;">RK</div>
+          </div>
+
+          <div style="display:flex;gap:7px;padding:2px 16px 10px;overflow:hidden;">
+            <sc-for list="{{ weekStrip }}" as="d" hint-placeholder-count="7">
+              <div style="{{ d.style }}">
+                <span style="font:700 8px/1 'Archivo';letter-spacing:.1em;opacity:.6;">{{ d.day }}</span>
+                <span style="font:800 12px/1 'IBM Plex Mono';">{{ d.km }}</span>
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="flex:1;overflow-y:auto;padding:0 16px 92px;display:flex;flex-direction:column;gap:14px;">
+            <sc-for list="{{ feed }}" as="a" hint-placeholder-count="3">
+              <div data-act="{{ a.id }}" onClick="{{ openActivity }}" style="{{ a.cardStyle }}">
+                <div style="position:absolute;inset:0;opacity:.5;background:{{ a.bg }};"></div>
+                <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.42) 0%,rgba(0,0,0,.1) 38%,rgba(0,0,0,.86) 100%);"></div>
+                <div style="position:relative;height:100%;padding:16px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between;">
+                  <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;">
+                    <div style="font:900 24px/1 'Archivo';letter-spacing:-.02em;color:#fff;">{{ a.dayLabel }}</div>
+                    <div data-act="{{ a.id }}" onClick="{{ createFrom }}" style="background:rgba(255,255,255,.14);backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.16);border-radius:16px;padding:7px 14px;cursor:pointer;">
+                      <span style="font:800 11px/1 'Archivo';letter-spacing:.06em;color:#fff;">SHARE</span>
+                    </div>
+                  </div>
+                  <div style="display:flex;flex-direction:column;gap:4px;">
+                    <div style="font:600 11px/1 'Archivo';letter-spacing:.14em;color:rgba(255,255,255,.62);text-transform:uppercase;">{{ a.typeLine }}</div>
+                    <div style="font:700 15px/1.35 'IBM Plex Mono';color:#fff;">{{ a.distLine }}</div>
+                    <div style="font:500 12px/1.35 'IBM Plex Mono';color:rgba(255,255,255,.66);">{{ a.paceLine }}</div>
+                    <div style="font:500 12px/1.35 'IBM Plex Mono';color:rgba(255,255,255,.66);">{{ a.timeLine }}</div>
+                  </div>
+                </div>
+                <div style="{{ a.prStyle }}">{{ a.prLabel }}</div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ══════════ ACTIVITY DETAIL ══════════ -->
+      <sc-if value="{{ isDetail }}" hint-placeholder-val="{{ true }}">
+        <div data-screen-label="06 Activity detail" style="height:100%;display:flex;flex-direction:column;">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 16px;">
+            <div data-go="home" onClick="{{ nav }}" style="width:40px;height:40px;border-radius:20px;background:#1C1C1E;display:flex;align-items:center;justify-content:center;font:600 18px/1 'Archivo';color:#fff;cursor:pointer;">‹</div>
+            <div data-go="capture" onClick="{{ nav }}" style="background:#fff;border-radius:20px;padding:9px 18px;cursor:pointer;">
+              <span style="font:800 13px/1 'Archivo';color:#000;">Share</span>
+            </div>
+          </div>
+          <div style="flex:1;overflow-y:auto;padding:16px 16px 40px;">
+            <div style="font:900 32px/1 'Archivo';letter-spacing:-.03em;color:#fff;">{{ detail.dayLabel }}</div>
+            <div style="font:500 13px/1 'Archivo';color:#8E8E93;margin:6px 0 20px;">{{ detail.typeLine }}</div>
+            <div style="height:150px;border-radius:18px;border:1px solid #1C1C1E;overflow:hidden;position:relative;margin-bottom:16px;background:#0E0E10;display:flex;align-items:center;justify-content:center;">
+              {{ detail.routeNode }}
+            </div>
+            <div style="background:#0E0E10;border-radius:18px;border:1px solid #1C1C1E;overflow:hidden;">
+              <sc-for list="{{ detail.rows }}" as="r" hint-placeholder-count="9">
+                <div style="{{ r.style }}">
+                  <span style="font:500 13.5px/1 'Archivo';color:#8E8E93;">{{ r.label }}</span>
+                  <span style="font:700 13.5px/1 'IBM Plex Mono';color:#fff;">{{ r.value }}</span>
+                </div>
+              </sc-for>
+            </div>
+            <div data-go="capture" onClick="{{ nav }}" style="margin-top:22px;height:54px;border-radius:27px;background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;">
+              <span style="font:800 14px/1 'Archivo';color:#000;">CREATE POST FROM ACTIVITY</span>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ══════════ CAPTURE ══════════ -->
+      <sc-if value="{{ isCapture }}" hint-placeholder-val="{{ true }}">
+        <div data-screen-label="07 Capture" style="height:100%;position:relative;overflow:hidden;">
+          <div style="{{ captureBg }}"></div>
+          <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.5) 0%,transparent 26%,transparent 62%,rgba(0,0,0,.72) 100%);"></div>
+
+          <div style="position:absolute;top:12px;left:14px;right:14px;display:flex;align-items:center;justify-content:space-between;">
+            <div data-go="home" onClick="{{ nav }}" style="width:38px;height:38px;border-radius:19px;background:rgba(0,0,0,.42);backdrop-filter:blur(12px);display:flex;align-items:center;justify-content:center;font:600 17px/1 'Archivo';color:#fff;cursor:pointer;">✕</div>
+            <div style="background:rgba(0,0,0,.42);backdrop-filter:blur(12px);border-radius:18px;padding:8px 14px;display:flex;align-items:center;gap:7px;">
+              <div style="width:6px;height:6px;border-radius:3px;background:#FF6B35;"></div>
+              <span style="font:700 10.5px/1 'IBM Plex Mono';letter-spacing:.08em;color:#fff;">{{ selectedActivityLabel }}</span>
+              <span style="font:600 9px/1 'Archivo';color:rgba(255,255,255,.55);">▾</span>
+            </div>
+            <div style="width:38px;height:38px;border-radius:19px;background:rgba(0,0,0,.42);backdrop-filter:blur(12px);display:flex;align-items:center;justify-content:center;font:700 13px/1 'Archivo';color:#fff;">⚡</div>
+          </div>
+
+          <div style="position:absolute;bottom:118px;left:0;right:0;display:flex;justify-content:center;gap:8px;">
+            <sc-for list="{{ captureModes }}" as="m" hint-placeholder-count="3">
+              <div data-go="{{ m.go }}" onClick="{{ nav }}" style="{{ m.style }}">{{ m.label }}</div>
+            </sc-for>
+          </div>
+
+          <div style="position:absolute;bottom:26px;left:0;right:0;display:flex;align-items:center;justify-content:space-between;padding:0 30px;">
+            <div data-go="gallery" onClick="{{ nav }}" style="width:46px;height:46px;border-radius:12px;background:linear-gradient(140deg,#3A2A22,#8C4E2E);border:2px solid rgba(255,255,255,.35);cursor:pointer;"></div>
+            <div data-go="editor" onClick="{{ nav }}" style="width:78px;height:78px;border-radius:50%;border:4px solid #fff;display:flex;align-items:center;justify-content:center;cursor:pointer;">
+              <div style="width:60px;height:60px;border-radius:50%;background:#FF6B35;box-shadow:0 8px 30px rgba(255,107,53,.5);"></div>
+            </div>
+            <div style="width:46px;height:46px;border-radius:23px;background:rgba(0,0,0,.42);backdrop-filter:blur(12px);display:flex;align-items:center;justify-content:center;font:600 17px/1 'Archivo';color:#fff;">⟲</div>
+          </div>
+          <div style="position:absolute;bottom:6px;left:0;right:0;text-align:center;font:600 9px/1 'Archivo';letter-spacing:.2em;color:rgba(255,255,255,.4);">HOLD FOR VIDEO · SWIPE FOR GALLERY</div>
+        </div>
+      </sc-if>
+
+      <!-- ══════════ GALLERY / BACKGROUNDS ══════════ -->
+      <sc-if value="{{ isGallery }}" hint-placeholder-val="{{ true }}">
+        <div data-screen-label="08 Background picker" style="height:100%;display:flex;flex-direction:column;background:#000;">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;">
+            <div data-go="capture" onClick="{{ nav }}" style="width:38px;height:38px;border-radius:19px;background:#16161A;display:flex;align-items:center;justify-content:center;font:600 17px/1 'Archivo';color:#fff;cursor:pointer;">‹</div>
+            <div style="font:800 15px/1 'Archivo';color:#fff;">Choose a background</div>
+            <div data-go="editor" onClick="{{ nav }}" style="font:800 12.5px/1 'Archivo';color:#FF6B35;cursor:pointer;padding:10px;">DONE</div>
+          </div>
+          <div style="display:flex;gap:7px;padding:2px 16px 12px;">
+            <sc-for list="{{ bgTabs }}" as="t" hint-placeholder-count="4">
+              <div data-cat="{{ t.id }}" onClick="{{ setBgTab }}" style="{{ t.style }}">{{ t.label }}</div>
+            </sc-for>
+          </div>
+          <div style="flex:1;overflow-y:auto;padding:0 12px 26px;">
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;">
+              <sc-for list="{{ bgOptions }}" as="b" hint-placeholder-count="12">
+                <div data-bg="{{ b.id }}" onClick="{{ setBgAndGo }}" style="{{ b.style }}">
+                  <div style="{{ b.tag }}">{{ b.label }}</div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ══════════ EDITOR ══════════ -->
+      <sc-if value="{{ isEditor }}" hint-placeholder-val="{{ true }}">
+        <div data-screen-label="09 Editor" style="height:100%;display:flex;flex-direction:column;background:#000;position:relative;">
+
+          <div style="height:46px;display:flex;align-items:center;justify-content:space-between;padding:0 10px;flex:none;">
+            <div data-go="capture" onClick="{{ nav }}" style="width:34px;height:34px;border-radius:17px;background:#16161A;display:flex;align-items:center;justify-content:center;font:600 16px/1 'Archivo';color:#fff;cursor:pointer;">‹</div>
+            <div style="display:flex;align-items:center;gap:6px;">
+              <div onClick="{{ undo }}" style="{{ undoStyle }}">↺</div>
+              <div onClick="{{ redo }}" style="{{ redoStyle }}">↻</div>
+              <sc-for list="{{ ratios }}" as="r" hint-placeholder-count="3">
+                <div data-ratio="{{ r.id }}" onClick="{{ setRatio }}" style="{{ r.style }}">{{ r.label }}</div>
+              </sc-for>
+            </div>
+            <div data-go="export" onClick="{{ nav }}" style="height:34px;padding:0 15px;border-radius:17px;background:#FF6B35;display:flex;align-items:center;cursor:pointer;">
+              <span style="font:800 12px/1 'Archivo';color:#fff;">NEXT</span>
+            </div>
+          </div>
+
+          <div style="position:relative;flex:1;overflow:hidden;z-index:1;">
+            <div onPointerDown="{{ canvasDown }}" onPointerMove="{{ canvasMove }}" onPointerUp="{{ canvasUp }}" onPointerCancel="{{ canvasUp }}" style="{{ canvasStyle }}">
+              <div style="{{ canvasBgStyle }}"></div>
+              <sc-for list="{{ layerViews }}" as="L" hint-placeholder-count="0">
+                <div data-layer="{{ L.id }}" style="{{ L.wrapStyle }}">
+                  <div style="{{ L.innerStyle }}">{{ L.node }}</div>
+                  <sc-if value="{{ L.selected }}" hint-placeholder-val="{{ false }}">
+                    <div style="{{ L.frameStyle }}"></div>
+                  </sc-if>
+                  <sc-if value="{{ L.selected }}" hint-placeholder-val="{{ false }}">
+                    <div data-handle="scale" style="position:absolute;right:-14px;bottom:-14px;width:28px;height:28px;border-radius:14px;background:#FF6B35;border:2px solid #fff;box-shadow:0 3px 10px rgba(0,0,0,.5);cursor:nwse-resize;touch-action:none;pointer-events:auto;z-index:20;"></div>
+                  </sc-if>
+                  <sc-if value="{{ L.selected }}" hint-placeholder-val="{{ false }}">
+                    <div data-handle="rotate" style="position:absolute;left:-14px;top:-14px;width:28px;height:28px;border-radius:14px;background:#0A84FF;border:2px solid #fff;box-shadow:0 3px 10px rgba(0,0,0,.5);cursor:grab;touch-action:none;pointer-events:auto;z-index:20;display:flex;align-items:center;justify-content:center;font:700 12px/1 'Archivo';color:#fff;">↻</div>
+                  </sc-if>
+                </div>
+              </sc-for>
+              <div style="{{ guideXStyle }}"></div>
+              <div style="{{ guideYStyle }}"></div>
+              <div style="{{ trashStyle }}">
+                <div style="font:700 15px/1 'Archivo';color:#fff;">⌫</div>
+                <div style="font:700 7.5px/1 'Archivo';letter-spacing:.16em;color:#fff;">DROP</div>
+              </div>
+            </div>
+
+            <div style="position:absolute;top:8px;right:8px;display:flex;flex-direction:column;gap:6px;">
+              <sc-for list="{{ tools }}" as="t" hint-placeholder-count="6">
+                <div data-tool="{{ t.id }}" onClick="{{ setTool }}" style="{{ t.style }}">{{ t.label }}</div>
+              </sc-for>
+            </div>
+
+            <div style="{{ selBarStyle }}">
+              <sc-for list="{{ selActions }}" as="s" hint-placeholder-count="0">
+                <div data-act2="{{ s.id }}" onClick="{{ layerAction }}" style="{{ s.style }}">{{ s.label }}</div>
+              </sc-for>
+            </div>
+          </div>
+
+          <!-- STICKER TRAY -->
+          <sc-if value="{{ trayOpen }}" hint-placeholder-val="{{ false }}">
+            <div style="position:absolute;left:0;right:0;bottom:0;max-height:54%;background:#0A0A0B;border-top:1px solid rgba(255,255,255,.12);border-radius:22px 22px 0 0;z-index:1200;box-shadow:0 -18px 44px rgba(0,0,0,.6);display:flex;flex-direction:column;animation:strideRise .22s ease-out;">
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px 8px;">
+                <div style="display:flex;flex-direction:column;gap:2px;">
+                  <div style="font:800 14px/1 'Archivo';color:#fff;">{{ trayTitle }}</div>
+                  <div style="font:600 9px/1 'IBM Plex Mono';letter-spacing:.1em;color:#FF6B35;">{{ trayCount }} LIVE FROM THIS ACTIVITY</div>
+                </div>
+                <div onClick="{{ closeTray }}" style="width:30px;height:30px;border-radius:15px;background:#1C1C1E;display:flex;align-items:center;justify-content:center;font:600 14px/1 'Archivo';color:#fff;cursor:pointer;">✕</div>
+              </div>
+              <div style="display:flex;gap:6px;padding:0 16px 8px;overflow-x:auto;">
+                <sc-for list="{{ trayCats }}" as="c" hint-placeholder-count="6">
+                  <div data-cat="{{ c.id }}" onClick="{{ setCat }}" style="{{ c.style }}">{{ c.label }}</div>
+                </sc-for>
+              </div>
+              <div style="display:flex;gap:6px;padding:0 16px 10px;overflow-x:auto;">
+                <sc-for list="{{ trayThemes }}" as="t" hint-placeholder-count="8">
+                  <div data-theme="{{ t.id }}" onClick="{{ setTheme }}" style="{{ t.style }}">{{ t.label }}</div>
+                </sc-for>
+              </div>
+              <div style="flex:1;overflow-y:auto;padding:0 12px 18px;">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                  <sc-for list="{{ trayItems }}" as="s" hint-placeholder-count="8">
+                    <div data-sticker="{{ s.id }}" onClick="{{ addSticker }}" style="height:118px;border-radius:14px;background:#0E0E10;border:1px solid #1C1C1E;overflow:hidden;position:relative;cursor:pointer;display:flex;align-items:center;justify-content:center;">
+                      <div style="{{ s.previewStyle }}">{{ s.node }}</div>
+                      <div style="position:absolute;left:6px;bottom:5px;font:600 8px/1 'IBM Plex Mono';letter-spacing:.08em;color:rgba(255,255,255,.5);">{{ s.name }}</div>
+                      <div style="{{ s.badgeStyle }}">{{ s.theme }}</div>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </div>
+          </sc-if>
+
+          <!-- STYLE PANEL -->
+          <sc-if value="{{ styleOpen }}" hint-placeholder-val="{{ false }}">
+            <div style="position:absolute;left:0;right:0;bottom:0;background:#0A0A0B;border-top:1px solid rgba(255,255,255,.12);border-radius:22px 22px 0 0;z-index:1200;box-shadow:0 -18px 44px rgba(0,0,0,.6);padding:14px 16px 18px;display:flex;flex-direction:column;gap:14px;animation:strideRise .2s ease-out;">
+              <div style="display:flex;align-items:center;justify-content:space-between;">
+                <div style="font:800 14px/1 'Archivo';color:#fff;">{{ styleTitle }}</div>
+                <div onClick="{{ closeTray }}" style="width:30px;height:30px;border-radius:15px;background:#1C1C1E;display:flex;align-items:center;justify-content:center;font:600 14px/1 'Archivo';color:#fff;cursor:pointer;">✕</div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:7px;">
+                <div style="font:700 9px/1 'Archivo';letter-spacing:.18em;color:rgba(255,255,255,.4);">THEME PALETTE</div>
+                <div style="display:flex;gap:9px;">
+                  <sc-for list="{{ palettes }}" as="p" hint-placeholder-count="6">
+                    <div data-palette="{{ p.id }}" onClick="{{ setPalette }}" style="{{ p.style }}"></div>
+                  </sc-for>
+                </div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:7px;">
+                <div style="font:700 9px/1 'Archivo';letter-spacing:.18em;color:rgba(255,255,255,.4);">PHOTO FILTER</div>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                  <sc-for list="{{ filters }}" as="f" hint-placeholder-count="6">
+                    <div data-filter="{{ f.id }}" onClick="{{ setFilter }}" style="{{ f.style }}">{{ f.label }}</div>
+                  </sc-for>
+                </div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:7px;">
+                <div style="display:flex;justify-content:space-between;">
+                  <div style="font:700 9px/1 'Archivo';letter-spacing:.18em;color:rgba(255,255,255,.4);">STICKER OPACITY</div>
+                  <div style="font:600 9px/1 'IBM Plex Mono';color:#FF6B35;">{{ opacityLabel }}</div>
+                </div>
+                <input type="range" min="20" max="100" value="{{ opacityValue }}" onChange="{{ setOpacity }}" disabled="{{ noSelection }}" style="width:100%;accent-color:#FF6B35;">
+              </div>
+              <div style="{{ noSelStyle }}">Tap a sticker on the canvas to change its opacity, shadow, blur or border. Palette and filter apply to the whole post.</div>
+              <div style="display:flex;gap:6px;">
+                <sc-for list="{{ fxToggles }}" as="x" hint-placeholder-count="3">
+                  <div data-act2="{{ x.id }}" onClick="{{ layerAction }}" style="{{ x.style }}">{{ x.label }}</div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+
+          <!-- LAYERS PANEL -->
+          <sc-if value="{{ layersOpen }}" hint-placeholder-val="{{ false }}">
+            <div style="position:absolute;left:0;right:0;bottom:0;max-height:56%;background:#0A0A0B;border-top:1px solid rgba(255,255,255,.12);border-radius:22px 22px 0 0;z-index:1200;box-shadow:0 -18px 44px rgba(0,0,0,.6);padding:14px 16px 18px;display:flex;flex-direction:column;gap:10px;animation:strideRise .2s ease-out;">
+              <div style="display:flex;align-items:center;justify-content:space-between;">
+                <div style="font:800 14px/1 'Archivo';color:#fff;">Layers</div>
+                <div onClick="{{ closeTray }}" style="width:30px;height:30px;border-radius:15px;background:#1C1C1E;display:flex;align-items:center;justify-content:center;font:600 14px/1 'Archivo';color:#fff;cursor:pointer;">✕</div>
+              </div>
+              <div style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:6px;">
+                <sc-for list="{{ layerList }}" as="l" hint-placeholder-count="0">
+                  <div data-layer2="{{ l.id }}" onClick="{{ selectFromList }}" style="{{ l.style }}">
+                    <div style="width:38px;height:30px;border-radius:6px;background:#000;border:1px solid #1C1C1E;overflow:hidden;display:flex;align-items:center;justify-content:center;flex:none;">
+                      <div style="{{ l.thumbStyle }}">{{ l.node }}</div>
+                    </div>
+                    <div style="flex:1;display:flex;flex-direction:column;gap:1px;min-width:0;">
+                      <div style="font:700 11.5px/1 'Archivo';color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ l.name }}</div>
+                      <div style="font:500 8.5px/1 'IBM Plex Mono';color:rgba(255,255,255,.42);">{{ l.meta }}</div>
+                    </div>
+                    <div data-act2="up" data-layer2="{{ l.id }}" onClick="{{ layerAction }}" style="width:26px;height:26px;border-radius:13px;background:#1C1C1E;display:flex;align-items:center;justify-content:center;font:600 11px/1 'Archivo';color:#fff;cursor:pointer;">▲</div>
+                    <div data-act2="down" data-layer2="{{ l.id }}" onClick="{{ layerAction }}" style="width:26px;height:26px;border-radius:13px;background:#1C1C1E;display:flex;align-items:center;justify-content:center;font:600 11px/1 'Archivo';color:#fff;cursor:pointer;">▼</div>
+                    <div data-act2="delete" data-layer2="{{ l.id }}" onClick="{{ layerAction }}" style="width:26px;height:26px;border-radius:13px;background:#2A1416;display:flex;align-items:center;justify-content:center;font:600 11px/1 'Archivo';color:#FF453A;cursor:pointer;">✕</div>
+                  </div>
+                </sc-for>
+                <sc-if value="{{ noLayers }}" hint-placeholder-val="{{ false }}">
+                  <div style="padding:26px 0;text-align:center;display:flex;flex-direction:column;gap:6px;">
+                    <div style="font:700 12.5px/1 'Archivo';color:rgba(255,255,255,.6);">No stickers yet</div>
+                    <div style="font:500 11px/1.4 'Archivo';color:rgba(255,255,255,.35);">Open the sticker tray and tap any card to drop it on your photo.</div>
+                  </div>
+                </sc-if>
+              </div>
+            </div>
+          </sc-if>
+
+          <div style="{{ hintStyle }}">{{ hintText }}</div>
+        </div>
+      </sc-if>
+
+      <!-- ══════════ EXPORT ══════════ -->
+      <sc-if value="{{ isExport }}" hint-placeholder-val="{{ true }}">
+        <div data-screen-label="10 Export and share" style="height:100%;display:flex;flex-direction:column;padding:12px 16px 18px;box-sizing:border-box;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+            <div data-go="editor" onClick="{{ nav }}" style="width:36px;height:36px;border-radius:18px;background:#16161A;display:flex;align-items:center;justify-content:center;font:600 17px/1 'Archivo';color:#fff;cursor:pointer;">‹</div>
+            <div style="font:800 15px/1 'Archivo';color:#fff;">Ready to post</div>
+            <div style="width:36px;"></div>
+          </div>
+          <div style="display:flex;gap:12px;align-items:flex-start;">
+            <div style="width:172px;height:306px;border-radius:14px;overflow:hidden;border:1px solid #1C1C1E;position:relative;flex:none;background:#000;">
+              <div style="{{ previewScaleStyle }}">
+                <div style="{{ canvasBgStyle }}"></div>
+                <sc-for list="{{ layerViews }}" as="L" hint-placeholder-count="0">
+                  <div style="{{ L.wrapStyle }}"><div style="{{ L.innerStyle }}">{{ L.node }}</div></div>
+                </sc-for>
+              </div>
+            </div>
+            <div style="flex:1;display:flex;flex-direction:column;gap:9px;">
+              <div style="font:700 9px/1 'Archivo';letter-spacing:.18em;color:rgba(255,255,255,.4);">EXPORT</div>
+              <sc-for list="{{ exportSpecs }}" as="e" hint-placeholder-count="3">
+                <div style="background:#0E0E10;border:1px solid #1C1C1E;border-radius:12px;padding:9px 11px;display:flex;flex-direction:column;gap:2px;">
+                  <span style="font:700 11.5px/1 'Archivo';color:#fff;">{{ e.title }}</span>
+                  <span style="font:500 9.5px/1 'IBM Plex Mono';color:rgba(255,255,255,.42);">{{ e.meta }}</span>
+                </div>
+              </sc-for>
+              <div onClick="{{ doExport }}" style="height:44px;border-radius:22px;background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;margin-top:2px;">
+                <span style="font:800 12.5px/1 'Archivo';color:#000;">{{ exportLabel }}</span>
+              </div>
+            </div>
+          </div>
+          <div style="font:700 9px/1 'Archivo';letter-spacing:.18em;color:rgba(255,255,255,.4);margin:18px 0 10px;">SHARE TO</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;">
+            <sc-for list="{{ shareTargets }}" as="s" hint-placeholder-count="8">
+              <div data-share="{{ s.id }}" onClick="{{ share }}" style="display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;">
+                <div style="{{ s.iconStyle }}"></div>
+                <span style="font:600 9px/1.1 'Archivo';color:rgba(255,255,255,.6);text-align:center;">{{ s.label }}</span>
+              </div>
+            </sc-for>
+          </div>
+          <div style="{{ toastStyle }}">{{ toast }}</div>
+        </div>
+      </sc-if>
+
+      <!-- ══════════ TEMPLATES GALLERY ══════════ -->
+      <sc-if value="{{ isTemplates }}" hint-placeholder-val="{{ true }}">
+        <div data-screen-label="11 Sticker library" style="height:100%;display:flex;flex-direction:column;">
+          <div style="padding:10px 16px 6px;">
+            <div style="font:900 25px/1 'Archivo';letter-spacing:-.03em;color:#fff;">Sticker library</div>
+            <div style="font:500 11.5px/1 'Archivo';color:#8E8E93;margin-top:4px;">{{ trayCount }} designs · live data from {{ selectedActivityLabel }}</div>
+          </div>
+          <div style="display:flex;gap:6px;padding:8px 16px;overflow-x:auto;">
+            <sc-for list="{{ trayThemes }}" as="t" hint-placeholder-count="8">
+              <div data-theme="{{ t.id }}" onClick="{{ setTheme }}" style="{{ t.style }}">{{ t.label }}</div>
+            </sc-for>
+          </div>
+          <div style="flex:1;overflow-y:auto;padding:4px 12px 92px;">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+              <sc-for list="{{ trayItems }}" as="s" hint-placeholder-count="10">
+                <div data-sticker="{{ s.id }}" onClick="{{ addStickerAndEdit }}" style="height:140px;border-radius:14px;background:#0E0E10;border:1px solid #1C1C1E;overflow:hidden;position:relative;cursor:pointer;display:flex;align-items:center;justify-content:center;">
+                  <div style="{{ s.previewStyle }}">{{ s.node }}</div>
+                  <div style="position:absolute;left:7px;bottom:6px;font:600 8.5px/1 'IBM Plex Mono';letter-spacing:.08em;color:rgba(255,255,255,.55);">{{ s.name }}</div>
+                  <div style="{{ s.badgeStyle }}">{{ s.theme }}</div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ══════════ SAVED ══════════ -->
+      <sc-if value="{{ isSaved }}" hint-placeholder-val="{{ true }}">
+        <div data-screen-label="12 Saved projects" style="height:100%;display:flex;flex-direction:column;">
+          <div style="padding:10px 16px 10px;">
+            <div style="font:900 25px/1 'Archivo';letter-spacing:-.03em;color:#fff;">Saved posts</div>
+            <div style="font:500 11.5px/1 'Archivo';color:#8E8E93;margin-top:4px;">Drafts keep every layer editable</div>
+          </div>
+          <div style="flex:1;overflow-y:auto;padding:0 12px 92px;">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+              <sc-for list="{{ savedProjects }}" as="p" hint-placeholder-count="6">
+                <div data-go="editor" onClick="{{ nav }}" style="height:180px;border-radius:14px;overflow:hidden;position:relative;cursor:pointer;border:1px solid #1C1C1E;">
+                  <div style="position:absolute;inset:0;background:{{ p.bg }};"></div>
+                  <div style="position:absolute;inset:0;background:linear-gradient(180deg,transparent 40%,rgba(0,0,0,.8));"></div>
+                  <div style="position:absolute;left:9px;bottom:8px;display:flex;flex-direction:column;gap:2px;">
+                    <span style="font:800 12px/1 'Archivo';color:#fff;">{{ p.title }}</span>
+                    <span style="font:500 9px/1 'IBM Plex Mono';color:rgba(255,255,255,.55);">{{ p.meta }}</span>
+                  </div>
+                  <div style="{{ p.badgeStyle }}">{{ p.badge }}</div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ══════════ PROFILE ══════════ -->
+      <sc-if value="{{ isProfile }}" hint-placeholder-val="{{ true }}">
+        <div data-screen-label="13 Profile and settings" style="height:100%;display:flex;flex-direction:column;">
+          <div style="flex:1;overflow-y:auto;padding-bottom:92px;">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:26px 16px 22px;border-bottom:1px solid #1C1C1E;">
+              <div style="width:82px;height:82px;border-radius:41px;background:linear-gradient(150deg,#FF6B35,#6E2A10);display:flex;align-items:center;justify-content:center;font:900 26px/1 'Archivo';color:#fff;">RK</div>
+              <div style="font:800 21px/1 'Archivo';color:#fff;">Riya Kulkarni</div>
+              <div style="font:500 12.5px/1 'Archivo';color:#8E8E93;">Pune, India · Training is an art</div>
+              <div style="display:flex;gap:6px;margin-top:4px;">
+                <div style="background:rgba(255,107,53,.14);border:1px solid rgba(255,107,53,.4);border-radius:14px;padding:6px 11px;font:700 9.5px/1 'IBM Plex Mono';letter-spacing:.08em;color:#FF6B35;">{{ streakLine }}</div>
+                <div style="background:#16161A;border:1px solid #1C1C1E;border-radius:14px;padding:6px 11px;font:700 9.5px/1 'IBM Plex Mono';letter-spacing:.08em;color:rgba(255,255,255,.6);">14 POSTS SHARED</div>
+              </div>
+            </div>
+            <div style="display:flex;gap:9px;padding:16px;">
+              <sc-for list="{{ profileStats }}" as="s" hint-placeholder-count="3">
+                <div style="flex:1;background:#0E0E10;border:1px solid #1C1C1E;border-radius:14px;padding:13px 10px;display:flex;flex-direction:column;align-items:center;gap:4px;">
+                  <span style="font:800 19px/1 'IBM Plex Mono';color:#FF6B35;">{{ s.value }}</span>
+                  <span style="font:600 9px/1 'Archivo';letter-spacing:.12em;color:#8E8E93;text-align:center;">{{ s.label }}</span>
+                </div>
+              </sc-for>
+            </div>
+            <div style="padding:0 16px 14px;">
+              <div style="font:700 9px/1 'Archivo';letter-spacing:.18em;color:rgba(255,255,255,.4);margin-bottom:9px;">DATA SOURCES</div>
+              <div style="background:#0E0E10;border:1px solid #1C1C1E;border-radius:14px;overflow:hidden;">
+                <sc-for list="{{ sources }}" as="s" hint-placeholder-count="4">
+                  <div style="{{ s.rowStyle }}">
+                    <div style="{{ s.dotStyle }}"></div>
+                    <div style="flex:1;display:flex;flex-direction:column;gap:2px;">
+                      <span style="font:700 13px/1 'Archivo';color:#fff;">{{ s.name }}</span>
+                      <span style="font:500 10.5px/1 'IBM Plex Mono';color:#8E8E93;">{{ s.status }}</span>
+                    </div>
+                    <div style="{{ s.switchStyle }}"><div style="{{ s.knobStyle }}"></div></div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+            <div style="padding:0 16px 14px;">
+              <div style="font:700 9px/1 'Archivo';letter-spacing:.18em;color:rgba(255,255,255,.4);margin-bottom:9px;">PREFERENCES</div>
+              <div style="background:#0E0E10;border:1px solid #1C1C1E;border-radius:14px;overflow:hidden;">
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:14px;border-bottom:1px solid #1C1C1E;">
+                  <span style="font:500 13px/1 'Archivo';color:#fff;">Units</span>
+                  <div style="display:flex;background:#000;border-radius:14px;padding:3px;gap:2px;">
+                    <sc-for list="{{ unitOptions }}" as="u" hint-placeholder-count="2">
+                      <div data-unit="{{ u.id }}" onClick="{{ setUnits }}" style="{{ u.style }}">{{ u.label }}</div>
+                    </sc-for>
+                  </div>
+                </div>
+                <sc-for list="{{ settingRows }}" as="r" hint-placeholder-count="5">
+                  <div style="{{ r.style }}">
+                    <span style="font:500 13px/1 'Archivo';color:#fff;">{{ r.label }}</span>
+                    <span style="font:500 11.5px/1 'IBM Plex Mono';color:#8E8E93;">{{ r.value }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+            <div style="padding:0 16px;">
+              <div data-go="splash" onClick="{{ nav }}" style="height:48px;border-radius:24px;border:1px solid #2A1416;background:#160C0D;display:flex;align-items:center;justify-content:center;cursor:pointer;">
+                <span style="font:700 13px/1 'Archivo';color:#FF453A;">Sign out</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ══════════ BOTTOM NAV ══════════ -->
+      <sc-if value="{{ showNav }}" hint-placeholder-val="{{ true }}">
+        <div style="position:absolute;left:0;right:0;bottom:0;height:74px;background:linear-gradient(180deg,rgba(0,0,0,.4),#000 46%);border-top:1px solid #1C1C1E;display:flex;align-items:center;justify-content:space-around;padding:0 8px;">
+          <sc-for list="{{ navItems }}" as="n" hint-placeholder-count="5">
+            <div data-go="{{ n.id }}" onClick="{{ nav }}" style="{{ n.wrapStyle }}">
+              <div style="{{ n.iconStyle }}"></div>
+              <span style="{{ n.labelStyle }}">{{ n.label }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+
+    </div>
+  </x-import>
+
+  <div style="font:500 12px/1.5 'Archivo';color:rgba(255,255,255,.4);text-align:center;max-width:520px;text-wrap:pretty;">
+    In the editor: tap a sticker card to drop it, drag to move (orange guides snap to centre), drag the orange handle to scale, the blue one to rotate, drag onto ⌫ to delete. Undo / redo, layers, palettes, filters and opacity all work.
+  </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1000,&quot;height&quot;:1100}}">
+class Component extends DCLogic {
+  state = {
+    screen: "splash", actId: "a1", units: "metric",
+    layers: [], selId: null, tool: null, cat: "all", theme: "all",
+    paletteId: "stride", filter: "none", bgId: "bg1", ratio: "9:16",
+    hist: [[]], hIdx: 0, guides: { x: false, y: false }, dragging: false,
+    toast: null, exported: false, syncCount: 5, hint: null, bgTab: "recent",
+    sources: { strava: true, garmin: false, health: true, fitbit: false },
+  };
+
+  CW = 396;
+  ptrs = new Map();
+  drag = null;
+  uid = 0;
+
+  // ── data ───────────────────────────────────────────────
+  ACTS = [
+    {
+      id: "a1", type: "run", title: "SUNSET TEMPO", dateISO: "2026-07-24T18:41:00",
+      distanceKm: 14.62, movingSec: 3921, elapsedSec: 4180, paceSecPerKm: 268, speedKmh: 13.4,
+      elevM: 186, hrAvg: 158, hrMax: 179, cadence: 182, powerW: 312, calories: 968,
+      locationName: "PASHAN LAKE LOOP", gear: "NIKE VAPORFLY 3", gearKm: 412, achievements: 3,
+      weather: { tempC: 24, cond: "Clear", windKmh: 11 },
+      prs: [{ label: "FASTEST 10K", value: "44:12 · −38s" }],
+      splits: [{ km: 1, sec: 281, hr: 142 }, { km: 2, sec: 272, hr: 151 }, { km: 3, sec: 266, hr: 156 },
+        { km: 4, sec: 262, hr: 159 }, { km: 5, sec: 258, hr: 163 }, { km: 6, sec: 265, hr: 165 },
+        { km: 7, sec: 271, hr: 161 }],
+      hrSeries: [118, 132, 146, 152, 156, 159, 163, 166, 169, 174, 179, 171, 164, 158, 149],
+      elevSeries: [520, 528, 546, 572, 601, 588, 566, 592, 624, 611, 574, 548, 531, 524, 520],
+      coords: [[0, 0], [12, 8], [26, 6], [38, 16], [52, 30], [66, 28], [78, 40], [70, 54], [56, 62],
+        [40, 58], [28, 66], [14, 60], [6, 44], [10, 26], [0, 0]],
+      zones: [{ name: "Z1", pct: 8 }, { name: "Z2", pct: 22 }, { name: "Z3", pct: 41 }, { name: "Z4", pct: 24 }, { name: "Z5", pct: 5 }],
+    },
+    {
+      id: "a2", type: "ride", title: "LAVASA CLIMB", dateISO: "2026-07-22T06:12:00",
+      distanceKm: 62.4, movingSec: 8460, elapsedSec: 9240, paceSecPerKm: null, speedKmh: 26.6,
+      elevM: 942, hrAvg: 141, hrMax: 168, cadence: 84, powerW: 214, calories: 1840,
+      locationName: "LAVASA GHAT", gear: "SPECIALIZED ALLEZ", gearKm: 2810, achievements: 1,
+      weather: { tempC: 21, cond: "Overcast", windKmh: 18 },
+      prs: [{ label: "BEST 20 MIN POWER", value: "246 W" }],
+      splits: [{ km: 10, sec: 1380, hr: 132 }, { km: 20, sec: 1410, hr: 138 }, { km: 30, sec: 1490, hr: 144 },
+        { km: 40, sec: 1520, hr: 147 }, { km: 50, sec: 1400, hr: 141 }, { km: 60, sec: 1260, hr: 136 }],
+      hrSeries: [104, 118, 126, 133, 138, 142, 148, 155, 168, 160, 151, 144, 138, 131, 122],
+      elevSeries: [560, 610, 700, 812, 940, 1080, 1160, 1240, 1120, 960, 810, 700, 640, 590, 560],
+      coords: [[0, 0], [18, 4], [34, 14], [48, 34], [64, 52], [82, 66], [96, 84], [78, 92], [58, 86],
+        [42, 70], [26, 54], [12, 32], [4, 14], [0, 0]],
+      zones: [{ name: "Z1", pct: 14 }, { name: "Z2", pct: 38 }, { name: "Z3", pct: 30 }, { name: "Z4", pct: 15 }, { name: "Z5", pct: 3 }],
+    },
+    {
+      id: "a3", type: "run", title: "MORNING SHAKEOUT", dateISO: "2026-07-21T05:52:00",
+      distanceKm: 6.05, movingSec: 1962, elapsedSec: 2010, paceSecPerKm: 324, speedKmh: 11.1,
+      elevM: 42, hrAvg: 134, hrMax: 148, cadence: 176, powerW: null, calories: 386,
+      locationName: "AUNDH RIVERSIDE", gear: "ASICS NOVABLAST 4", gearKm: 128, achievements: 0,
+      weather: null, prs: [],
+      splits: [{ km: 1, sec: 330, hr: 124 }, { km: 2, sec: 326, hr: 130 }, { km: 3, sec: 322, hr: 135 },
+        { km: 4, sec: 320, hr: 138 }, { km: 5, sec: 324, hr: 140 }, { km: 6, sec: 318, hr: 143 }],
+      hrSeries: [98, 110, 118, 124, 128, 131, 134, 136, 139, 142, 148, 141, 132, 124, 112],
+      elevSeries: [552, 556, 560, 566, 572, 568, 562, 558, 564, 570, 566, 560, 556, 552, 550],
+      coords: [[0, 0], [16, 2], [32, 6], [48, 4], [62, 12], [74, 24], [60, 30], [44, 26], [28, 20], [12, 12], [0, 0]],
+      zones: [{ name: "Z1", pct: 26 }, { name: "Z2", pct: 48 }, { name: "Z3", pct: 22 }, { name: "Z4", pct: 4 }, { name: "Z5", pct: 0 }],
+    },
+    {
+      id: "a4", type: "workout", title: "STRENGTH BLOCK", dateISO: "2026-07-20T19:20:00",
+      distanceKm: 0, movingSec: 2760, elapsedSec: 3120, paceSecPerKm: null, speedKmh: null,
+      elevM: null, hrAvg: 122, hrMax: 156, cadence: null, powerW: null, calories: 421,
+      locationName: "STUDIO 9", gear: null, gearKm: null, achievements: 0,
+      weather: null, prs: [],
+      splits: [], hrSeries: [92, 108, 121, 134, 146, 156, 138, 126, 118, 112, 106, 101, 98, 96, 94],
+      elevSeries: null, coords: null,
+      zones: [{ name: "Z1", pct: 34 }, { name: "Z2", pct: 36 }, { name: "Z3", pct: 21 }, { name: "Z4", pct: 9 }, { name: "Z5", pct: 0 }],
+    },
+    {
+      id: "a5", type: "run", title: "TRACK INTERVALS", dateISO: "2026-07-18T06:30:00",
+      distanceKm: 10.2, movingSec: 2544, elapsedSec: 3300, paceSecPerKm: 249, speedKmh: 14.4,
+      elevM: 18, hrAvg: 166, hrMax: 188, cadence: 190, powerW: 348, calories: 702,
+      locationName: "BALEWADI STADIUM", gear: "NIKE VAPORFLY 3", gearKm: 397, achievements: 2,
+      weather: { tempC: 22, cond: "Humid", windKmh: 6 },
+      prs: [{ label: "FASTEST 1 MILE", value: "5:41 · −11s" }],
+      splits: [{ km: 1, sec: 262, hr: 148 }, { km: 2, sec: 244, hr: 162 }, { km: 3, sec: 239, hr: 170 },
+        { km: 4, sec: 241, hr: 174 }, { km: 5, sec: 236, hr: 179 }, { km: 6, sec: 252, hr: 176 },
+        { km: 7, sec: 258, hr: 172 }, { km: 8, sec: 246, hr: 178 }],
+      hrSeries: [126, 148, 162, 170, 176, 182, 188, 174, 168, 179, 185, 170, 158, 146, 132],
+      elevSeries: [548, 550, 552, 549, 551, 553, 550, 548, 552, 554, 551, 549, 548, 547, 548],
+      coords: [[0, 0], [24, 0], [30, 10], [24, 20], [0, 20], [-6, 10], [0, 0]],
+      zones: [{ name: "Z1", pct: 6 }, { name: "Z2", pct: 14 }, { name: "Z3", pct: 32 }, { name: "Z4", pct: 34 }, { name: "Z5", pct: 14 }],
+    },
+  ];
+
+  PALETTES = [
+    { id: "stride", name: "Stride", ink: "#FFFFFF", sub: "rgba(255,255,255,0.62)", accent: "#FF6B35", hair: "rgba(255,255,255,0.20)" },
+    { id: "mono", name: "Mono", ink: "#FFFFFF", sub: "rgba(255,255,255,0.55)", accent: "#FFFFFF", hair: "rgba(255,255,255,0.24)" },
+    { id: "gold", name: "Gold", ink: "#FFE9B8", sub: "rgba(255,233,184,0.6)", accent: "#FFB300", hair: "rgba(255,179,0,0.35)" },
+    { id: "mint", name: "Mint", ink: "#E4FFF2", sub: "rgba(228,255,242,0.6)", accent: "#00E08A", hair: "rgba(0,224,138,0.32)" },
+    { id: "neon", name: "Neon", ink: "#FFFFFF", sub: "rgba(255,255,255,0.6)", accent: "#00E5FF", hair: "rgba(0,229,255,0.35)" },
+    { id: "ink", name: "Ink", ink: "#0B0B0C", sub: "rgba(11,11,12,0.6)", accent: "#FF3B30", hair: "rgba(11,11,12,0.22)" },
+  ];
+
+  FILTERS = [
+    { id: "none", label: "None", css: "none" },
+    { id: "mono", label: "Mono", css: "grayscale(1) contrast(1.08)" },
+    { id: "warm", label: "Warm", css: "saturate(1.3) sepia(.22) contrast(1.05)" },
+    { id: "cold", label: "Cold", css: "saturate(.85) hue-rotate(-18deg) brightness(1.04)" },
+    { id: "fade", label: "Fade", css: "contrast(.86) brightness(1.1) saturate(.8)" },
+    { id: "punch", label: "Punch", css: "contrast(1.25) saturate(1.45)" },
+  ];
+
+  BGS = [
+    { id: "bg1", label: "Sunset road", css: "linear-gradient(168deg,#1B1014 0%,#7A2E12 46%,#FF8A3D 100%)" },
+    { id: "bg2", label: "Dawn track", css: "linear-gradient(200deg,#0B1220 0%,#1E3A5F 52%,#6FA8C7 100%)" },
+    { id: "bg3", label: "Trail dust", css: "linear-gradient(150deg,#12100D 0%,#4A3A24 55%,#A67C48 100%)" },
+    { id: "bg4", label: "Night city", css: "linear-gradient(190deg,#07070B 0%,#191B33 58%,#4C3E6B 100%)" },
+    { id: "bg5", label: "Ghat mist", css: "linear-gradient(170deg,#0C1310 0%,#22392C 50%,#6E8F72 100%)" },
+    { id: "bg6", label: "Studio grey", css: "linear-gradient(160deg,#121214 0%,#2A2A2E 60%,#55555C 100%)" },
+    { id: "bg7", label: "Heat map", css: "linear-gradient(155deg,#1A0A0A 0%,#8C1E12 48%,#FFC247 100%)" },
+    { id: "bg8", label: "Cool fade", css: "linear-gradient(200deg,#0A0F12 0%,#14403F 55%,#48A79A 100%)" },
+    { id: "bg9", label: "Violet dusk", css: "linear-gradient(175deg,#0B0810 0%,#3A1B54 55%,#B06AA8 100%)" },
+    { id: "bg10", label: "Concrete", css: "linear-gradient(140deg,#0E0E0F 0%,#333339 58%,#6D6D74 100%)" },
+    { id: "bg11", label: "Sand", css: "linear-gradient(165deg,#141009 0%,#5E4A22 52%,#D9B168 100%)" },
+    { id: "bg12", label: "Deep sea", css: "linear-gradient(185deg,#05080D 0%,#0F2A4A 56%,#2F7EA8 100%)" },
+  ];
+
+  TOOLS = [
+    { id: "stickers", label: "▦" }, { id: "text", label: "Aa" }, { id: "style", label: "◑" },
+    { id: "layers", label: "≡" }, { id: "crop", label: "⌗" }, { id: "activity", label: "↻" },
+  ];
+
+  CATS = [
+    { id: "all", label: "All" }, { id: "distance", label: "Distance" }, { id: "pace", label: "Pace" },
+    { id: "time", label: "Time" }, { id: "hr", label: "Heart rate" }, { id: "elev", label: "Elevation" },
+    { id: "splits", label: "Splits" }, { id: "route", label: "Route" }, { id: "achievement", label: "Records" },
+    { id: "totals", label: "Totals" }, { id: "date", label: "Date & place" }, { id: "gear", label: "Gear" },
+    { id: "weather", label: "Weather" }, { id: "multi", label: "Multi-stat" },
+  ];
+
+  THEMES = [
+    { id: "all", label: "All themes" }, { id: "led", label: "LED" }, { id: "mono", label: "Minimal" },
+    { id: "terminal", label: "Terminal" }, { id: "glass", label: "Glass" }, { id: "chart", label: "Chart" },
+    { id: "poster", label: "Poster" }, { id: "tape", label: "Tape" }, { id: "serif", label: "Serif" },
+  ];
+
+  SHARES = [
+    { id: "ig-story", label: "IG Story", bg: "linear-gradient(140deg,#F9CE34,#EE2A7B 55%,#6228D7)" },
+    { id: "ig-feed", label: "IG Feed", bg: "linear-gradient(140deg,#EE2A7B,#6228D7)" },
+    { id: "threads", label: "Threads", bg: "#101010" },
+    { id: "facebook", label: "Facebook", bg: "#1877F2" },
+    { id: "x", label: "X", bg: "#0B0B0C" },
+    { id: "whatsapp", label: "WhatsApp", bg: "#25D366" },
+    { id: "strava", label: "Strava", bg: "#FC4C02" },
+    { id: "download", label: "Gallery", bg: "#2C2C2E" },
+  ];
+
+  componentDidMount() { this.loadLib(0); }
+
+  loadLib(tries) {
+    if (window.StrideStickers) { this.lib = window.StrideStickers(React); this.forceUpdate(); return; }
+    if (tries > 40) return;
+    setTimeout(() => this.loadLib(tries + 1), 60);
+  }
+
+  // ── helpers ────────────────────────────────────────────
+  act() { return this.ACTS.find((a) => a.id === this.state.actId) || this.ACTS[0]; }
+  pal() { return this.PALETTES.find((p) => p.id === this.state.paletteId) || this.PALETTES[0]; }
+  canvasH() { const r = this.state.ratio; return r === "9:16" ? 704 : r === "4:5" ? 495 : 396; }
+
+  totals() {
+    const days = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
+    const km = [0, 6.05, 62.4, 0, 14.62, 10.2, 8.4];
+    const t = km.reduce((s, k) => s + k, 0);
+    return {
+      totalKm: t, count: 5, streak: 6, monthKm: 214.8, monthCount: 19,
+      days: days.map((d, i) => ({ day: d, km: km[i] })),
+    };
+  }
+
+  push(layers) {
+    const hist = this.state.hist.slice(0, this.state.hIdx + 1);
+    hist.push(JSON.parse(JSON.stringify(layers)));
+    this.setState({ layers, hist: hist.slice(-30), hIdx: Math.min(hist.length - 1, 29) });
+  }
+
+  flash(msg) { this.setState({ toast: msg }); clearTimeout(this._t); this._t = setTimeout(() => this.setState({ toast: null }), 1700); }
+  hint(msg) { this.setState({ hint: msg }); clearTimeout(this._h); this._h = setTimeout(() => this.setState({ hint: null }), 2200); }
+
+  sel() { return this.state.layers.find((l) => l.id === this.state.selId) || null; }
+
+  stickerNode(id, layer) {
+    if (!this.lib) return null;
+    const def = this.lib.stickers.find((s) => s.id === id);
+    if (!def) return null;
+    const c = this.pal();
+    return def.render({ a: this.act(), t: this.totals(), u: this.state.units, c, layer });
+  }
+
+  // ── handlers ───────────────────────────────────────────
+  nav = (e) => {
+    const to = e.currentTarget.dataset.go;
+    if (!to) return;
+    if (to === "capture" || to === "editor") this.setState({ tool: to === "editor" ? "stickers" : null });
+    this.setState({ screen: to });
+    if (to === "editor" && this.state.layers.length === 0) this.hint("Tap any sticker card to drop it on the photo");
+  };
+
+  openActivity = (e) => { this.setState({ actId: e.currentTarget.dataset.act, screen: "detail" }); };
+  createFrom = (e) => { e.stopPropagation(); this.setState({ actId: e.currentTarget.dataset.act, screen: "capture" }); };
+
+  setTool = (e) => {
+    const t = e.currentTarget.dataset.tool;
+    if (t === "text") { this.addLayer("caption-text"); this.setState({ tool: null }); return; }
+    if (t === "activity") {
+      const i = this.ACTS.findIndex((a) => a.id === this.state.actId);
+      const next = this.ACTS[(i + 1) % this.ACTS.length];
+      this.setState({ actId: next.id, tool: null });
+      this.flash("Switched to " + next.title);
+      return;
+    }
+    if (t === "crop") {
+      const order = ["9:16", "4:5", "1:1"];
+      const r = order[(order.indexOf(this.state.ratio) + 1) % 3];
+      this.setState({ ratio: r, tool: null });
+      this.flash("Canvas " + r);
+      return;
+    }
+    this.setState({ tool: this.state.tool === t ? null : t });
+  };
+
+  closeTray = () => this.setState({ tool: null });
+  setCat = (e) => this.setState({ cat: e.currentTarget.dataset.cat });
+  setTheme = (e) => this.setState({ theme: e.currentTarget.dataset.theme });
+  setBgTab = (e) => this.setState({ bgTab: e.currentTarget.dataset.cat });
+  setBg = (e) => this.setState({ bgId: e.currentTarget.dataset.bg });
+  setBgAndGo = (e) => this.setState({ bgId: e.currentTarget.dataset.bg, screen: "editor", tool: "stickers" });
+  setFilter = (e) => this.setState({ filter: e.currentTarget.dataset.filter });
+  setPalette = (e) => this.setState({ paletteId: e.currentTarget.dataset.palette });
+  setRatio = (e) => this.setState({ ratio: e.currentTarget.dataset.ratio });
+  setUnits = (e) => this.setState({ units: e.currentTarget.dataset.unit });
+
+  addLayer(sid) {
+    const def = this.lib && this.lib.stickers.find((s) => s.id === sid);
+    const layer = {
+      id: "L" + ++this.uid, sid, name: def ? def.name : sid, w: def ? def.w : 220,
+      x: this.CW / 2, y: this.canvasH() * (0.34 + Math.random() * 0.22),
+      scale: 1, rot: 0, opacity: 1, z: this.state.layers.length + 1,
+      shadow: true, blur: false, border: false, locked: false,
+      text: sid === "caption-text" ? "STILL RUNNING" : null,
+    };
+    this.push(this.state.layers.concat([layer]));
+    this.setState({ selId: layer.id });
+  }
+
+  addSticker = (e) => { this.addLayer(e.currentTarget.dataset.sticker); this.flash("Sticker added"); };
+  addStickerAndEdit = (e) => { this.addLayer(e.currentTarget.dataset.sticker); this.setState({ screen: "editor", tool: null }); };
+
+  selectFromList = (e) => this.setState({ selId: e.currentTarget.dataset.layer2 });
+
+  layerAction = (e) => {
+    e.stopPropagation();
+    const a = e.currentTarget.dataset.act2;
+    const id = e.currentTarget.dataset.layer2 || this.state.selId;
+    let layers = this.state.layers.map((l) => ({ ...l }));
+    const l = layers.find((x) => x.id === id);
+    if (!l) return;
+    if (a === "delete") { layers = layers.filter((x) => x.id !== id); this.push(layers); this.setState({ selId: null }); return; }
+    if (a === "dup") {
+      const copy = { ...l, id: "L" + ++this.uid, x: l.x + 22, y: l.y + 22, z: layers.length + 1 };
+      layers.push(copy); this.push(layers); this.setState({ selId: copy.id }); return;
+    }
+    if (a === "up") l.z = Math.max.apply(null, layers.map((x) => x.z)) + 1;
+    if (a === "down") l.z = Math.min.apply(null, layers.map((x) => x.z)) - 1;
+    if (a === "lock") l.locked = !l.locked;
+    if (a === "shadow") l.shadow = !l.shadow;
+    if (a === "blur") l.blur = !l.blur;
+    if (a === "border") l.border = !l.border;
+    this.push(layers);
+  };
+
+  setOpacity = (e) => {
+    const v = Number(e.target.value) / 100;
+    const layers = this.state.layers.map((l) => (l.id === this.state.selId ? { ...l, opacity: v } : l));
+    this.setState({ layers });
+  };
+
+  undo = () => {
+    if (this.state.hIdx <= 0) return;
+    const i = this.state.hIdx - 1;
+    const layers = JSON.parse(JSON.stringify(this.state.hist[i]));
+    const keep = layers.some((l) => l.id === this.state.selId) ? this.state.selId : (layers.length ? layers[layers.length - 1].id : null);
+    this.setState({ hIdx: i, layers, selId: keep });
+  };
+  redo = () => { if (this.state.hIdx < this.state.hist.length - 1) { const i = this.state.hIdx + 1; this.setState({ hIdx: i, layers: JSON.parse(JSON.stringify(this.state.hist[i])) }); } };
+
+  doExport = () => { this.setState({ exported: true }); this.flash("Exported 1080 × 1920 PNG"); };
+  share = (e) => { const t = this.SHARES.find((s) => s.id === e.currentTarget.dataset.share); this.flash("Shared to " + t.label); };
+
+  // ── canvas gestures ───────────────────────────────────
+  canvasDown = (e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    this.rect = rect;
+    const handle = e.target.closest && e.target.closest("[data-handle]");
+    const node = e.target.closest && e.target.closest("[data-layer]");
+    e.currentTarget.setPointerCapture && e.currentTarget.setPointerCapture(e.pointerId);
+    this.ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+    if (handle && this.sel()) {
+      const l = this.sel();
+      const cx = rect.left + l.x, cy = rect.top + l.y;
+      this.drag = {
+        mode: handle.dataset.handle, id: l.id,
+        baseScale: l.scale, baseRot: l.rot,
+        baseDist: Math.hypot(e.clientX - cx, e.clientY - cy),
+        baseAng: Math.atan2(e.clientY - cy, e.clientX - cx),
+      };
+      this.setState({ dragging: true });
+      return;
+    }
+    if (node) {
+      const id = node.dataset.layer;
+      const l = this.state.layers.find((x) => x.id === id);
+      if (!l) return;
+      this.setState({ selId: id, dragging: true });
+      if (l.locked) { this.flash("Layer locked"); this.drag = null; return; }
+      this.drag = { mode: "move", id, ox: e.clientX - (rect.left + l.x), oy: e.clientY - (rect.top + l.y), baseScale: l.scale, baseRot: l.rot };
+      return;
+    }
+    this.setState({ selId: null });
+  };
+
+  canvasMove = (e) => {
+    if (!this.drag || !this.rect) return;
+    if (this.ptrs.has(e.pointerId)) this.ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    const rect = this.rect;
+    const layers = this.state.layers.map((l) => ({ ...l }));
+    const l = layers.find((x) => x.id === this.drag.id);
+    if (!l) return;
+
+    // two-finger pinch / twist
+    if (this.ptrs.size >= 2 && this.drag.mode === "move") {
+      const pts = Array.from(this.ptrs.values());
+      const d = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+      const ang = Math.atan2(pts[1].y - pts[0].y, pts[1].x - pts[0].x);
+      if (!this.pinch) this.pinch = { d, ang, scale: l.scale, rot: l.rot };
+      l.scale = Math.max(0.3, Math.min(3.2, this.pinch.scale * (d / this.pinch.d)));
+      l.rot = this.pinch.rot + (ang - this.pinch.ang) * (180 / Math.PI);
+      this.setState({ layers });
+      return;
+    }
+
+    if (this.drag.mode === "move") {
+      let x = e.clientX - rect.left - this.drag.ox;
+      let y = e.clientY - rect.top - this.drag.oy;
+      const gx = Math.abs(x - this.CW / 2) < 9;
+      const gy = Math.abs(y - this.canvasH() / 2) < 9;
+      if (gx) x = this.CW / 2;
+      if (gy) y = this.canvasH() / 2;
+      l.x = Math.max(10, Math.min(this.CW - 10, x));
+      l.y = Math.max(10, Math.min(this.canvasH() - 10, y));
+      this.setState({ layers, guides: { x: gx, y: gy } });
+      return;
+    }
+    const cx = rect.left + l.x, cy = rect.top + l.y;
+    const dist = Math.hypot(e.clientX - cx, e.clientY - cy);
+    const ang = Math.atan2(e.clientY - cy, e.clientX - cx);
+    if (this.drag.mode === "scale") {
+      l.scale = Math.max(0.3, Math.min(3.2, this.drag.baseScale * (dist / Math.max(12, this.drag.baseDist))));
+    } else {
+      l.rot = this.drag.baseRot + (ang - this.drag.baseAng) * (180 / Math.PI);
+    }
+    this.setState({ layers });
+  };
+
+  canvasUp = (e) => {
+    this.ptrs.delete(e.pointerId);
+    this.pinch = null;
+    if (this.drag) {
+      const l = this.state.layers.find((x) => x.id === this.drag.id);
+      const overTrash = l && l.y > this.canvasH() - 96 && Math.abs(l.x - this.CW / 2) < 62;
+      if (overTrash && this.drag.mode === "move") {
+        this.push(this.state.layers.filter((x) => x.id !== l.id));
+        this.setState({ selId: null });
+        this.flash("Sticker deleted");
+      } else {
+        this.push(this.state.layers);
+      }
+    }
+    this.drag = null;
+    this.setState({ dragging: false, guides: { x: false, y: false } });
+  };
+
+  // ── view values ───────────────────────────────────────
+  renderVals() {
+    const st = this.state, a = this.act(), c = this.pal(), L = this.lib;
+    const H = this.canvasH();
+    const F = (n, d) => (L ? n : d);
+    const bg = this.BGS.find((b) => b.id === st.bgId) || this.BGS[0];
+    const filt = this.FILTERS.find((f) => f.id === st.filter) || this.FILTERS[0];
+    const sel = this.sel();
+    const dist = (x) => (L ? L.dist(x, st.units) : "--");
+    const unitShort = L ? L.distUnitShort(st.units) : "km";
+    const dur = (s) => (L ? L.dur(s) : "--");
+
+    const chip = (on) => `padding:7px 11px;border-radius:14px;cursor:pointer;font:700 10px/1 'Archivo';letter-spacing:.06em;white-space:nowrap;border:1px solid ${on ? "#FF6B35" : "rgba(255,255,255,.12)"};background:${on ? "rgba(255,107,53,.16)" : "rgba(255,255,255,.04)"};color:${on ? "#FF6B35" : "rgba(255,255,255,.62)"};`;
+    const smallChip = (on) => `padding:6px 10px;border-radius:12px;cursor:pointer;font:700 9.5px/1 'Archivo';letter-spacing:.06em;white-space:nowrap;background:${on ? "#FF6B35" : "#1C1C1E"};color:${on ? "#0B0B0C" : "rgba(255,255,255,.65)"};`;
+
+    const screens = [
+      ["splash", "Splash"], ["auth", "Auth"], ["strava", "Strava"], ["sync", "Sync"],
+      ["home", "Home"], ["detail", "Activity"], ["capture", "Capture"], ["gallery", "Backgrounds"],
+      ["editor", "Editor"], ["export", "Export"], ["templates", "Stickers"], ["saved", "Saved"], ["profile", "Profile"],
+    ];
+
+    const stickers = L ? L.stickers.filter((s) => (st.cat === "all" || s.cat === st.cat) && (st.theme === "all" || s.theme === st.theme)) : [];
+
+    const layersSorted = st.layers.slice().sort((p, q) => p.z - q.z);
+    const layerViews = layersSorted.map((l) => {
+      const node = this.stickerNode(l.sid, l);
+      return {
+        id: l.id, node, selected: l.id === st.selId,
+        wrapStyle: {
+          position: "absolute", left: l.x, top: l.y, width: l.w,
+          transform: `translate(-50%,-50%) rotate(${l.rot}deg) scale(${l.scale})`,
+          transformOrigin: "center", opacity: l.opacity, zIndex: l.z,
+          touchAction: "none", cursor: l.locked ? "not-allowed" : "grab",
+        },
+        innerStyle: {
+          filter: (l.shadow ? "drop-shadow(0 4px 16px rgba(0,0,0,.55))" : "") + (l.blur ? " blur(1.2px)" : ""),
+          border: l.border ? `1.5px solid ${c.accent}` : "none",
+          borderRadius: l.border ? 12 : 0, padding: l.border ? 10 : 0,
+        },
+        frameStyle: {
+          position: "absolute", inset: -8, border: `1.5px dashed ${c.accent}`, borderRadius: 12, pointerEvents: "none",
+        },
+      };
+    });
+
+    const selBar = sel ? [
+      { id: "dup", label: "Duplicate" }, { id: "lock", label: sel.locked ? "Unlock" : "Lock" },
+      { id: "up", label: "Bring front" }, { id: "down", label: "Send back" }, { id: "delete", label: "Delete" },
+    ].map((s) => ({ ...s, style: `padding:8px 12px;border-radius:14px;background:${s.id === "delete" ? "rgba(255,69,58,.18)" : "rgba(255,255,255,.1)"};border:1px solid ${s.id === "delete" ? "rgba(255,69,58,.5)" : "rgba(255,255,255,.14)"};backdrop-filter:blur(14px);font:700 10px/1 'Archivo';color:${s.id === "delete" ? "#FF453A" : "#fff"};cursor:pointer;white-space:nowrap;` })) : [];
+
+    const rows = L ? [
+      ["Activity type", L.typeLabel(a)],
+      ["Distance", a.distanceKm ? `${dist(a)} ${unitShort}` : L.NS],
+      ["Moving time", dur(a.movingSec)],
+      ["Elapsed time", dur(a.elapsedSec)],
+      ["Avg pace", a.paceSecPerKm ? `${L.pace(a, st.units)} ${st.units === "imperial" ? "/mi" : "/km"}` : L.NS],
+      ["Avg speed", a.speedKmh ? `${L.speed(a, st.units)} ${L.speedUnit(st.units)}` : L.NS],
+      ["Elevation gain", a.elevM != null ? `${L.elev(a, st.units)} ${st.units === "imperial" ? "ft" : "m"}` : L.NS],
+      ["Avg / max HR", a.hrAvg ? `${a.hrAvg} / ${a.hrMax} bpm` : L.NS],
+      ["Cadence", a.cadence ? `${a.cadence} spm` : L.NS],
+      ["Avg power", a.powerW ? `${a.powerW} w` : L.NS],
+      ["Calories", a.calories ? `${a.calories} cal` : L.NS],
+      ["Achievements", a.achievements != null ? `${a.achievements}` : L.NS],
+      ["Gear", a.gear || L.NS],
+      ["Weather", a.weather ? `${a.weather.tempC}° ${a.weather.cond}` : L.NS],
+      ["Started", `${L.dateFull(a)} · ${L.time12(a)}`],
+    ] : [];
+
+    return {
+      isSplash: st.screen === "splash", isAuth: st.screen === "auth", isStrava: st.screen === "strava",
+      isSync: st.screen === "sync", isHome: st.screen === "home", isDetail: st.screen === "detail",
+      isCapture: st.screen === "capture", isGallery: st.screen === "gallery", isEditor: st.screen === "editor",
+      isExport: st.screen === "export", isTemplates: st.screen === "templates", isSaved: st.screen === "saved",
+      isProfile: st.screen === "profile",
+      showNav: ["home", "templates", "saved", "profile"].indexOf(st.screen) >= 0,
+
+      nav: this.nav, openActivity: this.openActivity, createFrom: this.createFrom,
+      setTool: this.setTool, closeTray: this.closeTray, setCat: this.setCat, setTheme: this.setTheme,
+      setBg: this.setBg, setBgAndGo: this.setBgAndGo, setBgTab: this.setBgTab, setFilter: this.setFilter,
+      setPalette: this.setPalette, setRatio: this.setRatio, setUnits: this.setUnits,
+      addSticker: this.addSticker, addStickerAndEdit: this.addStickerAndEdit, layerAction: this.layerAction,
+      selectFromList: this.selectFromList, setOpacity: this.setOpacity, undo: this.undo, redo: this.redo,
+      doExport: this.doExport, share: this.share,
+      canvasDown: this.canvasDown, canvasMove: this.canvasMove, canvasUp: this.canvasUp,
+
+      screenChips: screens.map(([id, label]) => ({
+        id, label,
+        style: `padding:7px 12px;border-radius:13px;cursor:pointer;font:700 10px/1 'Archivo';letter-spacing:.1em;text-transform:uppercase;border:1px solid ${st.screen === id ? "#FF6B35" : "rgba(255,255,255,.12)"};background:${st.screen === id ? "rgba(255,107,53,.18)" : "rgba(255,255,255,.03)"};color:${st.screen === id ? "#FF6B35" : "rgba(255,255,255,.5)"};`,
+      })),
+
+      stravaScopes: [
+        { title: "Read your activities", body: "Distance, pace, splits, heart rate, power, route, gear — everything a sticker can use." },
+        { title: "Photos stay on device", body: "Backgrounds you pick never leave your phone until you export." },
+        { title: "Achievements & records", body: "PRs and course records become one-tap badges." },
+        { title: "Auto-import new sessions", body: "New activities appear in your feed within a minute of upload." },
+      ],
+
+      syncCount: st.syncCount,
+      syncRows: this.ACTS.map((x, i) => ({
+        title: x.title, mark: "✓",
+        style: `display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border-radius:11px;background:#0E0E10;border:1px solid #1C1C1E;animation:strideRise .3s ease-out ${i * 0.08}s both;`,
+      })),
+
+      streakLine: `${this.totals().streak} WEEK STREAK · ${this.totals().totalKm.toFixed(0)} ${unitShort.toUpperCase()} THIS WEEK`,
+      weekStrip: this.totals().days.map((d) => ({
+        day: d.day, km: d.km ? (st.units === "imperial" ? (d.km * 0.621371).toFixed(0) : d.km.toFixed(0)) : "–",
+        style: `flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 0;border-radius:11px;background:${d.km ? "rgba(255,107,53,.14)" : "#0E0E10"};border:1px solid ${d.km ? "rgba(255,107,53,.32)" : "#1C1C1E"};color:${d.km ? "#FF6B35" : "rgba(255,255,255,.35)"};`,
+      })),
+
+      feed: this.ACTS.map((x, i) => ({
+        id: x.id, bg: this.BGS[i % this.BGS.length].css,
+        dayLabel: L ? L.weekday(x).slice(0, 3) + " " + L.dateShort(x) : "",
+        typeLine: L ? `${L.typeLabel(x)} · ${x.title}` : "",
+        distLine: x.distanceKm ? `${dist(x)} ${unitShort}` : "—",
+        paceLine: x.paceSecPerKm ? `${L.pace(x, st.units)}${st.units === "imperial" ? "/mi" : "/km"}` : x.speedKmh ? `${L.speed(x, st.units)} ${L.speedUnit(st.units)}` : "—",
+        timeLine: dur(x.movingSec),
+        cardStyle: "position:relative;height:296px;border-radius:20px;overflow:hidden;border:1px solid #1C1C1E;background:#0E0E10;cursor:pointer;flex:none;",
+        prLabel: x.achievements ? `${x.achievements} PR` : "",
+        prStyle: x.achievements
+          ? "position:absolute;top:60px;right:16px;background:#FF6B35;border-radius:10px;padding:5px 9px;font:800 9px/1 'Archivo';letter-spacing:.1em;color:#0B0B0C;"
+          : "display:none;",
+      })),
+
+      detail: {
+        dayLabel: L ? `${L.weekday(a)} ${L.dateShort(a)}` : "",
+        typeLine: L ? `${L.typeLabel(a)} · ${a.title}` : "",
+        location: a.locationName || (L ? L.NS : ""),
+        routeNode: L && a.coords ? this.stickerNode("chart-route") : null,
+        rows: rows.map(([label, value], i) => ({
+          label, value,
+          style: `display:flex;align-items:center;justify-content:space-between;padding:13px 15px;${i < rows.length - 1 ? "border-bottom:1px solid #1C1C1E;" : ""}`,
+        })),
+      },
+
+      selectedActivityLabel: a.distanceKm ? `${dist(a)} ${unitShort} ${a.type}` : a.title,
+      captureBg: `position:absolute;inset:0;background:${bg.css};filter:${filt.css};`,
+      captureModes: [
+        { go: "editor", label: "PHOTO" }, { go: "editor", label: "VIDEO" }, { go: "gallery", label: "PRESET" },
+      ].map((m, i) => ({ ...m, style: `padding:7px 14px;border-radius:15px;background:${i === 0 ? "rgba(255,255,255,.92)" : "rgba(0,0,0,.4)"};backdrop-filter:blur(12px);font:800 9.5px/1 'Archivo';letter-spacing:.14em;color:${i === 0 ? "#0B0B0C" : "rgba(255,255,255,.7)"};cursor:pointer;` })),
+
+      bgTabs: [
+        { id: "recent", label: "Recents" }, { id: "stock", label: "Stock" },
+        { id: "preset", label: "Presets" }, { id: "solid", label: "Gradients" },
+      ].map((t) => ({ ...t, style: chip(st.bgTab === t.id) })),
+      bgOptions: this.BGS.map((b) => ({
+        id: b.id, label: b.label,
+        style: `height:118px;border-radius:10px;position:relative;overflow:hidden;cursor:pointer;background:${b.css};outline:${st.bgId === b.id ? "2px solid #FF6B35" : "none"};outline-offset:-2px;`,
+        tag: `position:absolute;left:6px;bottom:5px;font:600 8px/1 'IBM Plex Mono';letter-spacing:.06em;color:rgba(255,255,255,.85);text-shadow:0 1px 4px rgba(0,0,0,.7);`,
+      })),
+
+      canvasStyle: { position: "relative", width: this.CW, height: H, overflow: "hidden", touchAction: "none", background: "#0B0B0C", userSelect: "none" },
+      canvasBgStyle: { position: "absolute", inset: 0, background: bg.css, filter: filt.css },
+      guideXStyle: { position: "absolute", left: this.CW / 2 - 0.5, top: 0, bottom: 0, width: 1, background: c.accent, opacity: st.guides.x ? 0.9 : 0, pointerEvents: "none", zIndex: 900 },
+      guideYStyle: { position: "absolute", top: H / 2 - 0.5, left: 0, right: 0, height: 1, background: c.accent, opacity: st.guides.y ? 0.9 : 0, pointerEvents: "none", zIndex: 900 },
+      trashStyle: {
+        position: "absolute", bottom: 14, left: this.CW / 2 - 27, width: 54, height: 54, borderRadius: 27,
+        background: "rgba(255,69,58,.24)", border: "1.5px solid #FF453A", backdropFilter: "blur(12px)",
+        display: st.dragging ? "flex" : "none", flexDirection: "column", alignItems: "center",
+        justifyContent: "center", gap: 2, zIndex: 950, pointerEvents: "none",
+      },
+      selBarStyle: {
+        position: "absolute", left: 8, right: 58, bottom: 10, display: sel && !st.tool ? "flex" : "none",
+        gap: 6, overflowX: "auto", zIndex: 800,
+      },
+      selActions: selBar,
+
+      tools: this.TOOLS.map((t) => ({
+        id: t.id, label: t.label,
+        style: `width:42px;height:42px;border-radius:21px;display:flex;align-items:center;justify-content:center;cursor:pointer;font:700 15px/1 'Archivo';background:${st.tool === t.id ? "#FF6B35" : "rgba(0,0,0,.44)"};color:${st.tool === t.id ? "#0B0B0C" : "#fff"};backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.14);`,
+      })),
+
+      ratios: [{ id: "9:16", label: "9:16" }, { id: "4:5", label: "4:5" }, { id: "1:1", label: "1:1" }]
+        .map((r) => ({ ...r, style: smallChip(st.ratio === r.id) })),
+      undoStyle: `width:32px;height:32px;border-radius:16px;background:#16161A;display:flex;align-items:center;justify-content:center;font:600 14px/1 'Archivo';cursor:pointer;color:${st.hIdx > 0 ? "#fff" : "rgba(255,255,255,.25)"};`,
+      redoStyle: `width:32px;height:32px;border-radius:16px;background:#16161A;display:flex;align-items:center;justify-content:center;font:600 14px/1 'Archivo';cursor:pointer;color:${st.hIdx < st.hist.length - 1 ? "#fff" : "rgba(255,255,255,.25)"};`,
+
+      layerViews,
+      trayOpen: st.tool === "stickers", styleOpen: st.tool === "style", layersOpen: st.tool === "layers",
+      trayTitle: st.cat === "all" ? "Stat stickers" : this.CATS.find((x) => x.id === st.cat).label + " stickers",
+      trayCount: stickers.length,
+      trayCats: this.CATS.map((x) => ({ ...x, style: chip(st.cat === x.id) })),
+      trayThemes: this.THEMES.map((x) => ({ ...x, style: smallChip(st.theme === x.id) })),
+      trayItems: stickers.map((s) => ({
+        id: s.id, name: s.name, theme: s.theme, node: this.stickerNode(s.id),
+        previewStyle: { width: s.w, transform: `scale(${Math.min(0.62, 168 / s.w)})`, transformOrigin: "center", pointerEvents: "none" },
+        badgeStyle: `position:absolute;top:6px;right:6px;padding:3px 6px;border-radius:6px;background:rgba(255,107,53,.16);border:1px solid rgba(255,107,53,.4);font:700 7px/1 'Archivo';letter-spacing:.1em;color:#FF6B35;text-transform:uppercase;`,
+      })),
+
+      styleTitle: sel ? "Style · " + sel.name : "Style",
+      noSelection: !sel,
+      noSelStyle: {
+        display: sel ? "none" : "block", padding: "10px 12px", borderRadius: 12,
+        background: "rgba(255,107,53,.1)", border: "1px solid rgba(255,107,53,.3)",
+        font: "600 10.5px/1.4 'Archivo'", color: "#FF6B35",
+      },
+      palettes: this.PALETTES.map((p) => ({
+        id: p.id,
+        style: `width:38px;height:38px;border-radius:19px;cursor:pointer;background:${p.accent};border:${st.paletteId === p.id ? "2.5px solid #fff" : "1px solid rgba(255,255,255,.2)"};box-shadow:0 4px 14px rgba(0,0,0,.4);`,
+      })),
+      filters: this.FILTERS.map((f) => ({ ...f, style: smallChip(st.filter === f.id) })),
+      opacityValue: sel ? Math.round(sel.opacity * 100) : 100,
+      opacityLabel: sel ? Math.round(sel.opacity * 100) + "%" : "—",
+      fxToggles: [
+        { id: "shadow", label: "Shadow", on: sel ? sel.shadow : false },
+        { id: "blur", label: "Blur", on: sel ? sel.blur : false },
+        { id: "border", label: "Border", on: sel ? sel.border : false },
+      ].map((x) => ({ id: x.id, label: x.label, style: `flex:1;text-align:center;padding:11px 0;border-radius:13px;cursor:pointer;font:700 11px/1 'Archivo';background:${x.on ? "rgba(255,107,53,.18)" : "#16161A"};border:1px solid ${x.on ? "#FF6B35" : "rgba(255,255,255,.1)"};color:${x.on ? "#FF6B35" : "rgba(255,255,255,.65)"};` })),
+
+      layerList: layersSorted.slice().reverse().map((l) => ({
+        id: l.id, name: l.name, node: this.stickerNode(l.sid, l),
+        meta: `z${l.z} · ${Math.round(l.scale * 100)}% · ${Math.round(l.rot)}°${l.locked ? " · locked" : ""}`,
+        thumbStyle: { width: l.w, transform: `scale(${Math.min(0.16, 34 / l.w)})`, pointerEvents: "none" },
+        style: `display:flex;align-items:center;gap:9px;padding:8px;border-radius:12px;cursor:pointer;background:${l.id === st.selId ? "rgba(255,107,53,.12)" : "#0E0E10"};border:1px solid ${l.id === st.selId ? "rgba(255,107,53,.4)" : "#1C1C1E"};`,
+      })),
+      noLayers: st.layers.length === 0,
+      hintStyle: {
+        position: "absolute", left: 16, right: 16, bottom: 92, padding: "10px 14px", borderRadius: 14,
+        background: "rgba(255,255,255,.1)", backdropFilter: "blur(16px)", border: "1px solid rgba(255,255,255,.16)",
+        font: "600 11px/1.35 'Archivo'", color: "#fff", textAlign: "center",
+        display: st.hint ? "block" : "none", zIndex: 990,
+      },
+      hintText: st.hint || "",
+
+      previewScaleStyle: { position: "absolute", top: 0, left: 0, width: this.CW, height: H, transform: `scale(${172 / this.CW})`, transformOrigin: "top left" },
+      exportSpecs: [
+        { title: "Story · 1080 × 1920", meta: "PNG · " + st.ratio },
+        { title: "Feed · 1080 × 1350", meta: "PNG · 4:5 crop" },
+        { title: st.layers.length + " layers flattened", meta: "Editable draft kept in Saved" },
+      ],
+      exportLabel: st.exported ? "EXPORTED ✓" : "EXPORT PNG",
+      shareTargets: this.SHARES.map((s) => ({
+        id: s.id, label: s.label,
+        iconStyle: `width:48px;height:48px;border-radius:15px;background:${s.bg};border:1px solid rgba(255,255,255,.12);`,
+      })),
+      toastStyle: {
+        position: "absolute", left: 0, right: 0, bottom: 26, display: st.toast ? "flex" : "none",
+        justifyContent: "center", zIndex: 999,
+      },
+      toast: st.toast || "",
+
+      savedProjects: this.ACTS.slice(0, 6).map((x, i) => ({
+        title: x.title, bg: this.BGS[(i + 3) % this.BGS.length].css,
+        meta: L ? `${L.dateShort(x)} · ${2 + (i % 3)} layers` : "",
+        badge: i === 0 ? "DRAFT" : "SHARED",
+        badgeStyle: `position:absolute;top:8px;left:8px;padding:4px 7px;border-radius:7px;background:${i === 0 ? "rgba(255,107,53,.9)" : "rgba(0,0,0,.55)"};font:800 8px/1 'Archivo';letter-spacing:.1em;color:${i === 0 ? "#0B0B0C" : "#fff"};`,
+      })),
+
+      profileStats: [
+        { value: "5", label: "ACTIVITIES" },
+        { value: st.units === "imperial" ? (this.totals().totalKm * 0.621371).toFixed(0) : this.totals().totalKm.toFixed(0), label: st.units === "imperial" ? "MILES THIS WEEK" : "KM THIS WEEK" },
+        { value: "14", label: "POSTS CREATED" },
+      ],
+      sources: [
+        { name: "Strava", status: "Connected as Riya · synced 2 min ago", on: st.sources.strava, color: "#FC4C02" },
+        { name: "Garmin Connect", status: "Not connected", on: st.sources.garmin, color: "#0B0B0C" },
+        { name: "Health Connect", status: "Connected · steps and HR", on: st.sources.health, color: "#32D74B" },
+        { name: "Fitbit", status: "Not connected", on: st.sources.fitbit, color: "#00B0B9" },
+      ].map((s, i, arr) => ({
+        name: s.name, status: s.status,
+        rowStyle: `display:flex;align-items:center;gap:12px;padding:14px;${i < arr.length - 1 ? "border-bottom:1px solid #1C1C1E;" : ""}`,
+        dotStyle: `width:34px;height:34px;border-radius:11px;background:${s.color};border:1px solid rgba(255,255,255,.12);flex:none;`,
+        switchStyle: `width:44px;height:26px;border-radius:13px;padding:2px;box-sizing:border-box;display:flex;justify-content:${s.on ? "flex-end" : "flex-start"};background:${s.on ? "#FF6B35" : "#2C2C2E"};`,
+        knobStyle: "width:22px;height:22px;border-radius:11px;background:#fff;",
+      })),
+      unitOptions: [{ id: "metric", label: "KM" }, { id: "imperial", label: "MI" }].map((u) => ({
+        id: u.id, label: u.label,
+        style: `padding:6px 13px;border-radius:11px;cursor:pointer;font:800 10px/1 'Archivo';letter-spacing:.08em;background:${st.units === u.id ? "#FF6B35" : "transparent"};color:${st.units === u.id ? "#0B0B0C" : "rgba(255,255,255,.55)"};`,
+      })),
+      settingRows: [
+        { label: "Default sticker theme", value: this.PALETTES.find((p) => p.id === st.paletteId).name },
+        { label: "Watermark", value: "Off" },
+        { label: "Auto-import activities", value: "On" },
+        { label: "Notifications", value: "New PRs only" },
+        { label: "Privacy", value: "Hide start point" },
+      ].map((r, i, arr) => ({
+        label: r.label, value: r.value,
+        style: `display:flex;align-items:center;justify-content:space-between;padding:14px;${i < arr.length - 1 ? "border-bottom:1px solid #1C1C1E;" : ""}`,
+      })),
+
+      navItems: [
+        { id: "home", label: "Home" }, { id: "templates", label: "Stickers" },
+        { id: "capture", label: "Create" }, { id: "saved", label: "Saved" }, { id: "profile", label: "Profile" },
+      ].map((n) => {
+        const on = st.screen === n.id;
+        const fab = n.id === "capture";
+        return {
+          id: n.id, label: n.label,
+          wrapStyle: `display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;min-width:56px;padding:6px 0;`,
+          iconStyle: fab
+            ? "width:44px;height:44px;border-radius:22px;background:#FF6B35;box-shadow:0 8px 22px rgba(255,107,53,.42);margin-top:-14px;"
+            : `width:22px;height:22px;border-radius:7px;border:2px solid ${on ? "#FF6B35" : "rgba(255,255,255,.4)"};background:${on ? "rgba(255,107,53,.28)" : "transparent"};`,
+          labelStyle: `font:700 9px/1 'Archivo';letter-spacing:.08em;color:${fab ? "#FF6B35" : on ? "#FF6B35" : "rgba(255,255,255,.42)"};`,
+        };
+      }),
+    };
+  }
+}
+
+</script>
+</body>
+</html>
