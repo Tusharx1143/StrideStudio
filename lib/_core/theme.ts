@@ -59,109 +59,153 @@ export const Colors = {
 
 export type ThemeColorPalette = (typeof Colors)[ColorScheme];
 
-/**
- * Font families — UI/UX Pro Max skill recommendation for fitness/sports apps:
- * Barlow Condensed (display/headings) + Barlow (body text).
- * Falls back gracefully when custom fonts aren't loaded.
- */
-const FONT_DISPLAY = "'Barlow Condensed', 'Impact', 'Arial Black', sans-serif";
-const FONT_BODY = "'Barlow', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+// ──────────────────────────────────────────────────────────────
+// Font families — StrideStudio design handoff
+//
+// Three families loaded via expo-font:
+//   Archivo (500–900)   — all UI text, headings
+//   IBM Plex Mono (600–700) — stat values, counters, labels
+//   Instrument Serif (400)   — editorial sticker theme only
+//
+// RN note: reference by fontFamily, not fontWeight.
+// Register one font file per weight.
+// ──────────────────────────────────────────────────────────────
+
+const FONT_UI = "'Archivo', system-ui, sans-serif";
+const FONT_MONO = "'IBM Plex Mono', ui-monospace, Menlo, monospace";
+const FONT_SERIF = "'Instrument Serif', Georgia, serif";
 
 export const Fonts = Platform.select({
   ios: {
-    sans: FONT_BODY,
-    serif: "ui-serif",
-    display: FONT_DISPLAY,
+    sans: FONT_UI,
+    serif: FONT_SERIF,
+    display: FONT_UI,
     rounded: "ui-rounded",
-    mono: "ui-monospace",
+    mono: FONT_MONO,
   },
   default: {
-    sans: FONT_BODY,
-    serif: "serif",
-    display: FONT_DISPLAY,
+    sans: FONT_UI,
+    serif: FONT_SERIF,
+    display: FONT_UI,
     rounded: "normal",
-    mono: "monospace",
+    mono: FONT_MONO,
   },
   web: {
-    sans: FONT_BODY,
-    serif: "Georgia, 'Times New Roman', serif",
-    display: FONT_DISPLAY,
+    sans: FONT_UI,
+    serif: FONT_SERIF,
+    display: FONT_UI,
     rounded: "'SF Pro Rounded', 'Hiragino Maru Gothic ProN', Meiryo, 'MS PGothic', sans-serif",
-    mono: "SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
+    mono: FONT_MONO,
   },
 });
 
-// ── Typography Scale ──
-// Barlow Condensed for display/stats, Barlow for body text.
-// Uses Major Third ratio (1.250) from 16px base.
+export { FONT_UI, FONT_MONO, FONT_SERIF };
+
+// ── Typography Scale ──────────────────────────────────────────
+// Lifted directly from the prototype. Sizes at 393pt-wide device.
+// ──────────────────────────────────────────────────────────────
 
 export const Typography = {
-  /** 48px — hero title, landing page brand */
+  /** 32 / 1.02 — display hero */
   hero: {
-    fontFamily: FONT_DISPLAY,
-    fontSize: 48,
-    fontWeight: "900" as const,
-    lineHeight: 52,
-  },
-  /** 32px — screen titles */
-  h1: {
-    fontFamily: FONT_DISPLAY,
+    fontFamily: FONT_UI,
     fontSize: 32,
-    fontWeight: "700" as const,
-    lineHeight: 38,
+    fontWeight: "900" as const,
+    lineHeight: 32.64,
+    letterSpacing: -0.035 * 32,
   },
-  /** 24px — section headers */
+  /** 27 / 1.06 — screen title */
+  h1: {
+    fontFamily: FONT_UI,
+    fontSize: 27,
+    fontWeight: "900" as const,
+    lineHeight: 28.62,
+    letterSpacing: -0.03 * 27,
+  },
+  /** 25 / 1 — section title */
   h2: {
-    fontFamily: FONT_DISPLAY,
-    fontSize: 24,
-    fontWeight: "700" as const,
-    lineHeight: 30,
+    fontFamily: FONT_UI,
+    fontSize: 25,
+    fontWeight: "900" as const,
+    lineHeight: 25,
+    letterSpacing: -0.03 * 25,
   },
-  /** 20px — card titles, panel headers */
+  /** 19 / 1 — card heading */
   h3: {
-    fontFamily: FONT_DISPLAY,
-    fontSize: 20,
-    fontWeight: "600" as const,
-    lineHeight: 26,
+    fontFamily: FONT_UI,
+    fontSize: 19,
+    fontWeight: "800" as const,
+    lineHeight: 19,
   },
-  /** 16px — body text */
-  body: {
-    fontFamily: FONT_BODY,
-    fontSize: 16,
-    fontWeight: "400" as const,
-    lineHeight: 24,
+  /** 15 / 1 — nav / bar title */
+  navTitle: {
+    fontFamily: FONT_UI,
+    fontSize: 15,
+    fontWeight: "800" as const,
+    lineHeight: 15,
   },
-  /** 14px — secondary body, list items */
-  bodySmall: {
-    fontFamily: FONT_BODY,
+  /** 14 / 1 — button label */
+  button: {
+    fontFamily: FONT_UI,
     fontSize: 14,
-    fontWeight: "400" as const,
-    lineHeight: 20,
-  },
-  /** 12px — captions, labels, helper text */
-  caption: {
-    fontFamily: FONT_BODY,
-    fontSize: 12,
-    fontWeight: "500" as const,
-    lineHeight: 16,
-  },
-  /** 10px — micro-copy, badges */
-  micro: {
-    fontFamily: FONT_BODY,
-    fontSize: 10,
-    fontWeight: "600" as const,
+    fontWeight: "700" as const,
     lineHeight: 14,
   },
-  /** 28px — big stat numbers (distance, time) */
-  stat: {
-    fontFamily: FONT_DISPLAY,
-    fontSize: 28,
-    fontWeight: "700" as const,
-    lineHeight: 34,
+  /** 13 / 1.5 — body */
+  body: {
+    fontFamily: FONT_UI,
+    fontSize: 13,
+    fontWeight: "500" as const,
+    lineHeight: 19.5,
   },
-  /** 12px — stat label above/below numbers */
+  /** 13.5 / 1.35 — stat value (mono) */
+  statValue: {
+    fontFamily: FONT_MONO,
+    fontSize: 13.5,
+    fontWeight: "700" as const,
+    lineHeight: 18.225,
+  },
+  /** 12 / 1 — mono meta */
+  meta: {
+    fontFamily: FONT_MONO,
+    fontSize: 12,
+    fontWeight: "600" as const,
+    lineHeight: 12,
+    letterSpacing: 0.08 * 12,
+  },
+  /** 11.5 / 1 — small label */
+  bodySmall: {
+    fontFamily: FONT_UI,
+    fontSize: 11.5,
+    fontWeight: "500" as const,
+    lineHeight: 11.5,
+  },
+  /** 10 / 1 — eyebrow (uppercase, tracked) */
+  caption: {
+    fontFamily: FONT_UI,
+    fontSize: 10,
+    fontWeight: "700" as const,
+    lineHeight: 10,
+    letterSpacing: 0.24 * 10,
+  },
+  /** 9.5 / 1 — mono micro */
+  micro: {
+    fontFamily: FONT_MONO,
+    fontSize: 9.5,
+    fontWeight: "600" as const,
+    lineHeight: 9.5,
+    letterSpacing: 0.1 * 9.5,
+  },
+  /** 28 — big stat (deprecated by statValue but kept for compat) */
+  stat: {
+    fontFamily: FONT_UI,
+    fontSize: 28,
+    fontWeight: "800" as const,
+    lineHeight: 28,
+  },
+  /** 12 — stat label */
   statLabel: {
-    fontFamily: FONT_BODY,
+    fontFamily: FONT_UI,
     fontSize: 12,
     fontWeight: "500" as const,
     lineHeight: 16,
@@ -170,21 +214,107 @@ export const Typography = {
   },
 } as const;
 
-// ── Spacing Scale (8pt grid) ──
+// ── Spacing Scale ─────────────────────────────────────────────
+// Base scale from the prototype (px):
+// 2, 4, 6, 7, 8, 9, 10, 12, 14, 16, 18, 20, 22, 26, 30, 34
+// Screen horizontal padding: 16 (content), 22 (auth), 26 (splash)
+// ──────────────────────────────────────────────────────────────
 
 export const Spacing = {
+  /** 2px */
+  xxs: 2,
   /** 4px */
   xs: 4,
+  /** 6px */
+  tight: 6,
   /** 8px */
   sm: 8,
+  /** 10px */
+  mdTight: 10,
+  /** 12px */
+  md: 12,
+  /** 14px */
+  mdLoose: 14,
   /** 16px */
+  lg: 16,
+  /** 18px */
+  lgLoose: 18,
+  /** 20px */
+  xl: 20,
+  /** 22px */
+  xlLoose: 22,
+  /** 26px */
+  "2xl": 26,
+  /** 30px */
+  "3xl": 30,
+  /** 34px */
+  "4xl": 34,
+} as const;
+
+// ── Radii ─────────────────────────────────────────────────────
+
+export const Radii = {
+  /** 12 — small tiles, gallery thumbs */
+  sm: 12,
+  /** 16 — logo squares, chips */
   md: 16,
-  /** 24px */
-  lg: 24,
-  /** 32px */
-  xl: 32,
-  /** 48px */
-  "2xl": 48,
-  /** 64px */
-  "3xl": 64,
+  /** 18 — cards, stat panels, glass pills */
+  lg: 18,
+  /** 22 — app icon */
+  xl: 22,
+  /** 26–27 — primary buttons (height 52–54) */
+  pill: 26,
+  /** 50% — avatars (38), back buttons (38–40), shutter */
+  circle: "50%" as const,
+} as const;
+
+// ── Shadows ───────────────────────────────────────────────────
+// RN: use shadowColor/shadowOffset/shadowOpacity/shadowRadius on iOS
+// and elevation + translucent border on Android.
+// Large colored glows: absolutely-positioned blurred sibling view.
+
+export const Shadows = {
+  /** Primary CTA glow (shutter) */
+  accentGlow: {
+    shadowColor: "#FF6B35",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.5,
+    shadowRadius: 30,
+    elevation: 12,
+  },
+  /** Strava-specific CTA glow */
+  stravaGlow: {
+    shadowColor: "#FC4C02",
+    shadowOffset: { width: 0, height: 14 },
+    shadowOpacity: 0.34,
+    shadowRadius: 34,
+    elevation: 16,
+  },
+  /** App icon glow */
+  iconGlow: {
+    shadowColor: "#FF6B35",
+    shadowOffset: { width: 0, height: 18 },
+    shadowOpacity: 0.34,
+    shadowRadius: 50,
+    elevation: 20,
+  },
+} as const;
+
+// ── Control Sizes ─────────────────────────────────────────────
+
+export const Controls = {
+  /** Primary button: height 52–54, radius 26–27, full width */
+  buttonHeight: 52,
+  buttonRadius: 26,
+  /** Back button: 38–40 circle */
+  backButtonSize: 38,
+  /** Shutter: 78 outer ring, 60 inner disc */
+  shutterOuter: 78,
+  shutterInner: 60,
+  /** Capture side buttons: 46 square/circle */
+  captureSide: 46,
+  /** Bottom tab bar height */
+  tabBarHeight: 64,
+  /** Minimum hit target */
+  minHitTarget: 44,
 } as const;

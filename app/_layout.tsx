@@ -20,6 +20,7 @@ import { trpc, createTRPCClient } from "@/lib/trpc";
 import { AppProvider } from "@/lib/app-context";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { initManusRuntime, subscribeSafeAreaInsets } from "@/lib/_core/manus-runtime";
+import { useFonts } from "expo-font";
 import { MaterialIcons, Ionicons } from "@expo/vector-icons";
 
 const DEFAULT_WEB_INSETS: EdgeInsets = { top: 0, right: 0, bottom: 0, left: 0 };
@@ -48,11 +49,12 @@ export default function RootLayout() {
     return () => unsubscribe();
   }, [handleSafeAreaUpdate]);
 
-  // Preload icon fonts on web to prevent the silent font-loading failure
-  // in @expo/vector-icons' createIconSet componentDidMount.
-  // On web, expo-font's loadSingleFontAsync can silently swallow errors
-  // when the TTF asset has a downloadAsync method (Expo Asset object),
-  // leaving icons permanently in the empty <Text /> fallback state.
+  // Preload icon fonts and custom typefaces.
+  //
+  // Custom fonts (Archivo, IBM Plex Mono, Instrument Serif):
+  // Place .ttf files in assets/fonts/ then uncomment the useFonts block below.
+  // Until then the app uses the CSS font stacks defined in lib/_core/theme.ts
+  // which fall back to system fonts gracefully.
   useEffect(() => {
     const loadIconFonts = async () => {
       try {
