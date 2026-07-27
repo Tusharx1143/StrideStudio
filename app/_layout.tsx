@@ -111,11 +111,15 @@ export default function RootLayout() {
           {/* Landing page uses fullScreenModal presentation so it doesn't interfere with tab switching on iOS. */}
           <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen name="index" options={{ animation: "fade" }} />
-            <Stack.Screen name="home" />
-            <Stack.Screen name="profile-screen" options={{ animation: "slide_from_right" }} />
-            <Stack.Screen name="templates-gallery" options={{ animation: "slide_from_right" }} />
-            <Stack.Screen name="oauth/callback" />
+            <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="editor" options={{ animation: "slide_from_bottom" }} />
+            <Stack.Screen name="activity/[id]" options={{ animation: "slide_from_right" }} />
+            <Stack.Screen name="capture" options={{ animation: "fade", presentation: "fullScreenModal" }} />
+            <Stack.Screen name="backgrounds" options={{ animation: "slide_from_left" }} />
+            <Stack.Screen name="export" options={{ animation: "slide_from_left" }} />
             <Stack.Screen name="settings" options={{ animation: "slide_from_right", title: "Settings" }} />
+            <Stack.Screen name="oauth/callback" />
           </Stack>
           <StatusBar style="light" />
           </AppProvider>

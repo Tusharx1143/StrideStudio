@@ -1,354 +1,176 @@
 /**
- * Landing page — shown before the main app for unauthenticated users.
+ * Splash screen — brand beat + auth-state check.
  *
- * Design direction: "Data Runner" — inspired by high-end sports watch
- * interfaces and running shoe design. Dark, precise, geometric. Orange
- * serves as the single accent against deep near-black backgrounds.
- *
- * Auth flow:
- *   1. Check if Strava is already connected → redirect to /home
- *   2. Show landing page with "Connect with Strava" CTA
- *   3. Redirect to backend /api/strava/auth to initiate OAuth
+ * Shows the StrideStudio logo and tagline with a progress bar.
+ * Auto-advances to home (if already connected) or auth (if not).
+ * Tap to skip the animation.
  */
-
-import { Text, View, TouchableOpacity, Platform, Linking } from "react-native";
-import { useEffect, useState, useCallback } from "react";
+import { Text, View, TouchableOpacity } from "react-native";
+import { useEffect, useRef, useCallback } from "react";
 import { useRouter } from "expo-router";
-import { LinearGradient } from "expo-linear-gradient";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, {
-  FadeInDown,
   FadeIn,
-  FadeInUp,
+  FadeInDown,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+  withRepeat,
 } from "react-native-reanimated";
-import Svg, { Circle, Line, Path, Polyline } from "react-native-svg";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useApp } from "@/lib/app-context";
-import { API_BASE } from "@/lib/config";
-import { useColors } from "@/hooks/use-colors";
-import { Typography, Fonts } from "@/lib/_core/theme";
+import { FONT_UI, FONT_MONO } from "@/lib/_core/theme";
 
-// ── Background Art ──────────────────────────────────────────────────────────
-// Abstract geometric composition suggesting movement, routes, and data.
-// Three concentric circles (watch face / GPS accuracy rings) + a route line.
-
-const ROUTE_POINTS = [
-  [40, 180],
-  [90, 120],
-  [140, 150],
-  [190, 80],
-  [240, 110],
-  [290, 60],
-  [340, 100],
-  [370, 70],
-];
-
-function BackgroundArt() {
-  const pointsStr = ROUTE_POINTS.map(([x, y]) => `${x},${y}`).join(" ");
-
-  return (
-    <View
-      style={{
-        position: "absolute",
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        opacity: 0.12,
-      }}
-      pointerEvents="none"
-    >
-      <Svg viewBox="0 0 400 700" style={{ width: "100%", height: "100%" }}>
-        {/* Concentric rings — GPS accuracy / watch face */}
-        <Circle cx="200" cy="280" r="220" stroke="#F97316" strokeWidth="0.6" fill="none" opacity={0.35} />
-        <Circle cx="200" cy="280" r="170" stroke="#64748B" strokeWidth="0.5" fill="none" opacity={0.2} />
-        <Circle cx="200" cy="280" r="120" stroke="#64748B" strokeWidth="0.4" fill="none" opacity={0.15} />
-
-        {/* Radial tick marks at 45° intervals */}
-        {[0, 45, 90, 135, 180, 225, 270, 315].map((angle) => {
-          const rad = (angle * Math.PI) / 180;
-          const inner = 105;
-          const outer = angle % 90 === 0 ? 125 : 115;
-          return (
-            <Line
-              key={angle}
-              x1={200 + inner * Math.cos(rad)}
-              y1={280 + inner * Math.sin(rad)}
-              x2={200 + outer * Math.cos(rad)}
-              y2={280 + outer * Math.sin(rad)}
-              stroke="#64748B"
-              strokeWidth={angle % 90 === 0 ? 1 : 0.4}
-              opacity={0.25}
-            />
-          );
-        })}
-
-        {/* Crosshairs at center */}
-        <Line x1={170} y1={280} x2={230} y2={280} stroke="#F97316" strokeWidth="0.3" opacity={0.3} />
-        <Line x1={200} y1={250} x2={200} y2={310} stroke="#F97316" strokeWidth="0.3" opacity={0.3} />
-
-        {/* Activity route line */}
-        <Polyline
-          points={pointsStr}
-          fill="none"
-          stroke="#F97316"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          opacity={0.5}
-        />
-
-        {/* Waypoint dots */}
-        {ROUTE_POINTS.map(([cx, cy], i) => (
-          <Circle
-            key={`wp-${i}`}
-            cx={cx}
-            cy={cy}
-            r={i === 0 || i === ROUTE_POINTS.length - 1 ? 3 : 2}
-            fill="#F97316"
-            opacity={i === 0 || i === ROUTE_POINTS.length - 1 ? 0.6 : 0.35}
-          />
-        ))}
-
-        {/* Vertical grid lines */}
-        {[50, 130, 200, 270, 350].map((x) => (
-          <Line key={`gx-${x}`} x1={x} y1={0} x2={x} y2={700} stroke="#64748B" strokeWidth="0.3" opacity={0.08} />
-        ))}
-      </Svg>
-    </View>
-  );
-}
-
-// ── Stat Preview ────────────────────────────────────────────────────────────
-
-function StatItem({ value, label, delay }: { value: string; label: string; delay: number }) {
-  const colors = useColors();
-  return (
-    <Animated.View
-      entering={FadeInUp.delay(delay).springify().damping(15)}
-      style={{ alignItems: "center", gap: 2 }}
-    >
-      <Text
-        style={[
-          Typography.stat,
-          { color: colors.foreground, fontFamily: Fonts.display },
-        ]}
-      >
-        {value}
-      </Text>
-      <Text
-        style={[
-          Typography.statLabel,
-          { color: colors.muted },
-        ]}
-      >
-        {label}
-      </Text>
-    </Animated.View>
-  );
-}
-
-// ── Landing Page ────────────────────────────────────────────────────────────
-
-export default function LandingPage() {
+export default function SplashScreen() {
   const router = useRouter();
-  const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { stravaConnected, loading } = useApp();
-  const [connecting, setConnecting] = useState(false);
-  const [ready, setReady] = useState(false);
+  const { stravaConnected, loading, activities } = useApp();
+  const hasNavigated = useRef(false);
 
-  // ── Auth gate ──
-  // Redirect immediately if already connected. The landing page acts as a
-  // branded loading state while the tRPC status check is in flight (~300ms).
+  const navigate = useCallback(() => {
+    if (hasNavigated.current) return;
+    hasNavigated.current = true;
+    // If user has activities (Strava connected), go to tabs.
+    // Otherwise go through the auth flow.
+    if (stravaConnected && activities.length > 0) {
+      router.replace("/(tabs)");
+    } else {
+      router.replace("/(auth)/sign-in");
+    }
+  }, [stravaConnected, activities, router]);
+
+  // Auto-advance after auth check completes (or after 2.5s timeout)
   useEffect(() => {
-    if (!loading && stravaConnected) {
-      router.replace("/home");
-      return;
-    }
-    // Brief delay so the entrance animation doesn't fight the status check
-    const t = setTimeout(() => setReady(true), 200);
-    return () => clearTimeout(t);
-  }, [stravaConnected, loading, router]);
-
-  // ── Connect handler ──
-  const handleConnect = useCallback(async () => {
-    setConnecting(true);
-    try {
-      if (Platform.OS === "web") {
-        window.location.href = `${API_BASE}/api/strava/auth`;
-      } else {
-        const supported = await Linking.canOpenURL(`${API_BASE}/api/strava/auth`);
-        if (supported) await Linking.openURL(`${API_BASE}/api/strava/auth`);
-      }
-    } catch (error) {
-      console.error("[Landing] Failed to initiate Strava auth:", error);
-    } finally {
-      setConnecting(false);
-    }
-  }, []);
-
-  // ── Don't render anything if redirecting ──
-  if (stravaConnected) return null;
+    if (loading) return;
+    const timer = setTimeout(navigate, loading ? 2500 : 1800);
+    return () => clearTimeout(timer);
+  }, [loading, navigate]);
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
-      {/* Decorative background */}
-      <BackgroundArt />
-
-      {/* Subtle top-to-bottom gradient vignette */}
-      <LinearGradient
-        colors={[colors.background, "transparent", "transparent", colors.background]}
-        style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
-        pointerEvents="none"
-      />
-
-      {/* Main layout */}
+    <TouchableOpacity
+      onPress={navigate}
+      activeOpacity={1}
+      style={{
+        flex: 1,
+        backgroundColor: "#000",
+        alignItems: "center",
+        justifyContent: "center",
+        paddingTop: insets.top,
+        paddingBottom: insets.bottom,
+      }}
+    >
+      {/* Radial gradient approximation with a large soft shadow */}
       <View
         style={{
-          flex: 1,
-          paddingTop: insets.top,
-          paddingBottom: insets.bottom,
+          position: "absolute",
+          top: "38%",
+          left: "50%",
+          width: 420,
+          height: 420,
+          borderRadius: 210,
+          backgroundColor: "#2A150C",
+          opacity: 0.55,
+          transform: [
+            { translateX: -210 },
+            { translateY: -210 },
+          ],
         }}
+      />
+
+      <Animated.View
+        entering={FadeInDown.delay(100).springify().damping(15)}
+        style={{ alignItems: "center", gap: 26 }}
       >
-        {/* ── HERO: Brand + tagline ── */}
+        {/* App icon */}
         <View
           style={{
-            flex: 1,
-            justifyContent: "center",
+            width: 74,
+            height: 74,
+            borderRadius: 22,
+            backgroundColor: "#FF6B35",
             alignItems: "center",
-            paddingHorizontal: 32,
+            justifyContent: "center",
+            shadowColor: "#FF6B35",
+            shadowOffset: { width: 0, height: 18 },
+            shadowOpacity: 0.34,
+            shadowRadius: 50,
+            elevation: 20,
           }}
         >
-          {ready && (
-            <>
-              {/* Accent dash above brand */}
-              <Animated.View
-                entering={FadeInDown.delay(80).springify().damping(15)}
-                style={{
-                  width: 36,
-                  height: 3,
-                  borderRadius: 2,
-                  backgroundColor: colors.primary,
-                  marginBottom: 28,
-                }}
-              />
-
-              {/* Brand name — huge, condensed, tight tracking */}
-              <Animated.Text
-                entering={FadeInDown.delay(180).springify().damping(15)}
-                style={{
-                  color: colors.foreground,
-                  fontSize: 58,
-                  fontWeight: "900",
-                  letterSpacing: -1.5,
-                  textAlign: "center",
-                  lineHeight: 58,
-                  fontFamily: Fonts.display,
-                }}
-              >
-                STRIDE{"\n"}STUDIO
-              </Animated.Text>
-
-              {/* Tagline */}
-              <Animated.Text
-                entering={FadeInDown.delay(300).springify().damping(15)}
-                style={[
-                  Typography.body,
-                  {
-                    color: colors.muted,
-                    textAlign: "center",
-                    marginTop: 18,
-                    lineHeight: 23,
-                    letterSpacing: 0.2,
-                  },
-                ]}
-              >
-                Turn your workouts{"\n"}into art worth sharing.
-              </Animated.Text>
-            </>
-          )}
+          <View
+            style={{
+              width: 26,
+              height: 26,
+              borderRadius: 13,
+              borderWidth: 5,
+              borderColor: "#0B0B0C",
+              borderRightColor: "transparent",
+              transform: [{ rotate: "-38deg" }],
+            }}
+          />
         </View>
 
-        {/* ── FOOTER: Stats + CTA ── */}
-        <View style={{ paddingHorizontal: 32, paddingBottom: 32, gap: 28 }}>
-          {ready && (
-            <>
-              {/* Preview stats — hint at what you'll see after connecting */}
-              <Animated.View
-                entering={FadeInUp.delay(450).springify().damping(15)}
-                style={{
-                  flexDirection: "row",
-                  justifyContent: "space-evenly",
-                  paddingHorizontal: 8,
-                  paddingVertical: 4,
-                }}
-              >
-                <StatItem value="150+" label="km / wk" delay={460} />
-                <View style={{ width: 1, height: "100%", backgroundColor: colors.border }} />
-                <StatItem value="12" label="activities" delay={540} />
-                <View style={{ width: 1, height: "100%", backgroundColor: colors.border }} />
-                <StatItem value="3.2k" label="elev (m)" delay={620} />
-              </Animated.View>
-
-              {/* CTA Button */}
-              <Animated.View entering={FadeInUp.delay(600).springify().damping(15)}>
-                <TouchableOpacity
-                  onPress={handleConnect}
-                  disabled={connecting}
-                  activeOpacity={0.9}
-                  accessibilityRole="button"
-                  accessibilityLabel="Connect with Strava to get started"
-                  style={{ minHeight: 56 }}
-                >
-                  <LinearGradient
-                    colors={[colors.primary, "#EA580C"]}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={{
-                      borderRadius: 16,
-                      paddingVertical: 17,
-                      paddingHorizontal: 24,
-                      alignItems: "center",
-                      justifyContent: "center",
-                      flexDirection: "row",
-                      gap: 10,
-                    }}
-                  >
-                    {/* Runner icon */}
-                    <Text style={{ fontSize: 20, fontWeight: "800" }}>🏃</Text>
-                    <Text
-                      style={{
-                        color: "#FFF",
-                        fontSize: 16,
-                        fontWeight: "700",
-                        letterSpacing: -0.2,
-                      }}
-                    >
-                      {connecting ? "Connecting..." : "Connect with Strava"}
-                    </Text>
-                  </LinearGradient>
-                </TouchableOpacity>
-              </Animated.View>
-
-              {/* Legal / Footer note */}
-              <Animated.View entering={FadeIn.delay(780)}>
-                <Text
-                  style={{
-                    color: colors.muted,
-                    fontSize: 11,
-                    textAlign: "center",
-                    lineHeight: 16,
-                  }}
-                >
-                  Powered by Strava.{" "}
-                  <Text style={{ color: colors.muted }}>Terms</Text> ·{" "}
-                  <Text style={{ color: colors.muted }}>Privacy</Text>
-                </Text>
-              </Animated.View>
-            </>
-          )}
+        {/* Brand name */}
+        <View style={{ alignItems: "center", gap: 10 }}>
+          <Text
+            style={{
+              fontFamily: FONT_UI,
+              fontWeight: "900",
+              fontSize: 34,
+              letterSpacing: -0.035 * 34,
+              color: "#fff",
+            }}
+          >
+            STRIDESTUDIO
+          </Text>
+          <Text
+            style={{
+              fontFamily: FONT_UI,
+              fontWeight: "700",
+              fontSize: 9.5,
+              letterSpacing: 0.3 * 9.5,
+              color: "rgba(255,255,255,0.5)",
+              textAlign: "center",
+            }}
+          >
+            TRAINING IS ART · THIS IS THE TOOL
+          </Text>
         </View>
-      </View>
-    </View>
+
+        {/* Progress bar */}
+        <View
+          style={{
+            width: 132,
+            height: 2,
+            backgroundColor: "rgba(255,255,255,0.14)",
+            borderRadius: 2,
+            overflow: "hidden",
+          }}
+        >
+          <Animated.View
+            style={{
+              width: "45%",
+              height: "100%",
+              backgroundColor: "#FF6B35",
+            }}
+          />
+        </View>
+      </Animated.View>
+
+      {/* Tap to continue */}
+      <Animated.Text
+        entering={FadeIn.delay(600)}
+        style={{
+          position: "absolute",
+          bottom: insets.bottom + 30,
+          fontFamily: FONT_UI,
+          fontWeight: "700",
+          fontSize: 10,
+          letterSpacing: 0.24 * 10,
+          color: "rgba(255,255,255,0.42)",
+        }}
+      >
+        TAP TO CONTINUE
+      </Animated.Text>
+    </TouchableOpacity>
   );
 }
