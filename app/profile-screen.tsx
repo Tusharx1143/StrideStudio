@@ -1,18 +1,53 @@
-import { ScrollView, Text, View, TouchableOpacity, Switch, Platform, Linking, Image, ActivityIndicator, Alert, RefreshControl } from "react-native";
+/**
+ * Profile Screen — athlete stats, achievements, Strava connection, settings.
+ *
+ * Standalone profile used as navigation target from HomeEmptyState and
+ * the OAuth flow. Restyled to match the design handoff tokens.
+ *
+ * Token alignment:
+ *   bg.base: #0A0A0B, bg.card: #0E0E10, bg.surface: #16161A
+ *   border.hairline: #1C1C1E, brand.orange: #FF6B35
+ *   text.primary: #FFFFFF, text.muted: #8E8E93
+ */
+import {
+  ScrollView,
+  Text,
+  View,
+  TouchableOpacity,
+  Switch,
+  Platform,
+  Linking,
+  Image,
+  Alert,
+  RefreshControl,
+} from "react-native";
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import Svg, { Circle } from "react-native-svg";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
-import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useApp } from "@/lib/app-context";
 import { API_BASE } from "@/lib/config";
 import { StrideButton } from "@/components/stride-button";
 import { computeWeekStats, computeAchievements, getSportColor } from "@/lib/sport-theme";
-import Svg, { Circle } from "react-native-svg";
-const WEEKLY_GOAL_KM = 40; // Default weekly goal
+import { FONT_UI, FONT_MONO } from "@/lib/_core/theme";
 
-// ── Progress Ring ──
-function ProgressRing({ progress, size = 100, strokeWidth = 8, color }: { progress: number; size?: number; strokeWidth?: number; color: string }) {
+const WEEKLY_GOAL_KM = 40;
+
+// ── Progress Ring ──────────────────────────────────────────────
+
+function ProgressRing({
+  progress,
+  size = 100,
+  strokeWidth = 8,
+  color,
+}: {
+  progress: number;
+  size?: number;
+  strokeWidth?: number;
+  color: string;
+}) {
   const colors = useColors();
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
@@ -21,7 +56,6 @@ function ProgressRing({ progress, size = 100, strokeWidth = 8, color }: { progre
   return (
     <View style={{ width: size, height: size, alignItems: "center", justifyContent: "center" }}>
       <Svg width={size} height={size} style={{ position: "absolute" }}>
-        {/* Background circle */}
         <Circle
           cx={size / 2}
           cy={size / 2}
@@ -30,7 +64,6 @@ function ProgressRing({ progress, size = 100, strokeWidth = 8, color }: { progre
           strokeWidth={strokeWidth}
           fill="none"
         />
-        {/* Progress circle */}
         <Circle
           cx={size / 2}
           cy={size / 2}
@@ -44,16 +77,43 @@ function ProgressRing({ progress, size = 100, strokeWidth = 8, color }: { progre
           transform={`rotate(-90 ${size / 2} ${size / 2})`}
         />
       </Svg>
-      <Text style={{ color: colors.foreground, fontSize: 22, fontWeight: "800" }}>
+      <Text
+        style={{
+          fontFamily: FONT_MONO,
+          fontWeight: "800",
+          fontSize: 19,
+          color: colors.foreground,
+        }}
+      >
         {Math.round(progress * 100)}%
       </Text>
-      <Text style={{ color: colors.muted, fontSize: 9, fontWeight: "600", marginTop: 2 }}>of goal</Text>
+      <Text
+        style={{
+          fontFamily: FONT_UI,
+          fontWeight: "600",
+          fontSize: 9,
+          letterSpacing: 0.08 * 9,
+          color: "#8E8E93",
+          marginTop: 2,
+        }}
+      >
+        OF GOAL
+      </Text>
     </View>
   );
 }
 
-// ── Sport Breakdown Bar ──
-function SportBreakdownBar({ runKm, rideKm, workoutCount }: { runKm: number; rideKm: number; workoutCount: number }) {
+// ── Sport Breakdown Bar ─────────────────────────────────────────
+
+function SportBreakdownBar({
+  runKm,
+  rideKm,
+  workoutCount,
+}: {
+  runKm: number;
+  rideKm: number;
+  workoutCount: number;
+}) {
   const colors = useColors();
   const total = runKm + rideKm + workoutCount;
   if (total === 0) return null;
@@ -63,7 +123,9 @@ function SportBreakdownBar({ runKm, rideKm, workoutCount }: { runKm: number; rid
 
   return (
     <View style={{ marginTop: 12 }}>
-      <View style={{ flexDirection: "row", height: 6, borderRadius: 3, overflow: "hidden" }}>
+      <View
+        style={{ flexDirection: "row", height: 6, borderRadius: 3, overflow: "hidden" }}
+      >
         {runKm > 0 && (
           <View style={{ flex: runPct, backgroundColor: getSportColor("run") }} />
         )}
@@ -71,32 +133,83 @@ function SportBreakdownBar({ runKm, rideKm, workoutCount }: { runKm: number; rid
           <View style={{ flex: ridePct, backgroundColor: getSportColor("ride") }} />
         )}
         {workoutCount > 0 && (
-          <View style={{ flex: 1 - runPct - ridePct, backgroundColor: getSportColor("workout") }} />
+          <View
+            style={{
+              flex: 1 - runPct - ridePct,
+              backgroundColor: getSportColor("workout"),
+            }}
+          />
         )}
       </View>
-      <View style={{ flexDirection: "row", justifyContent: "center", gap: 16, marginTop: 8 }}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: getSportColor("run") }} />
-          <Text style={{ color: colors.muted, fontSize: 10 }}>Run {runKm.toFixed(1)}km</Text>
-        </View>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: getSportColor("ride") }} />
-          <Text style={{ color: colors.muted, fontSize: 10 }}>Ride {rideKm.toFixed(1)}km</Text>
-        </View>
+      <View
+        style={{
+          flexDirection: "row",
+          justifyContent: "center",
+          gap: 16,
+          marginTop: 8,
+        }}
+      >
+        {runKm > 0 && (
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+            <View
+              style={{
+                width: 8,
+                height: 8,
+                borderRadius: 4,
+                backgroundColor: getSportColor("run"),
+              }}
+            />
+            <Text
+              style={{
+                fontFamily: FONT_MONO,
+                fontWeight: "600",
+                fontSize: 10,
+                color: "#8E8E93",
+              }}
+            >
+              Run {runKm.toFixed(1)}km
+            </Text>
+          </View>
+        )}
+        {rideKm > 0 && (
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+            <View
+              style={{
+                width: 8,
+                height: 8,
+                borderRadius: 4,
+                backgroundColor: getSportColor("ride"),
+              }}
+            />
+            <Text
+              style={{
+                fontFamily: FONT_MONO,
+                fontWeight: "600",
+                fontSize: 10,
+                color: "#8E8E93",
+              }}
+            >
+              Ride {rideKm.toFixed(1)}km
+            </Text>
+          </View>
+        )}
       </View>
     </View>
   );
 }
 
+// ── Main Screen ─────────────────────────────────────────────────
+
 export default function ProfileScreen() {
   const router = useRouter();
   const colors = useColors();
-  const { activities, savedPostsCount, stravaConnected, athlete, loading, refresh } = useApp();
+  const { activities, savedPostsCount, stravaConnected, athlete, loading, refresh } =
+    useApp();
   const totalDistance = activities.reduce((sum, a) => sum + a.distance, 0);
   const [notifications, setNotifications] = useState(true);
   const [connecting, setConnecting] = useState(false);
 
-  // Pre-filter to current week since computeWeekStats no longer does this internally
+  // Pre-filter to current week
   const weekActivities = useMemo(() => {
     const now = new Date();
     const monday = new Date(now);
@@ -145,7 +258,9 @@ export default function ProfileScreen() {
           style: "destructive",
           onPress: async () => {
             try {
-              const resp = await fetch(`${API_BASE}/api/strava/disconnect`, { method: "POST" });
+              const resp = await fetch(`${API_BASE}/api/strava/disconnect`, {
+                method: "POST",
+              });
               if (resp.ok) refresh();
             } catch (error) {
               console.error("[Strava] Disconnect failed:", error);
@@ -155,6 +270,16 @@ export default function ProfileScreen() {
       ],
     );
   };
+
+  const avatarInitials = athlete
+    ? (athlete.firstname?.[0] ?? "") + (athlete.lastname?.[0] ?? "")
+    : "";
+
+  const displayName = athlete
+    ? `${athlete.firstname ?? ""} ${athlete.lastname ?? ""}`.trim()
+    : stravaConnected
+      ? "Athlete"
+      : "StrideStudio";
 
   return (
     <ScreenContainer className="p-0">
@@ -170,100 +295,457 @@ export default function ProfileScreen() {
             />
           }
         >
-          {/* Profile Header */}
-          <View style={{ alignItems: "center", paddingVertical: 32, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+          {/* ── Profile Header ──────────────────────────── */}
+          <View
+            style={{
+              alignItems: "center",
+              paddingVertical: 30,
+              paddingHorizontal: 16,
+              borderBottomWidth: 1,
+              borderBottomColor: colors.border,
+              gap: 10,
+            }}
+          >
+            {/* Avatar */}
             {athlete?.profile ? (
-              <View style={{ width: 80, height: 80, borderRadius: 40, marginBottom: 12, overflow: "hidden", backgroundColor: colors.surface }}>
-                <Image source={{ uri: athlete.profile }} style={{ width: 80, height: 80, borderRadius: 40 }} />
+              <View
+                style={{
+                  width: 82,
+                  height: 82,
+                  borderRadius: 41,
+                  overflow: "hidden",
+                  backgroundColor: "#0E0E10",
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                }}
+              >
+                <Image
+                  source={{ uri: athlete.profile }}
+                  style={{ width: 82, height: 82, borderRadius: 41 }}
+                />
               </View>
             ) : (
-              <View style={{ width: 80, height: 80, borderRadius: 40, backgroundColor: colors.primary, justifyContent: "center", alignItems: "center", marginBottom: 12 }}>
-                <Text style={{ fontSize: 36 }}>🏃</Text>
+              <View
+                style={{
+                  width: 82,
+                  height: 82,
+                  borderRadius: 41,
+                  backgroundColor: colors.primary,
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                {athlete ? (
+                  <Text
+                    style={{
+                      fontFamily: FONT_UI,
+                      fontWeight: "900",
+                      fontSize: 26,
+                      color: "#FFFFFF",
+                    }}
+                  >
+                    {avatarInitials}
+                  </Text>
+                ) : (
+                  <Ionicons name="person" size={34} color="#FFFFFF" />
+                )}
               </View>
             )}
-            <Text style={{ color: colors.foreground, fontSize: 22, fontWeight: "bold" }}>
-              {athlete ? `${athlete.firstname} ${athlete.lastname}` : stravaConnected ? "Athlete" : "StrideStudio"}
+
+            <Text
+              style={{
+                fontFamily: FONT_UI,
+                fontWeight: "800",
+                fontSize: 21,
+                color: colors.foreground,
+              }}
+            >
+              {displayName}
             </Text>
-            {athlete?.city && (
-              <Text style={{ color: colors.muted, fontSize: 14, marginTop: 4 }}>{athlete.city}{athlete.country ? `, ${athlete.country}` : ""}</Text>
+            {athlete?.city ? (
+              <Text
+                style={{
+                  fontFamily: FONT_UI,
+                  fontWeight: "500",
+                  fontSize: 12.5,
+                  color: "#8E8E93",
+                }}
+              >
+                {athlete.city}
+                {athlete.country ? `, ${athlete.country}` : ""}
+              </Text>
+            ) : (
+              <Text
+                style={{
+                  fontFamily: FONT_UI,
+                  fontWeight: "500",
+                  fontSize: 12.5,
+                  color: "#8E8E93",
+                }}
+              >
+                {stravaConnected ? "Training is an art" : "Connect Strava to get started"}
+              </Text>
             )}
-            {!athlete && (
-              <Text style={{ color: colors.muted, fontSize: 14, marginTop: 4 }}>{stravaConnected ? "Training is an art" : "Connect Strava to get started"}</Text>
-            )}
+
+            {/* Status chips */}
+            <View style={{ flexDirection: "row", gap: 6, marginTop: 2 }}>
+              {stravaConnected && (
+                <View
+                  style={{
+                    backgroundColor: "rgba(50,215,75,0.14)",
+                    borderWidth: 1,
+                    borderColor: "rgba(50,215,75,0.35)",
+                    borderRadius: 14,
+                    paddingVertical: 5,
+                    paddingHorizontal: 11,
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontFamily: FONT_MONO,
+                      fontWeight: "700",
+                      fontSize: 9.5,
+                      letterSpacing: 0.08 * 9.5,
+                      color: "#32D74B",
+                    }}
+                  >
+                    CONNECTED
+                  </Text>
+                </View>
+              )}
+              {activities.length > 0 && (
+                <View
+                  style={{
+                    backgroundColor: "#16161A",
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                    borderRadius: 14,
+                    paddingVertical: 5,
+                    paddingHorizontal: 11,
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontFamily: FONT_MONO,
+                      fontWeight: "700",
+                      fontSize: 9.5,
+                      letterSpacing: 0.08 * 9.5,
+                      color: "rgba(255,255,255,0.6)",
+                    }}
+                  >
+                    {activities.length} ACTIVITIES
+                  </Text>
+                </View>
+              )}
+            </View>
           </View>
 
-          {/* Weekly Goal Progress */}
+          {/* ── Weekly Goal Progress ────────────────────── */}
           {activities.length > 0 && (
-            <View style={{ paddingHorizontal: 16, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-              <Text style={{ color: colors.foreground, fontSize: 16, fontWeight: "600", marginBottom: 12 }}>This Week</Text>
+            <View
+              style={{
+                paddingHorizontal: 16,
+                paddingVertical: 18,
+                borderBottomWidth: 1,
+                borderBottomColor: colors.border,
+              }}
+            >
+              <Text
+                style={{
+                  fontFamily: FONT_UI,
+                  fontWeight: "700",
+                  fontSize: 9,
+                  letterSpacing: 0.18 * 9,
+                  color: "rgba(255,255,255,0.4)",
+                  marginBottom: 12,
+                }}
+              >
+                THIS WEEK
+              </Text>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 20 }}>
                 <ProgressRing progress={goalProgress} color={colors.primary} />
-                <View style={{ flex: 1 }}>
-                  <Text style={{ color: colors.foreground, fontSize: 28, fontWeight: "800" }}>{weekStats.totalKm.toFixed(1)} km</Text>
-                  <Text style={{ color: colors.muted, fontSize: 13, marginTop: 2 }}>of {WEEKLY_GOAL_KM} km goal</Text>
-                  <Text style={{ color: colors.muted, fontSize: 12, marginTop: 4 }}>
+                <View style={{ flex: 1, gap: 3 }}>
+                  <Text
+                    style={{
+                      fontFamily: FONT_MONO,
+                      fontWeight: "800",
+                      fontSize: 19,
+                      color: colors.primary,
+                    }}
+                  >
+                    {weekStats.totalKm.toFixed(1)} km
+                  </Text>
+                  <Text
+                    style={{
+                      fontFamily: FONT_UI,
+                      fontWeight: "500",
+                      fontSize: 12.5,
+                      color: "rgba(255,255,255,0.55)",
+                    }}
+                  >
+                    of {WEEKLY_GOAL_KM} km goal
+                  </Text>
+                  <Text
+                    style={{
+                      fontFamily: FONT_MONO,
+                      fontWeight: "500",
+                      fontSize: 10.5,
+                      color: "#8E8E93",
+                    }}
+                  >
                     {weekStats.activitiesCount} activities · {Math.round(weekStats.totalMinutes)} min
                   </Text>
-                  <SportBreakdownBar runKm={weekStats.runKm} rideKm={weekStats.rideKm} workoutCount={weekStats.workoutCount} />
+                  <SportBreakdownBar
+                    runKm={weekStats.runKm}
+                    rideKm={weekStats.rideKm}
+                    workoutCount={weekStats.workoutCount}
+                  />
                 </View>
               </View>
             </View>
           )}
 
-          {/* Stats Summary */}
+          {/* ── Stats Summary ───────────────────────────── */}
           {activities.length > 0 && (
-            <View style={{ flexDirection: "row", paddingHorizontal: 16, paddingVertical: 16, gap: 12 }}>
+            <View
+              style={{
+                flexDirection: "row",
+                paddingHorizontal: 16,
+                paddingVertical: 16,
+                gap: 9,
+              }}
+            >
               {[
-                { value: activities.length, label: "Activities", accessibilityLabel: `${activities.length} activities` },
-                { value: `${totalDistance.toFixed(0)} km`, label: "Total Distance", accessibilityLabel: `${totalDistance.toFixed(0)} kilometers total` },
-                { value: savedPostsCount, label: "Posts", accessibilityLabel: `${savedPostsCount} posts created` },
+                {
+                  value: String(activities.length),
+                  label: "Activities",
+                },
+                {
+                  value: `${totalDistance.toFixed(0)} km`,
+                  label: "Total Distance",
+                },
+                {
+                  value: String(savedPostsCount),
+                  label: "Posts",
+                },
               ].map((stat) => (
-                <View key={stat.label} style={{ flex: 1, backgroundColor: colors.surface, borderRadius: 12, padding: 16, alignItems: "center", borderWidth: 1, borderColor: colors.border }}
-                  accessibilityRole="summary" accessibilityLabel={stat.accessibilityLabel}>
-                  <Text style={{ color: colors.primary, fontSize: 22, fontWeight: "bold" }}>{stat.value}</Text>
-                  <Text style={{ color: colors.muted, fontSize: 12, marginTop: 4 }}>{stat.label}</Text>
+                <View
+                  key={stat.label}
+                  style={{
+                    flex: 1,
+                    backgroundColor: "#0E0E10",
+                    borderRadius: 14,
+                    paddingVertical: 13,
+                    paddingHorizontal: 10,
+                    alignItems: "center",
+                    gap: 4,
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                  }}
+                  accessibilityRole="summary"
+                >
+                  <Text
+                    style={{
+                      fontFamily: FONT_MONO,
+                      fontWeight: "800",
+                      fontSize: 19,
+                      color: colors.primary,
+                    }}
+                  >
+                    {stat.value}
+                  </Text>
+                  <Text
+                    style={{
+                      fontFamily: FONT_UI,
+                      fontWeight: "600",
+                      fontSize: 9,
+                      letterSpacing: 0.12 * 9,
+                      color: "#8E8E93",
+                      textAlign: "center",
+                    }}
+                  >
+                    {stat.label.toUpperCase()}
+                  </Text>
                 </View>
               ))}
             </View>
           )}
 
-          {/* Personal Records */}
+          {/* ── Personal Records ────────────────────────── */}
           {achievements.length > 0 && (
-            <View style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
-              <Text style={{ color: colors.foreground, fontSize: 16, fontWeight: "600", marginBottom: 10 }}>Personal Records</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+            <View style={{ paddingHorizontal: 16, paddingBottom: 14 }}>
+              <Text
+                style={{
+                  fontFamily: FONT_UI,
+                  fontWeight: "700",
+                  fontSize: 9,
+                  letterSpacing: 0.18 * 9,
+                  color: "rgba(255,255,255,0.4)",
+                  marginBottom: 9,
+                }}
+              >
+                PERSONAL RECORDS
+              </Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ gap: 8 }}
+              >
                 {achievements.map((ach) => (
-                  <View key={ach.id} style={{ backgroundColor: colors.surface, borderRadius: 14, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 14, paddingVertical: 10, alignItems: "center", minWidth: 100 }}>
-                    <Text style={{ fontSize: 20 }}>{ach.emoji}</Text>
-                    <Text style={{ color: colors.foreground, fontSize: 13, fontWeight: "700", marginTop: 4 }}>{ach.value}</Text>
-                    <Text style={{ color: colors.muted, fontSize: 10, marginTop: 2 }}>{ach.label}</Text>
+                  <View
+                    key={ach.id}
+                    style={{
+                      backgroundColor: "#0E0E10",
+                      borderRadius: 14,
+                      borderWidth: 1,
+                      borderColor: colors.border,
+                      paddingHorizontal: 14,
+                      paddingVertical: 12,
+                      alignItems: "center",
+                      minWidth: 100,
+                    }}
+                  >
+                    <Text style={{ fontSize: 22 }}>{ach.emoji}</Text>
+                    <Text
+                      style={{
+                        fontFamily: FONT_MONO,
+                        fontWeight: "700",
+                        fontSize: 13,
+                        color: colors.foreground,
+                        marginTop: 6,
+                      }}
+                    >
+                      {ach.value}
+                    </Text>
+                    <Text
+                      style={{
+                        fontFamily: FONT_UI,
+                        fontWeight: "600",
+                        fontSize: 9,
+                        color: "#8E8E93",
+                        marginTop: 2,
+                        textAlign: "center",
+                      }}
+                    >
+                      {ach.label}
+                    </Text>
                   </View>
                 ))}
               </ScrollView>
             </View>
           )}
 
-          {/* Strava Connection */}
-          <View style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
-            <Text style={{ color: colors.foreground, fontSize: 16, fontWeight: "600", marginBottom: 12 }}>Data Source</Text>
-            <View style={{ backgroundColor: colors.surface, borderRadius: 12, borderWidth: 1, borderColor: colors.border, overflow: "hidden" }}>
-              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: 16 }}>
-                <View style={{ flexDirection: "row", alignItems: "center" }}>
-                  <Text style={{ fontSize: 24, marginRight: 12 }}>🏃</Text>
+          {/* ── Strava Connection ───────────────────────── */}
+          <View style={{ paddingHorizontal: 16, paddingBottom: 14 }}>
+            <Text
+              style={{
+                fontFamily: FONT_UI,
+                fontWeight: "700",
+                fontSize: 9,
+                letterSpacing: 0.18 * 9,
+                color: "rgba(255,255,255,0.4)",
+                marginBottom: 9,
+              }}
+            >
+              DATA SOURCE
+            </Text>
+            <View
+              style={{
+                backgroundColor: "#0E0E10",
+                borderRadius: 14,
+                borderWidth: 1,
+                borderColor: colors.border,
+                overflow: "hidden",
+              }}
+            >
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  padding: 14,
+                }}
+              >
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                  <View
+                    style={{
+                      width: 34,
+                      height: 34,
+                      borderRadius: 11,
+                      backgroundColor: "#FC4C02",
+                      borderWidth: 1,
+                      borderColor: "rgba(255,255,255,0.12)",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <Ionicons name="flash" size={18} color="#FFFFFF" />
+                  </View>
                   <View>
-                    <Text style={{ color: colors.foreground, fontSize: 14, fontWeight: "600" }}>Strava</Text>
-                    <Text style={{ color: colors.muted, fontSize: 12, marginTop: 2 }}>
-                      {loading ? "Checking..." : stravaConnected ? (athlete ? `Connected as ${athlete.firstname}` : "Connected") : "Not connected"}
+                    <Text
+                      style={{
+                        fontFamily: FONT_UI,
+                        fontWeight: "700",
+                        fontSize: 13,
+                        color: colors.foreground,
+                      }}
+                    >
+                      Strava
+                    </Text>
+                    <Text
+                      style={{
+                        fontFamily: FONT_MONO,
+                        fontWeight: "500",
+                        fontSize: 10.5,
+                        color: "#8E8E93",
+                        marginTop: 2,
+                      }}
+                    >
+                      {loading
+                        ? "Checking..."
+                        : stravaConnected
+                          ? athlete
+                            ? `Connected as ${athlete.firstname}`
+                            : "Connected"
+                          : "Not connected"}
                     </Text>
                   </View>
                 </View>
                 {stravaConnected ? (
-                  <TouchableOpacity onPress={disconnectStrava} accessibilityRole="button" accessibilityLabel="Disconnect Strava"
-                    style={{ backgroundColor: colors.error + "20", borderRadius: 16, paddingHorizontal: 14, paddingVertical: 7, minHeight: 44, justifyContent: "center" }}>
-                    <Text style={{ color: colors.error, fontSize: 12, fontWeight: "600" }}>Disconnect</Text>
+                  <TouchableOpacity
+                    onPress={disconnectStrava}
+                    accessibilityRole="button"
+                    accessibilityLabel="Disconnect Strava"
+                    style={{
+                      paddingVertical: 6,
+                      paddingHorizontal: 12,
+                      borderRadius: 12,
+                      backgroundColor: "rgba(255,69,58,0.14)",
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontFamily: FONT_UI,
+                        fontWeight: "700",
+                        fontSize: 10,
+                        color: "#FF453A",
+                      }}
+                    >
+                      Disconnect
+                    </Text>
                   </TouchableOpacity>
                 ) : (
-                  <StrideButton onPress={connectStrava} loading={connecting} style={{ borderRadius: 16, paddingHorizontal: 14, paddingVertical: 7, minHeight: 36 }} textStyle={{ fontSize: 12 }}>
+                  <StrideButton
+                    onPress={connectStrava}
+                    loading={connecting}
+                    style={{
+                      borderRadius: 12,
+                      paddingHorizontal: 14,
+                      paddingVertical: 7,
+                      minHeight: 36,
+                    }}
+                    textStyle={{ fontSize: 12 }}
+                  >
                     Connect
                   </StrideButton>
                 )}
@@ -271,36 +753,110 @@ export default function ProfileScreen() {
             </View>
           </View>
 
-          {/* Settings */}
-          <View style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
-            <Text style={{ color: colors.foreground, fontSize: 16, fontWeight: "600", marginBottom: 12 }}>Settings</Text>
-            <View style={{ backgroundColor: colors.surface, borderRadius: 12, borderWidth: 1, borderColor: colors.border, overflow: "hidden" }}>
-              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-                <Text style={{ color: colors.foreground, fontSize: 14 }}>Notifications</Text>
-                <Switch value={notifications} onValueChange={setNotifications} trackColor={{ false: colors.border, true: colors.primary }}
-                  accessibilityRole="switch" accessibilityLabel="Notifications" accessibilityState={{ checked: notifications }} />
+          {/* ── Settings ────────────────────────────────── */}
+          <View style={{ paddingHorizontal: 16, paddingBottom: 14 }}>
+            <Text
+              style={{
+                fontFamily: FONT_UI,
+                fontWeight: "700",
+                fontSize: 9,
+                letterSpacing: 0.18 * 9,
+                color: "rgba(255,255,255,0.4)",
+                marginBottom: 9,
+              }}
+            >
+              SETTINGS
+            </Text>
+            <View
+              style={{
+                backgroundColor: "#0E0E10",
+                borderRadius: 14,
+                borderWidth: 1,
+                borderColor: colors.border,
+                overflow: "hidden",
+              }}
+            >
+              {/* Notifications row */}
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  padding: 14,
+                  borderBottomWidth: 1,
+                  borderBottomColor: colors.border,
+                }}
+              >
+                <Text
+                  style={{
+                    fontFamily: FONT_UI,
+                    fontWeight: "500",
+                    fontSize: 13,
+                    color: colors.foreground,
+                  }}
+                >
+                  Notifications
+                </Text>
+                <Switch
+                  value={notifications}
+                  onValueChange={setNotifications}
+                  trackColor={{ false: colors.border, true: colors.primary }}
+                  accessibilityRole="switch"
+                  accessibilityLabel="Notifications"
+                  accessibilityState={{ checked: notifications }}
+                />
               </View>
+
+              {/* All Settings row */}
               <TouchableOpacity
                 onPress={() => router.push("/settings")}
-                style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: 16, minHeight: 48 }}
-                accessibilityRole="button" accessibilityLabel="Open full settings"
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  padding: 14,
+                  minHeight: 48,
+                }}
+                accessibilityRole="button"
+                accessibilityLabel="Open full settings"
               >
                 <View>
-                  <Text style={{ color: colors.foreground, fontSize: 14 }}>All Settings</Text>
-                  <Text style={{ color: colors.muted, fontSize: 11, marginTop: 1 }}>Appearance, privacy, account</Text>
+                  <Text
+                    style={{
+                      fontFamily: FONT_UI,
+                      fontWeight: "500",
+                      fontSize: 13,
+                      color: colors.foreground,
+                    }}
+                  >
+                    All Settings
+                  </Text>
+                  <Text
+                    style={{
+                      fontFamily: FONT_MONO,
+                      fontWeight: "500",
+                      fontSize: 10.5,
+                      color: "#8E8E93",
+                      marginTop: 2,
+                    }}
+                  >
+                    Appearance, privacy, account
+                  </Text>
                 </View>
-                <IconSymbol name="chevron.right" size={18} color={colors.muted} />
+                <Ionicons name="chevron-forward" size={16} color="rgba(255,255,255,0.35)" />
               </TouchableOpacity>
             </View>
           </View>
 
-          {/* Refresh */}
-          <View style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
-            <StrideButton variant="secondary" onPress={refresh} loading={loading}>Refresh from Strava</StrideButton>
+          {/* ── Refresh from Strava ─────────────────────── */}
+          <View style={{ paddingHorizontal: 16, paddingBottom: 20 }}>
+            <StrideButton variant="secondary" onPress={refresh} loading={loading}>
+              Refresh from Strava
+            </StrideButton>
           </View>
         </ScrollView>
 
-        {/* Back button — outside ScrollView to avoid aria-hidden conflicts */}
+        {/* ── Back button — outside ScrollView ──────────── */}
         <TouchableOpacity
           onPress={() => router.push("/")}
           accessibilityRole="button"
@@ -309,17 +865,17 @@ export default function ProfileScreen() {
             position: "absolute",
             top: 12,
             left: 12,
-            width: 40,
-            height: 40,
-            borderRadius: 20,
-            backgroundColor: colors.surface,
+            width: 38,
+            height: 38,
+            borderRadius: 19,
+            backgroundColor: "#16161A",
             borderWidth: 1,
             borderColor: colors.border,
-            justifyContent: "center",
             alignItems: "center",
+            justifyContent: "center",
           }}
         >
-          <IconSymbol name="chevron.left" size={20} color={colors.foreground} />
+          <Ionicons name="chevron-back" size={18} color={colors.foreground} />
         </TouchableOpacity>
       </View>
     </ScreenContainer>

@@ -1,15 +1,22 @@
-import { ThemedView } from "@/components/themed-view";
+/**
+ * OAuth callback handler — processes Strava/Google auth redirects.
+ *
+ * Three states: processing (spinner), success (redirect), error (message).
+ * Restyled to match the design handoff tokens.
+ */
+import { View, Text, ActivityIndicator } from "react-native";
+import { useEffect, useState } from "react";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
 import * as Api from "@/lib/_core/api";
 import * as Auth from "@/lib/_core/auth";
 import { logger } from "@/lib/_core/logger";
-import * as Linking from "expo-linking";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useState } from "react";
-import { ActivityIndicator, Text } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useColors } from "@/hooks/use-colors";
+import { FONT_UI, FONT_MONO } from "@/lib/_core/theme";
 
 export default function OAuthCallback() {
   const router = useRouter();
+  const colors = useColors();
   const params = useLocalSearchParams<{
     code?: string;
     state?: string;
@@ -39,7 +46,6 @@ export default function OAuthCallback() {
           // Decode and store user info if available
           if (params.user) {
             try {
-              // Use atob for base64 decoding (works in both web and React Native)
               const userJson =
                 typeof atob !== "undefined"
                   ? atob(params.user)
@@ -74,7 +80,6 @@ export default function OAuthCallback() {
         // Try to get from local search params first (works with expo-router)
         if (params.code || params.state || params.error) {
           logger.log("[OAuth] Found params in route params");
-          // Extract from params
           const urlParams = new URLSearchParams();
           if (params.code) urlParams.set("code", params.code);
           if (params.state) urlParams.set("state", params.state);
@@ -83,8 +88,8 @@ export default function OAuthCallback() {
           logger.log("[OAuth] Constructed URL from params:", url);
         } else {
           logger.log("[OAuth] No params found, checking Linking.getInitialURL()...");
-          // Fallback: try to get from Linking
-          const initialUrl = await Linking.getInitialURL();
+          const { getInitialURL } = require("expo-linking");
+          const initialUrl = await getInitialURL();
           logger.log("[OAuth] Linking.getInitialURL():", initialUrl);
           if (initialUrl) {
             url = initialUrl;
@@ -113,7 +118,6 @@ export default function OAuthCallback() {
           state = params.state;
         } else if (url) {
           logger.log("[OAuth] Parsing code and state from URL:", url);
-          // Parse from URL
           try {
             const urlObj = new URL(url);
             code = urlObj.searchParams.get("code");
@@ -126,7 +130,6 @@ export default function OAuthCallback() {
             });
           } catch (e) {
             logger.log("[OAuth] Failed to parse as full URL, trying regex:", e);
-            // Try parsing as relative URL with query params
             const match = url.match(/[?&](code|state|sessionToken)=([^&]+)/g);
             if (match) {
               match.forEach((param) => {
@@ -155,8 +158,6 @@ export default function OAuthCallback() {
           logger.log("[OAuth] Session token found in URL, storing...");
           await Auth.setSessionToken(sessionToken);
           logger.log("[OAuth] Session token stored successfully");
-          // User info is already in the OAuth callback response
-          // No need to fetch from API
           setStatus("success");
           logger.log("[OAuth] Redirecting to home...");
           setTimeout(() => {
@@ -189,11 +190,9 @@ export default function OAuthCallback() {
 
         if (result.sessionToken) {
           logger.log("[OAuth] Session token received, storing...");
-          // Store session token
           await Auth.setSessionToken(result.sessionToken);
           logger.log("[OAuth] Session token stored successfully");
 
-          // Store user info if available
           if (result.user) {
             logger.log("[OAuth] User data received:", result.user);
             const userInfo: Auth.User = {
@@ -213,7 +212,6 @@ export default function OAuthCallback() {
           setStatus("success");
           logger.log("[OAuth] Authentication successful, redirecting to home...");
 
-          // Redirect to home after a short delay
           setTimeout(() => {
             logger.log("[OAuth] Executing redirect...");
             router.replace("/home");
@@ -236,37 +234,121 @@ export default function OAuthCallback() {
   }, [params.code, params.state, params.error, params.sessionToken, params.user, router]);
 
   return (
-    <SafeAreaView className="flex-1" edges={["top", "bottom", "left", "right"]}>
-      <ThemedView className="flex-1 items-center justify-center gap-4 p-5">
+    <SafeAreaView
+      style={{ flex: 1, backgroundColor: colors.background }}
+      edges={["top", "bottom", "left", "right"]}
+    >
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: colors.background,
+          alignItems: "center",
+          justifyContent: "center",
+          padding: 32,
+          gap: 16,
+        }}
+      >
+        {/* ── Processing ─────────────────────────────────── */}
         {status === "processing" && (
           <>
-            <ActivityIndicator size="large" />
-            <Text className="mt-4 text-base leading-6 text-center text-foreground">
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text
+              style={{
+                fontFamily: FONT_UI,
+                fontWeight: "500",
+                fontSize: 13,
+                lineHeight: 19.5,
+                color: "rgba(255,255,255,0.55)",
+                textAlign: "center",
+              }}
+            >
               Completing authentication...
             </Text>
           </>
         )}
+
+        {/* ── Success ────────────────────────────────────── */}
         {status === "success" && (
           <>
-            <Text className="text-base leading-6 text-center text-foreground">
-              Authentication successful!
+            <View
+              style={{
+                width: 48,
+                height: 48,
+                borderRadius: 24,
+                backgroundColor: "rgba(50,215,75,0.14)",
+                borderWidth: 1,
+                borderColor: "rgba(50,215,75,0.35)",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Text style={{ fontSize: 22 }}>✓</Text>
+            </View>
+            <Text
+              style={{
+                fontFamily: FONT_UI,
+                fontWeight: "800",
+                fontSize: 19,
+                color: colors.foreground,
+              }}
+            >
+              Authentication successful
             </Text>
-            <Text className="text-base leading-6 text-center text-foreground">
+            <Text
+              style={{
+                fontFamily: FONT_MONO,
+                fontWeight: "600",
+                fontSize: 12,
+                color: "rgba(255,255,255,0.4)",
+              }}
+            >
               Redirecting...
             </Text>
           </>
         )}
+
+        {/* ── Error ──────────────────────────────────────── */}
         {status === "error" && (
           <>
-            <Text className="mb-2 text-xl font-bold leading-7 text-error">
+            <View
+              style={{
+                width: 48,
+                height: 48,
+                borderRadius: 24,
+                backgroundColor: "rgba(255,69,58,0.14)",
+                borderWidth: 1,
+                borderColor: "rgba(255,69,58,0.35)",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Text style={{ fontSize: 22 }}>✕</Text>
+            </View>
+            <Text
+              style={{
+                fontFamily: FONT_UI,
+                fontWeight: "800",
+                fontSize: 19,
+                color: colors.error,
+              }}
+            >
               Authentication failed
             </Text>
-            <Text className="text-base leading-6 text-center text-foreground">
+            <Text
+              style={{
+                fontFamily: FONT_UI,
+                fontWeight: "500",
+                fontSize: 13,
+                lineHeight: 19.5,
+                color: "rgba(255,255,255,0.55)",
+                textAlign: "center",
+              }}
+            >
               {errorMessage}
             </Text>
           </>
         )}
-      </ThemedView>
+      </View>
     </SafeAreaView>
   );
 }
