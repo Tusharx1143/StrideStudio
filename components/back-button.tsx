@@ -20,8 +20,8 @@ export interface BackButtonProps {
 }
 
 /**
- * Unified back button used consistently across all screens.
- * Uses Ionicons chevron-back with spring press animation and 44px touch target.
+ * Unified back button — matches the design handoff's 38–40px circle style.
+ * Dark surface (#16161A), no border, with spring press animation.
  */
 export function BackButton({ onPress, color }: BackButtonProps) {
   const colors = useColors();
@@ -57,21 +57,19 @@ export function BackButton({ onPress, color }: BackButtonProps) {
       accessibilityLabel="Go back"
       style={[
         {
-          width: 44,
-          height: 44,
-          borderRadius: 22,
-          backgroundColor: colors.surface,
+          width: 38,
+          height: 38,
+          borderRadius: 19,
+          backgroundColor: "#16161A",
           alignItems: "center",
           justifyContent: "center",
-          borderWidth: 1,
-          borderColor: colors.border,
         },
         animatedStyle,
       ]}
     >
       <Ionicons
         name="chevron-back"
-        size={22}
+        size={20}
         color={color ?? colors.foreground}
       />
     </AnimatedPressable>
