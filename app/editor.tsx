@@ -492,7 +492,7 @@ function EditorContent() {
                     style={StyleSheet.absoluteFill}
                     onPress={() => selectLayer(null)}
                   />
-                  {layers.sort((a, b) => a.zIndex - b.zIndex).map((l) => (
+                  {layers.sort((a, b) => (a.z ?? 0) - (b.z ?? 0)).map((l) => (
                     <LayerGesture
                       key={l.id} layer={l} canvasH={CANVAS_H}
                       onDragStart={handleDragStart}
@@ -519,7 +519,7 @@ function EditorContent() {
                     style={StyleSheet.absoluteFill}
                     onPress={() => selectLayer(null)}
                   />
-                  {layers.sort((a, b) => a.zIndex - b.zIndex).map((l) => (
+                  {layers.sort((a, b) => (a.z ?? 0) - (b.z ?? 0)).map((l) => (
                     <LayerGesture
                       key={l.id} layer={l} canvasH={CANVAS_H}
                       onDragStart={handleDragStart}
@@ -560,7 +560,7 @@ function EditorContent() {
                 </View>
 
                 {/* Still render layers over empty canvas */}
-                {layers.sort((a, b) => a.zIndex - b.zIndex).map((l) => (
+                {layers.sort((a, b) => (a.z ?? 0) - (b.z ?? 0)).map((l) => (
                   <LayerGesture
                     key={l.id} layer={l} canvasH={CANVAS_H}
                     onDragStart={handleDragStart}

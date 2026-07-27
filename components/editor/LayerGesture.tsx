@@ -11,7 +11,7 @@ import Animated, { useSharedValue, useAnimatedStyle } from "react-native-reanima
 import { useApp } from "@/lib/app-context";
 import { ALL_TEMPLATES, computeWeekTotals } from "@/lib/templates";
 import { useCanvas } from "@/lib/canvas-state";
-import { resolveColors, getFontFamily } from "@/lib/color-presets";
+import { resolveColors, getFontFamily, type FontFamily } from "@/lib/color-presets";
 import { useColors } from "@/hooks/use-colors";
 import { EditorColors, EditorRadius } from "@/constants/editor-theme";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -68,9 +68,9 @@ export const LayerGesture = React.memo(function LayerGesture({ layer, canvasH, o
     transform: [{ translateX: tx.value }, { translateY: ty.value }],
   }));
 
-  const template = ALL_TEMPLATES.find((t) => t.id === layer.templateId);
-  const palette = resolveColors(layer.paletteId);
-  const layerFont = getFontFamily(layer.fontFamily);
+  const template = ALL_TEMPLATES.find((t) => t.id === (layer.templateId ?? layer.stickerId));
+  const palette = resolveColors(layer.paletteId ?? "bright-white");
+  const layerFont = getFontFamily((layer.fontFamily ?? "system") as FontFamily);
   const finalColors = { ...palette, fontFamily: layerFont.family };
   const isSelected = layer.id === selectedLayerId;
 

@@ -29,7 +29,7 @@ export default function ExportScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const colors = useColors();
-  const { layers, photoUri } = useCanvas();
+  const { layers } = useCanvas();
   const [exported, setExported] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
