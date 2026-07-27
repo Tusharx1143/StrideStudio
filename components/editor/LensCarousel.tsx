@@ -33,8 +33,9 @@ import {
   LENS_CATEGORIES,
   getOrderedCategories,
 } from "@/lib/lenses/lens-categories";
-import { getPalette } from "@/lib/stickers/palettes";
-import { FONT_UI, FONT_MONO } from "@/lib/_core/theme";
+import { Fonts } from "@/lib/_core/theme";
+const FONT_UI = Fonts.sans;
+const FONT_MONO = Fonts.mono;
 
 const SCREEN_W = Dimensions.get("window").width;
 const CARD_W = 84;

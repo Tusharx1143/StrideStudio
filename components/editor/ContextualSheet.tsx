@@ -18,7 +18,8 @@ import {
   Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { FONT_UI } from "@/lib/_core/theme";
+import { Fonts } from "@/lib/_core/theme";
+const FONT_UI = Fonts.sans;
 
 // ── Constants ──
 

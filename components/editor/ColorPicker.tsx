@@ -19,8 +19,10 @@ import {
 import * as Haptics from "expo-haptics";
 import { useCanvas } from "@/lib/canvas-state";
 import { useColors } from "@/hooks/use-colors";
-import { PALETTES, getPalette } from "@/lib/stickers/palettes";
-import { FONT_UI, FONT_MONO } from "@/lib/_core/theme";
+import { ALL_PRESETS } from "@/lib/color-presets";
+import { Fonts } from "@/lib/_core/theme";
+const FONT_UI = Fonts.sans;
+const FONT_MONO = Fonts.mono;
 
 // ── Color swatches (common overrides) ──
 
@@ -140,9 +142,8 @@ export function ColorPicker({ mode = "full" }: ColorPickerProps) {
               flexWrap: "wrap",
             }}
           >
-            {PALETTES.map((p) => {
-              const palette = p;
-              const accentColor = palette?.colors?.accent ?? "#FF6B35";
+            {ALL_PRESETS.map((p) => {
+              const accentColor = p.colors.accent ?? "#FF6B35";
               return (
                 <TouchableOpacity
                   key={p.id}

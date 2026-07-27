@@ -22,8 +22,12 @@ import Animated, {
 } from "react-native-reanimated";
 import { useApp } from "@/lib/app-context";
 import { useColors } from "@/hooks/use-colors";
-import { FONT_UI, FONT_MONO, Controls, Radii } from "@/lib/_core/theme";
-import { dist, distUnitShort, typeLabel } from "@/lib/stickers/formatters";
+import { Fonts } from "@/lib/_core/theme";
+
+const FONT_UI = Fonts.sans;
+const FONT_MONO = Fonts.mono;
+const Controls = { captureSide: 44, shutterOuter: 76, shutterInner: 58 };
+const Radii = { sm: 8 };
 
 // ── Types ──
 
@@ -80,7 +84,7 @@ export default function CaptureScreen() {
 
   const activity = getSelectedActivity();
   const activityLabel = activity.distance
-    ? `${dist(activity, "metric")} ${distUnitShort("metric")} ${activity.type}`
+    ? `${activity.distance.toFixed(2)} km ${activity.type}`
     : activity.title || "Select activity";
 
   // ── Camera flash mapping ──

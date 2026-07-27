@@ -28,13 +28,9 @@ import {
   type CanvasRatio,
 } from "@/lib/canvas-state";
 import { useColors } from "@/hooks/use-colors";
-import {
-  getPalette,
-  dist,
-  distUnitShort,
-} from "@/lib/stickers";
-import { FONT_UI, FONT_MONO } from "@/lib/_core/theme";
-import type { WeekTotals } from "@/lib/stickers/types";
+import { Fonts } from "@/lib/_core/theme";
+const FONT_UI = Fonts.sans;
+const FONT_MONO = Fonts.mono;
 import type { ToolId } from "@/components/editor/FloatingToolbar";
 import { EditorCanvas } from "@/components/editor/EditorCanvas";
 import { LensCarousel } from "@/components/editor/LensCarousel";
@@ -66,7 +62,6 @@ function EditorContent() {
   const insets = useSafeAreaInsets();
   const colors = useColors();
   const {
-    activities,
     getSelectedActivity,
     selectActivity,
   } = useApp();
@@ -98,35 +93,15 @@ function EditorContent() {
 
   // ── Panel state ──
   const [activeTool, setActiveTool] = useState<ToolId | null>(null);
-  const [paletteId, setPaletteId] = useState("stride");
   const [flash, setFlash] = useState<string | null>(null);
-  const [activePresetId, setActivePresetId] = useState<string | undefined>();
-  const [showSheet, setShowSheet] = useState(false);
+  const [activePresetId, setActivePresetId] = useState<string | undefined>();  const [showSheet, setShowSheet] = useState(false);
 
   const activity = getSelectedActivity();
-  const palette = getPalette(paletteId);
   const selectedLayer = layers.find((l) => l.id === selectedLayerId) ?? null;
   const currentLens = getLens(lensId);
 
-  // Week totals
-  const totals: WeekTotals = useMemo(() => {
-    const totalKm = activities.reduce((s, a) => s + a.distance, 0);
-    return {
-      totalKm,
-      count: activities.length,
-      streak: 6,
-      monthKm: totalKm,
-      monthCount: activities.length,
-      days: activities.map((a) => ({
-        day: a.date?.slice(0, 3) ?? "---",
-        km: a.distance,
-        type: a.type,
-      })),
-    };
-  }, [activities]);
-
   const activityLabel = activity.distance
-    ? `${dist(activity, "metric")} ${distUnitShort("metric")} ${activity.type}`
+    ? `${activity.distance.toFixed(2)} km ${activity.type}`
     : activity.title || "No activity";
 
   // ── Toast ──

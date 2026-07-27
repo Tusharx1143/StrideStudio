@@ -16,7 +16,9 @@ import Slider from "@react-native-community/slider";
 import * as Haptics from "expo-haptics";
 import { useCanvas } from "@/lib/canvas-state";
 import { useColors } from "@/hooks/use-colors";
-import { FONT_UI, FONT_MONO } from "@/lib/_core/theme";
+import { Fonts } from "@/lib/_core/theme";
+const FONT_UI = Fonts.sans;
+const FONT_MONO = Fonts.mono;
 
 // ── Props ──
 

@@ -11,7 +11,8 @@ import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 import { useColors } from "@/hooks/use-colors";
 import { useCanvas } from "@/lib/canvas-state";
-import { FONT_UI } from "@/lib/_core/theme";
+import { Fonts } from "@/lib/_core/theme";
+const FONT_UI = Fonts.sans;
 
 // ── Tool Definition ──
 

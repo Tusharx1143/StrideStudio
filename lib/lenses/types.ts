@@ -6,8 +6,9 @@
  * Inspired by Snapchat Lenses — live preview, instant apply, fully editable.
  */
 import type { ReactNode } from "react";
-import type { Activity } from "@/shared/types";
-import type { PaletteColors } from "@/lib/stickers/types";
+import type { Activity } from "@/lib/app-data";
+import type { TemplateColors } from "@/lib/color-presets";
+import type { WeekTotals } from "@/lib/templates/shared/types";
 
 // ── Strava Metric ─────────────────────────────────────────────
 
@@ -167,11 +168,11 @@ export interface LensContext {
   /** The bound Strava activity */
   a: Activity;
   /** Computed weekly totals */
-  t: import("@/lib/stickers/types").WeekTotals;
+  t: WeekTotals;
   /** Unit preference */
   u: "metric" | "imperial";
   /** Active palette */
-  c: PaletteColors;
+  c: TemplateColors;
   /** Active font family */
   fontFamily: string;
   /** Active font weight */
@@ -203,7 +204,3 @@ export interface LensUsage {
   lastUsedAt: number;
   useCount: number;
 }
-
-// ── Barrel exports for convenience ────────────────────────────
-
-export type { PaletteColors } from "@/lib/stickers/types";

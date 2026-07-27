@@ -1,14 +1,16 @@
 /**
- * Lens registry — converts existing sticker templates into Lens definitions.
+ * Lens registry — converts existing dynamic templates into Lens definitions.
  *
- * Each Lens wraps an existing sticker render function with metadata about
+ * Each Lens wraps an existing template render function with metadata about
  * which metrics it displays, its category, and default styling.
- * This bridges the old "sticker" system with the new "Lens" architecture.
+ * This bridges the template system with the Lens architecture.
  */
 import type { LensDef, LensContext, QuickStylePreset } from "./types";
-import { STICKERS } from "@/lib/stickers/registry";
-import { getPalette } from "@/lib/stickers/palettes";
-import { FONT_UI, FONT_MONO } from "@/lib/_core/theme";
+import { DYNAMIC_TEMPLATES, type TemplateDef } from "@/lib/templates";
+import { Fonts } from "@/lib/_core/theme";
+const FONT_UI = Fonts.sans;
+const FONT_MONO = Fonts.mono;
+import type { WeekTotals } from "@/lib/templates/shared/types";
 
 // ── Quick Style Presets ───────────────────────────────────────
 
@@ -18,7 +20,7 @@ export const QUICK_STYLES: QuickStylePreset[] = [
     name: "Minimal",
     icon: "◻️",
     description: "Clean, white, maximum whitespace, thin fonts",
-    paletteId: "mono",
+    paletteId: "minimal-mono",
     fontFamily: FONT_UI,
     fontWeight: "400",
     textTransform: "uppercase",
@@ -28,7 +30,7 @@ export const QUICK_STYLES: QuickStylePreset[] = [
     name: "Neon",
     icon: "💡",
     description: "Vibrant neon colors, glow effects, bold type",
-    paletteId: "neon",
+    paletteId: "neon-pop",
     fontFamily: FONT_UI,
     fontWeight: "800",
     textTransform: "uppercase",
@@ -39,7 +41,7 @@ export const QUICK_STYLES: QuickStylePreset[] = [
     name: "Marathon",
     icon: "🏅",
     description: "High-contrast race-day theme",
-    paletteId: "stride",
+    paletteId: "bright-white",
     fontFamily: FONT_MONO,
     fontWeight: "700",
     textTransform: "uppercase",
@@ -50,7 +52,7 @@ export const QUICK_STYLES: QuickStylePreset[] = [
     name: "Trail",
     icon: "🌲",
     description: "Earth tones, rugged textures, organic shapes",
-    paletteId: "gold",
+    paletteId: "warm-gold",
     fontFamily: FONT_UI,
     fontWeight: "600",
     textTransform: "none",
@@ -60,7 +62,7 @@ export const QUICK_STYLES: QuickStylePreset[] = [
     name: "Premium",
     icon: "✨",
     description: "Metallic accents, refined spacing",
-    paletteId: "gold",
+    paletteId: "warm-gold",
     fontFamily: "serif",
     fontWeight: "400",
     textTransform: "none",
@@ -70,7 +72,7 @@ export const QUICK_STYLES: QuickStylePreset[] = [
     name: "Dark",
     icon: "🌙",
     description: "Pure black background, white text, high contrast",
-    paletteId: "mono",
+    paletteId: "minimal-mono",
     fontFamily: FONT_UI,
     fontWeight: "700",
     textTransform: "uppercase",
@@ -80,7 +82,7 @@ export const QUICK_STYLES: QuickStylePreset[] = [
     name: "White",
     icon: "☀️",
     description: "Clean white background, dark text",
-    paletteId: "stride",
+    paletteId: "bright-white",
     fontFamily: FONT_UI,
     fontWeight: "600",
     textTransform: "none",
@@ -90,7 +92,7 @@ export const QUICK_STYLES: QuickStylePreset[] = [
     name: "Gradient",
     icon: "🌈",
     description: "Full-bleed gradient backgrounds, white text",
-    paletteId: "mint",
+    paletteId: "cool-mint",
     fontFamily: FONT_UI,
     fontWeight: "700",
     textTransform: "uppercase",
@@ -100,7 +102,7 @@ export const QUICK_STYLES: QuickStylePreset[] = [
     name: "Glass",
     icon: "🪟",
     description: "Frosted glass effect, blurred backdrop",
-    paletteId: "mono",
+    paletteId: "minimal-mono",
     fontFamily: FONT_UI,
     fontWeight: "500",
     textTransform: "none",
@@ -111,7 +113,7 @@ export const QUICK_STYLES: QuickStylePreset[] = [
     name: "Bold",
     icon: "🔲",
     description: "Heavy typography, solid color blocks, big numbers",
-    paletteId: "stride",
+    paletteId: "bright-white",
     fontFamily: FONT_UI,
     fontWeight: "900",
     textTransform: "uppercase",
@@ -119,95 +121,99 @@ export const QUICK_STYLES: QuickStylePreset[] = [
   },
 ];
 
-// ── Convert existing stickers to Lenses ───────────────────────
+// ── Category inference from template metadata ─────────────────
 
-const STICKER_CATEGORY_LENS_MAP: Record<string, string> = {
+const TAB_LENS_MAP: Record<string, string> = {
+  activity: "multi",
+  totals: "totals",
+};
+
+const NAME_CATEGORY_MAP: Record<string, string> = {
   distance: "distance",
   pace: "pace",
   time: "time",
+  heart: "heart_rate",
   hr: "heart_rate",
+  elevation: "elevation",
   elev: "elevation",
   splits: "pace",
   route: "multi",
   achievement: "multi",
-  totals: "totals",
   date: "date",
-  gear: "multi",
-  weather: "multi",
-  multi: "multi",
 };
 
-/** Infer lens category from sticker category */
-function stickerCatToLensCat(stickerCat: string): string {
-  return STICKER_CATEGORY_LENS_MAP[stickerCat] ?? "multi";
+/** Infer lens category from template name/id */
+function inferCategory(tpl: TemplateDef): string {
+  const nameLower = tpl.name.toLowerCase();
+  const idLower = tpl.id.toLowerCase();
+
+  // Check tab first (totals is a category)
+  const tabCat = TAB_LENS_MAP[tpl.tab];
+  if (tpl.tab === "totals") return tabCat;
+
+  // Try matching name/id against known categories
+  for (const [keyword, cat] of Object.entries(NAME_CATEGORY_MAP)) {
+    if (nameLower.includes(keyword) || idLower.includes(keyword)) return cat;
+  }
+
+  return "multi";
 }
 
-/** Build a LensDef from a StickerDef */
-function stickerToLens(s: (typeof STICKERS)[number]): LensDef {
-  const lensCat = stickerCatToLensCat(s.cat);
+// ── Feature inference ─────────────────────────────────────────
 
-  // Extract metric features from the sticker's category
-  const featureMap: Record<string, string[]> = {
-    distance: ["distance"],
-    pace: ["pace"],
-    time: ["moving_time", "elapsed_time"],
-    hr: ["avg_heart_rate", "max_heart_rate"],
-    elev: ["elevation_gain", "max_elevation"],
-    splits: ["pace", "splits"],
-    route: ["distance", "elevation_gain"],
-    achievement: ["achievement_count", "pr_count"],
-    totals: ["distance"],
-    date: ["date", "activity_type"],
-    multi: ["distance", "pace", "moving_time", "avg_heart_rate"],
-  };
+const CATEGORY_FEATURES: Record<string, string[]> = {
+  distance: ["distance"],
+  pace: ["pace", "splits"],
+  time: ["moving_time", "elapsed_time"],
+  heart_rate: ["avg_heart_rate", "max_heart_rate"],
+  elevation: ["elevation_gain", "max_elevation", "avg_grade"],
+  totals: ["distance", "moving_time", "calories"],
+  multi: ["distance", "pace", "moving_time", "avg_heart_rate"],
+};
 
-  const features = featureMap[s.cat] ?? ["distance"];
+function inferFeatures(tpl: TemplateDef): string[] {
+  const cat = inferCategory(tpl);
+  return CATEGORY_FEATURES[cat] ?? ["distance"];
+}
 
-  // Map sticker theme → sport sub-category
-  const themeSportMap: Record<string, string> = {
-    led: "multi",
-    mono: "running",
-    terminal: "cycling",
-    glass: "multi",
-    chart: "multi",
-    poster: "running",
-    tape: "hiking",
-    serif: "multi",
-  };
+function inferSport(tpl: TemplateDef): string {
+  const nameLower = tpl.name.toLowerCase();
+  if (nameLower.includes("run") || nameLower.includes("pace")) return "running";
+  if (nameLower.includes("ride") || nameLower.includes("speed") || nameLower.includes("bike")) return "cycling";
+  if (nameLower.includes("swim")) return "swimming";
+  if (nameLower.includes("hike") || nameLower.includes("trail")) return "hiking";
+  if (nameLower.includes("gym") || nameLower.includes("workout")) return "gym";
+  return "multi";
+}
+
+// ── Convert templates to Lenses ───────────────────────
+
+function templateToLens(tpl: TemplateDef): LensDef {
+  const cat = inferCategory(tpl);
+  const features = inferFeatures(tpl);
+  const sport = inferSport(tpl);
 
   return {
-    id: s.id,
-    name: s.name,
-    category: lensCat,
-    sport: themeSportMap[s.theme] ?? "multi",
-    description: `${s.name} — ${s.theme} style`,
-    thumbnail: (ctx: LensContext) => s.render({
-      a: ctx.a,
-      t: ctx.t,
-      u: ctx.u,
-      c: ctx.c,
-      layer: undefined,
-    }),
-    render: (ctx: LensContext) => s.render({
-      a: ctx.a,
-      t: ctx.t,
-      u: ctx.u,
-      c: ctx.c,
-      layer: { text: undefined },
-    }),
-    defaultPalette: "stride",
+    id: tpl.id,
+    name: tpl.name.replace(/_/g, " "),
+    category: cat,
+    sport,
+    description: tpl.description || `${tpl.name} — ${tpl.tab}`,
+    thumbnail: (ctx: LensContext) => tpl.render(ctx.a, ctx.t, ctx.c),
+    render: (ctx: LensContext) => tpl.render(ctx.a, ctx.t, ctx.c),
+    defaultPalette: "bright-white",
     defaultFont: FONT_UI,
     layers: [],
     features,
-    tags: [s.cat, s.theme, ...features],
+    tags: [tpl.tab, cat, ...features],
   };
 }
 
-// ── Build the full lens registry ──────────────────────────────
+// ── Build the full lens registry ───────────────────────
 
-export const LENSES: LensDef[] = STICKERS.map(stickerToLens);
+export const LENSES: LensDef[] = DYNAMIC_TEMPLATES.map(templateToLens);
 
-// ── Lookup helpers ────────────────────────────────────────────
+// ── Lookup helpers ────────────────────────────────────
 
 export function getLens(id: string): LensDef | undefined {
   return LENSES.find((l) => l.id === id);
