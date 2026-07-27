@@ -1,23 +1,47 @@
-import { ScrollView, Text, View, TouchableOpacity, Platform } from "react-native";
+/**
+ * Activity detail screen — matched to the design handoff.
+ *
+ * Full stat table with IBM Plex Mono values, route map card,
+ * and a full-width "CREATE POST FROM ACTIVITY" CTA.
+ */
+import { ScrollView, Text, View, TouchableOpacity } from "react-native";
 import { useLocalSearchParams, useRouter, Stack } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { ScreenContainer } from "@/components/screen-container";
 import { useApp } from "@/lib/app-context";
-import { formatDuration } from "@/lib/app-data";
 import { useColors } from "@/hooks/use-colors";
 import { StrideButton } from "@/components/stride-button";
 import { ActivityCardSkeleton } from "@/components/skeleton";
-import { getSportConfig, relativeTime, computeAchievements } from "@/lib/sport-theme";
+import { getSportConfig } from "@/lib/sport-theme";
 import { polylineToSvgPath } from "@/lib/map-utils";
-import { IconSymbol, type IconSymbolName } from "@/components/ui/icon-symbol";
-import { ActivityAnimatedIcon } from "@/components/activity-animated-icon";
-import { StatCard } from "@/components/stat-card";
 import { BackButton } from "@/components/back-button";
-import { Typography } from "@/lib/_core/theme";
+import { FONT_UI, FONT_MONO } from "@/lib/_core/theme";
+import {
+  dist,
+  distUnitShort,
+  dur,
+  pace,
+  speed,
+  speedUnit,
+  elev,
+  elevUnit,
+  typeLabel,
+  weekday,
+  dateShort,
+  NS,
+} from "@/lib/stickers/formatters";
 import Svg, { Polyline, Circle } from "react-native-svg";
 
-// ── Route Map Widget ──
-function RouteMapWidget({ polyline, sportColor }: { polyline: string; sportColor: string }) {
+// ── Route Map Widget ────────────────────────────────────────
+
+function RouteMapCard({
+  polyline,
+  sportColor,
+}: {
+  polyline?: string;
+  sportColor: string;
+}) {
+  if (!polyline) return null;
   const pathData = polylineToSvgPath(polyline);
   if (!pathData) return null;
 
@@ -31,10 +55,26 @@ function RouteMapWidget({ polyline, sportColor }: { polyline: string; sportColor
     .join(" ");
 
   return (
-    <View style={{ height: 180, borderRadius: 14, overflow: "hidden", backgroundColor: "#0A0E14" }}>
+    <View
+      style={{
+        height: 150,
+        borderRadius: 18,
+        overflow: "hidden",
+        backgroundColor: "#0E0E10",
+        borderWidth: 1,
+        borderColor: "#1C1C1E",
+        marginBottom: 16,
+      }}
+    >
       <Svg viewBox="0 0 100 100" style={{ width: "100%", height: "100%" }}>
-        <Polyline points={coords} fill="none" stroke={sportColor} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-        {/* Start marker */}
+        <Polyline
+          points={coords}
+          fill="none"
+          stroke={sportColor}
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
         {(() => {
           const pts = coords.split(" ");
           if (pts.length < 2) return null;
@@ -46,29 +86,7 @@ function RouteMapWidget({ polyline, sportColor }: { polyline: string; sportColor
   );
 }
 
-
-// ── Achievement Chip ──
-function AchievementChip({ label, value, emoji }: { label: string; value: string; emoji: string }) {
-  const colors = useColors();
-  return (
-    <View
-      style={{
-        backgroundColor: colors.surface,
-        borderRadius: 14,
-        borderWidth: 1,
-        borderColor: colors.border,
-        paddingHorizontal: 14,
-        paddingVertical: 10,
-        alignItems: "center",
-        minWidth: 100,
-      }}
-    >
-      <Text style={{ fontSize: 20 }}>{emoji}</Text>
-      <Text style={{ color: colors.foreground, fontSize: 13, fontWeight: "700", marginTop: 4 }}>{value}</Text>
-      <Text style={{ color: colors.muted, fontSize: 10, marginTop: 2 }}>{label}</Text>
-    </View>
-  );
-}
+// ── Main Screen ─────────────────────────────────────────────
 
 export default function ActivityDetailsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -77,7 +95,6 @@ export default function ActivityDetailsScreen() {
   const { activities, loading, selectActivity } = useApp();
 
   const activity = activities.find((a) => a.id === id);
-  const achievements = computeAchievements(activities);
 
   // ── Loading ──
   if (loading && activities.length === 0) {
@@ -96,10 +113,28 @@ export default function ActivityDetailsScreen() {
     return (
       <ScreenContainer className="p-0" edges={["top", "left", "right", "bottom"]}>
         <Stack.Screen options={{ headerShown: false }} />
-        <View style={{ flex: 1, backgroundColor: colors.background, justifyContent: "center", alignItems: "center", padding: 32 }}>
-          <Text style={{ color: colors.foreground, fontSize: 18, fontWeight: "600" }}>Activity not found</Text>
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: colors.background,
+            justifyContent: "center",
+            alignItems: "center",
+            padding: 32,
+          }}
+        >
+          <Text
+            style={{
+              color: colors.foreground,
+              fontSize: 18,
+              fontWeight: "600",
+            }}
+          >
+            Activity not found
+          </Text>
           <View style={{ marginTop: 16 }}>
-            <StrideButton variant="secondary" onPress={() => router.back()}>Go Back</StrideButton>
+            <StrideButton variant="secondary" onPress={() => router.back()}>
+              Go Back
+            </StrideButton>
           </View>
         </View>
       </ScreenContainer>
@@ -107,27 +142,43 @@ export default function ActivityDetailsScreen() {
   }
 
   const sport = getSportConfig(activity.type);
-  const relTime = relativeTime(activity.startDate);
+  const dayLabel = `${weekday(activity)} ${dateShort(activity)}`;
+  const typeLine = `${typeLabel(activity)} · ${activity.title || ""}`;
 
   const onShare = () => {
-    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (typeof window === "undefined" || !("navigator" in window)) {
+      try {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      } catch {}
+    }
     selectActivity(activity.id);
     router.push("/editor");
   };
 
-  const statCards: Array<{ icon: IconSymbolName; label: string; value: string; color: string }> = [
-    { icon: "speedometer", label: "Distance", value: `${activity.distance.toFixed(2)} km`, color: sport.color },
-    { icon: "clock.fill", label: "Duration", value: formatDuration(activity.duration), color: colors.foreground },
+  // Stat rows — matching the handoff's field list
+  const statRows: [string, string][] = [
+    ["Distance", activity.distance ? `${dist(activity, "metric")} ${distUnitShort("metric")}` : NS],
+    ["Moving time", dur(activity.duration)],
+    ["Elapsed time", dur(activity.elapsedTime)],
     ...(activity.pace != null
-      ? [{ icon: "speedometer" as const, label: "Avg Pace", value: `${Math.floor(activity.pace)}:${Math.round((activity.pace - Math.floor(activity.pace)) * 60).toString().padStart(2, "0")} /km`, color: sport.color }]
-      : activity.speed != null
-        ? [{ icon: "speedometer" as const, label: "Avg Speed", value: `${activity.speed.toFixed(1)} km/h`, color: sport.color }]
-        : []),
-    { icon: "mountain.2.fill", label: "Elevation", value: `${activity.elevation ?? 0} m`, color: colors.muted },
-    ...(activity.hasHeartrate
-      ? [{ icon: "heart.fill" as const, label: "Heart Rate", value: `${activity.heartRate ?? 0} bpm`, color: "#FF375F" }]
+      ? [["Avg pace", `${pace(activity, "metric")}/km`] as [string, string]]
       : []),
-    { icon: "flame.fill", label: "Calories", value: `${activity.calories ?? 0} cal`, color: "#FF9F0A" },
+    ...(activity.speed != null
+      ? [["Avg speed", `${speed(activity, "metric")} ${speedUnit("metric").toLowerCase()}`] as [string, string]]
+      : []),
+    ...(activity.elevation != null && activity.elevation > 0
+      ? [["Elevation gain", `${elev(activity, "metric")} m`] as [string, string]]
+      : []),
+    ...(activity.hasHeartrate && activity.heartRate != null
+      ? [["Avg heart rate", `${activity.heartRate} bpm`] as [string, string]]
+      : []),
+    ...(activity.calories != null && activity.calories > 0
+      ? [["Calories", `${activity.calories} cal`] as [string, string]]
+      : []),
+    ...(activity.deviceName
+      ? [["Device", activity.deviceName] as [string, string]]
+      : []),
+    ["Started", `${activity.date || ""}`],
   ];
 
   return (
@@ -135,96 +186,150 @@ export default function ActivityDetailsScreen() {
       <Stack.Screen options={{ headerShown: false }} />
       <View style={{ flex: 1, backgroundColor: colors.background }}>
         {/* Header bar */}
-        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingVertical: 8 }}>
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+            paddingHorizontal: 16,
+            paddingVertical: 8,
+          }}
+        >
           <BackButton />
-
           <TouchableOpacity
             onPress={onShare}
             accessibilityRole="button"
             accessibilityLabel="Create post from this activity"
-            style={{ backgroundColor: colors.foreground, borderRadius: 20, paddingHorizontal: 18, paddingVertical: 9, minHeight: 44, justifyContent: "center" }}
+            style={{
+              backgroundColor: colors.foreground,
+              borderRadius: 20,
+              paddingHorizontal: 18,
+              paddingVertical: 9,
+              minHeight: 44,
+              justifyContent: "center",
+            }}
           >
-            <Text style={{ color: colors.background, fontSize: 13, fontWeight: "700" }}>Create Post</Text>
+            <Text
+              style={{
+                fontFamily: FONT_UI,
+                fontWeight: "800",
+                fontSize: 13,
+                color: colors.background,
+              }}
+            >
+              Share
+            </Text>
           </TouchableOpacity>
         </View>
 
         <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
-          {/* Sport header with animated icon */}
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 4 }}>
-            <ActivityAnimatedIcon type={activity.type} size={32} />
-            <Text style={{ color: sport.color, fontSize: 14, fontWeight: "700", textTransform: "uppercase", letterSpacing: 1 }}>{sport.label}</Text>
-          </View>
-
-          <Text style={{ color: colors.foreground, fontSize: 34, fontWeight: "800" }}>{activity.title}</Text>
-          <Text style={{ color: colors.muted, fontSize: 14, marginTop: 2, marginBottom: 20 }}>
-            {relTime} · {activity.date}
+          {/* Title */}
+          <Text
+            style={{
+              fontFamily: FONT_UI,
+              fontWeight: "900",
+              fontSize: 32,
+              letterSpacing: -0.03 * 32,
+              color: colors.foreground,
+            }}
+          >
+            {dayLabel}
+          </Text>
+          <Text
+            style={{
+              fontFamily: FONT_UI,
+              fontWeight: "500",
+              fontSize: 13,
+              color: "#8E8E93",
+              marginTop: 6,
+              marginBottom: 20,
+            }}
+          >
+            {typeLine}
           </Text>
 
           {/* Route map */}
           {activity.summaryPolyline && (
-            <View style={{ marginBottom: 16 }}>
-              <RouteMapWidget polyline={activity.summaryPolyline} sportColor={sport.color} />
-            </View>
+            <RouteMapCard
+              polyline={activity.summaryPolyline}
+              sportColor={sport.color}
+            />
           )}
 
-          {/* Device info */}
-          {activity.deviceName && (
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 16 }}>
-              <IconSymbol name="gear" size={14} color={colors.muted} />
-              <Text style={{ color: colors.muted, fontSize: 12 }}>Recorded with {activity.deviceName}</Text>
-            </View>
-          )}
-
-          {/* Stat cards grid */}
-          <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" }}>
-            {statCards.map((sc, i) => (
-              <StatCard
+          {/* Stat table — handoff style */}
+          <View
+            style={{
+              backgroundColor: "#0E0E10",
+              borderRadius: 18,
+              borderWidth: 1,
+              borderColor: "#1C1C1E",
+              overflow: "hidden",
+            }}
+          >
+            {statRows.map(([label, value], i) => (
+              <View
                 key={i}
-                icon={<IconSymbol name={sc.icon} size={18} color={sc.color} />}
-                label={sc.label}
-                value={sc.value}
-                color={sc.color}
-                style={{ width: "48%", marginBottom: 8 }}
-              />
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  paddingVertical: 13,
+                  paddingHorizontal: 15,
+                  ...(i < statRows.length - 1
+                    ? { borderBottomWidth: 1, borderColor: "#1C1C1E" }
+                    : {}),
+                }}
+              >
+                <Text
+                  style={{
+                    fontFamily: FONT_UI,
+                    fontWeight: "500",
+                    fontSize: 13.5,
+                    color: "#8E8E93",
+                  }}
+                >
+                  {label}
+                </Text>
+                <Text
+                  style={{
+                    fontFamily: FONT_MONO,
+                    fontWeight: "700",
+                    fontSize: 13.5,
+                    color: "#fff",
+                  }}
+                >
+                  {value}
+                </Text>
+              </View>
             ))}
           </View>
 
-          {/* Elapsed vs moving time */}
-          {activity.elapsedTime > 0 && activity.elapsedTime !== activity.duration && (
-            <View style={{ flexDirection: "row", justifyContent: "center", gap: 16, marginTop: 8, marginBottom: 16 }}>
-              <Text style={{ color: colors.muted, fontSize: 12 }}>Moving: {formatDuration(activity.duration)}</Text>
-              <Text style={{ color: colors.muted, fontSize: 12 }}>Elapsed: {formatDuration(activity.elapsedTime)}</Text>
-            </View>
-          )}
-
-          {/* Suffer score */}
-          {activity.sufferScore != null && activity.sufferScore > 0 && (
-            <View style={{ marginBottom: 16, alignItems: "center" }}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                <IconSymbol name="flame.fill" size={16} color="#FF6B35" />
-                <Text style={{ color: "#FF6B35", fontSize: 13, fontWeight: "700" }}>Suffer Score: {activity.sufferScore}</Text>
-              </View>
-            </View>
-          )}
-
-          {/* Achievements */}
-          {achievements.length > 0 && (
-            <View style={{ marginTop: 8 }}>
-              <Text style={{ color: colors.foreground, fontSize: 16, fontWeight: "700", marginBottom: 10 }}>Personal Records</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-                {achievements.map((ach) => (
-                  <AchievementChip key={ach.id} label={ach.label} value={ach.value} emoji={ach.emoji} />
-                ))}
-              </ScrollView>
-            </View>
-          )}
-
           {/* CTA */}
-          <View style={{ marginTop: 24 }}>
-            <StrideButton variant="secondary" onPress={onShare}>
-              Create Post from Activity
-            </StrideButton>
-          </View>
+          <TouchableOpacity
+            onPress={onShare}
+            activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel="Create post from activity"
+            style={{
+              marginTop: 22,
+              height: 54,
+              borderRadius: 27,
+              backgroundColor: colors.foreground,
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Text
+              style={{
+                fontFamily: FONT_UI,
+                fontWeight: "800",
+                fontSize: 14,
+                color: colors.background,
+              }}
+            >
+              CREATE POST FROM ACTIVITY
+            </Text>
+          </TouchableOpacity>
         </ScrollView>
       </View>
     </ScreenContainer>

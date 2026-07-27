@@ -1,12 +1,9 @@
 /**
- * HeroHeader — Greeting + athlete avatar + animated activity figure.
+ * HeroHeader — matched to the design handoff.
  *
- * Replaces the simple greeting row in the home screen.
- * Shows contextual greeting based on time of day, athlete name,
- * profile photo with streak ring, and a large animated sport figure
- * for the user's most recent activity type.
+ * Left: "StrideStudio" title (900 25px) with orange mono streak/stat line below.
+ * Right: small 38px avatar circle with orange gradient background.
  */
-
 import { View, Text, Image, TouchableOpacity } from "react-native";
 import { useMemo } from "react";
 import { useRouter } from "expo-router";
@@ -14,164 +11,127 @@ import Animated from "react-native-reanimated";
 import type { SharedValue } from "react-native-reanimated";
 import { useColors } from "@/hooks/use-colors";
 import { useApp } from "@/lib/app-context";
-import { ActivityAnimatedIcon } from "@/components/activity-animated-icon";
-import type { SportType } from "@/lib/sport-theme";
 import { headerEnter } from "@/lib/animations";
+import { FONT_UI, FONT_MONO } from "@/lib/_core/theme";
+import { distUnitShort } from "@/lib/stickers/formatters";
 
 interface HeroHeaderProps {
   scrollY?: SharedValue<number>;
-}
-
-/** Get time-of-day greeting */
-function getGreeting(): { text: string; emoji: string } {
-  const hour = new Date().getHours();
-  if (hour < 12) return { text: "Good morning", emoji: "🌅" };
-  if (hour < 17) return { text: "Good afternoon", emoji: "☀️" };
-  return { text: "Good evening", emoji: "🌙" };
 }
 
 export function HeroHeader({ scrollY }: HeroHeaderProps) {
   const router = useRouter();
   const colors = useColors();
   const { athlete, activities } = useApp();
-  const greeting = useMemo(() => getGreeting(), []);
 
-  // Determine the most recent activity type for the hero figure
-  const recentSport: SportType = useMemo(() => {
-    if (activities.length === 0) return "run";
-    return activities[0].type;
+  // Compute weekly total for the streak line
+  const { totalKm, count, streak } = useMemo(() => {
+    const now = new Date();
+    const monday = new Date(now);
+    monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
+    monday.setHours(0, 0, 0, 0);
+    const weekActs = activities.filter(
+      (a) => a.startDate && new Date(a.startDate) >= monday,
+    );
+    const km = weekActs.reduce((s, a) => s + a.distance, 0);
+    return {
+      totalKm: km,
+      count: weekActs.length,
+      streak: Math.min(weekActs.filter((a) => a.type === "run").length, 7),
+    };
   }, [activities]);
 
-  const displayName = athlete
-    ? athlete.firstname
-    : "Athlete";
-  const avatarUri = athlete?.profile;
+  const unitShort = distUnitShort("metric").toUpperCase();
+  const streakLine = `${streak} WEEK STREAK · ${totalKm.toFixed(0)} ${unitShort} THIS WEEK`;
+
+  const avatarInitials = athlete
+    ? (athlete.firstname?.[0] ?? "") + (athlete.lastname?.[0] ?? "")
+    : "RK";
 
   return (
     <Animated.View
       entering={headerEnter(0)}
       style={{
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
         paddingHorizontal: 16,
-        paddingTop: 8,
-        paddingBottom: 4,
+        paddingTop: 10,
+        paddingBottom: 8,
       }}
     >
-      {/* Background accent */}
-      <View
-        style={{
-          position: "absolute",
-          top: -40,
-          right: -20,
-          width: 200,
-          height: 200,
-          borderRadius: 100,
-          backgroundColor: colors.primary + "10",
-          opacity: 0.5,
-        }}
-      />
+      {/* Left: title + streak */}
+      <View style={{ gap: 1 }}>
+        <Text
+          style={{
+            fontFamily: FONT_UI,
+            fontWeight: "900",
+            fontSize: 25,
+            letterSpacing: -0.03 * 25,
+            color: colors.foreground,
+          }}
+        >
+          StrideStudio
+        </Text>
+        <Text
+          style={{
+            fontFamily: FONT_MONO,
+            fontWeight: "600",
+            fontSize: 9.5,
+            letterSpacing: 0.1 * 9.5,
+            color: colors.primary,
+          }}
+        >
+          {streakLine}
+        </Text>
+      </View>
 
-      {/* Main row */}
-      <View
+      {/* Right: avatar */}
+      <TouchableOpacity
+        onPress={() => router.push("/(tabs)/profile")}
+        accessibilityRole="button"
+        accessibilityLabel="View profile"
         style={{
-          flexDirection: "row",
-          justifyContent: "space-between",
+          width: 38,
+          height: 38,
+          borderRadius: 19,
           alignItems: "center",
-          marginBottom: 8,
+          justifyContent: "center",
         }}
       >
-        {/* Greeting + name */}
-        <View style={{ flex: 1, marginRight: 12 }}>
-          <Text
+        {athlete?.profile ? (
+          <Image
+            source={{ uri: athlete.profile }}
             style={{
-              color: colors.muted,
-              fontSize: 14,
-              fontWeight: "600",
-              marginBottom: 2,
+              width: 38,
+              height: 38,
+              borderRadius: 19,
             }}
-          >
-            {greeting.text} {greeting.emoji}
-          </Text>
-          <Text
-            style={{
-              color: colors.foreground,
-              fontSize: 28,
-              fontWeight: "900",
-              letterSpacing: -0.5,
-            }}
-            numberOfLines={1}
-          >
-            {displayName}
-          </Text>
-        </View>
-
-        {/* Athlete avatar + animated figure */}
-        <View style={{ position: "relative" }}>
-          {/* Animated sport figure in background */}
+          />
+        ) : (
           <View
             style={{
-              position: "absolute",
-              top: -30,
-              right: -10,
-              opacity: 0.25,
-              transform: [{ scale: 0.9 }],
+              width: 38,
+              height: 38,
+              borderRadius: 19,
+              backgroundColor: colors.primary,
+              alignItems: "center",
+              justifyContent: "center",
             }}
-            pointerEvents="none"
           >
-            <ActivityAnimatedIcon type={recentSport} size={100} />
+            <Text
+              style={{
+                fontFamily: FONT_UI,
+                fontWeight: "800",
+                fontSize: 13,
+                color: "#fff",
+              }}
+            >
+              {avatarInitials}
+            </Text>
           </View>
-
-          {/* Avatar button */}
-          <TouchableOpacity
-            onPress={() => router.push("/profile-screen")}
-            accessibilityRole="button"
-            accessibilityLabel="View profile"
-          >
-            {avatarUri ? (
-              <View>
-                {/* Streak ring */}
-                <View
-                  style={{
-                    position: "absolute",
-                    top: -3,
-                    left: -3,
-                    right: -3,
-                    bottom: -3,
-                    borderRadius: 27,
-                    borderWidth: 2,
-                    borderColor: colors.primary,
-                    opacity: 0.6,
-                  }}
-                />
-                <Image
-                  source={{ uri: avatarUri }}
-                  style={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: 24,
-                    borderWidth: 2,
-                    borderColor: colors.surface,
-                  }}
-                />
-              </View>
-            ) : (
-              <View
-                style={{
-                  width: 48,
-                  height: 48,
-                  borderRadius: 24,
-                  backgroundColor: colors.primary + "20",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  borderWidth: 2,
-                  borderColor: colors.primary + "40",
-                }}
-              >
-                <ActivityAnimatedIcon type="run" size={32} />
-              </View>
-            )}
-          </TouchableOpacity>
-        </View>
-      </View>
+        )}
+      </TouchableOpacity>
     </Animated.View>
   );
 }

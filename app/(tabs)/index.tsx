@@ -10,34 +10,27 @@
  * Loading, error, and empty states are handled with dedicated components.
  */
 
-import { Text, View, FlatList, RefreshControl, TouchableOpacity } from "react-native";
+import { Text, View, FlatList, RefreshControl } from "react-native";
 import { useState, useCallback, useMemo } from "react";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { ScreenContainer } from "@/components/screen-container";
 import { useApp } from "@/lib/app-context";
-import type { PeriodId } from "@/lib/app-data";
 import { useColors } from "@/hooks/use-colors";
 import { StrideButton } from "@/components/stride-button";
 import { ActivityListSkeleton } from "@/components/skeleton";
 import { HeroHeader } from "@/components/home/HeroHeader";
-import { WeekProgressRing } from "@/components/home/WeekProgressRing";
-import { QuickStatsRow } from "@/components/home/QuickStatsRow";
 import { ActivityFeedCard } from "@/components/home/ActivityFeedCard";
 import { HomeEmptyState } from "@/components/home/HomeEmptyState";
+import { FONT_UI, FONT_MONO } from "@/lib/_core/theme";
 
-const PERIODS: { id: PeriodId; label: string }[] = [
-  { id: "all", label: "All" },
-  { id: "today", label: "Today" },
-  { id: "week", label: "Week" },
-  { id: "month", label: "Month" },
-];
+const DAYS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
 
 export default function HomeScreen() {
   const router = useRouter();
   const colors = useColors();
-  const { activities, loading, error, refresh, selectActivity, periodFilter, setPeriodFilter } = useApp();
+  const { activities, loading, error, refresh, selectActivity } = useApp();
   const [refreshing, setRefreshing] = useState(false);
 
   const onRefresh = useCallback(async () => {
@@ -64,6 +57,30 @@ export default function HomeScreen() {
     },
     [router, selectActivity],
   );
+
+  // Week strip — compute daily km totals for the last 7 days
+  const weekStrip = useMemo(() => {
+    const now = new Date();
+    const days: { day: string; km: number }[] = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
+      const dayStr = DAYS[(d.getDay() + 6) % 7];
+      const km = activities
+        .filter((a) => {
+          if (!a.startDate) return false;
+          const ad = new Date(a.startDate);
+          return (
+            ad.getDate() === d.getDate() &&
+            ad.getMonth() === d.getMonth() &&
+            ad.getFullYear() === d.getFullYear()
+          );
+        })
+        .reduce((s, a) => s + a.distance, 0);
+      days.push({ day: dayStr, km });
+    }
+    return days;
+  }, [activities]);
 
   // ── Loading State ──
   if (loading && activities.length === 0) {
@@ -120,76 +137,74 @@ export default function HomeScreen() {
     );
   }
 
-  // Filter activities by the selected period
-  const filtered = useMemo(() => {
-    const now = new Date();
-    const today = now.toDateString();
-    const monday = new Date(now);
-    monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
-    monday.setHours(0, 0, 0, 0);
-    return activities.filter(a => {
-      if (periodFilter === "all") return true;
-      if (!a.startDate) return false;
-      const d = new Date(a.startDate);
-      switch (periodFilter) {
-        case "today": return d.toDateString() === today;
-        case "week": {
-          const dStart = new Date(d);
-          dStart.setHours(0, 0, 0, 0);
-          return dStart.getTime() >= monday.getTime();
-        }
-        case "month":
-          return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-        default: return true;
-      }
-    });
-  }, [activities, periodFilter]);
-
   // ── Activity Feed ──
   return (
     <ScreenContainer className="p-0">
       <View style={{ flex: 1, backgroundColor: colors.background }}>
         <FlatList
-          data={filtered}
+          data={activities}
           keyExtractor={(item) => item.id}
           ListHeaderComponent={() => (
             <View>
               <HeroHeader />
-              <WeekProgressRing entranceDelay={100} activities={filtered} />
-              <QuickStatsRow entranceDelay={180} activities={filtered} />
 
-              {/* Period filter pills */}
-              <View style={{
-                flexDirection: "row",
-                paddingHorizontal: 16,
-                paddingBottom: 12,
-                gap: 6,
-              }}>
-                {PERIODS.map((p) => (
-                  <TouchableOpacity
-                    key={p.id}
-                    onPress={() => setPeriodFilter(p.id)}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Filter: ${p.label}`}
-                    accessibilityState={{ selected: periodFilter === p.id }}
-                    style={{
-                      paddingHorizontal: 14,
-                      paddingVertical: 6,
-                      borderRadius: 20,
-                      backgroundColor: periodFilter === p.id ? colors.primary : colors.surface,
-                      borderWidth: 1,
-                      borderColor: periodFilter === p.id ? colors.primary : colors.border,
-                    }}
-                  >
-                    <Text style={{
-                      color: periodFilter === p.id ? "#FFFFFF" : colors.foreground,
-                      fontSize: 12,
-                      fontWeight: "700",
-                    }}>
-                      {p.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+              {/* Week strip — 7 day pills */}
+              <View
+                style={{
+                  flexDirection: "row",
+                  paddingHorizontal: 16,
+                  paddingBottom: 10,
+                  gap: 7,
+                }}
+              >
+                {weekStrip.map((d, i) => {
+                  const hasActivity = d.km > 0;
+                  return (
+                    <View
+                      key={i}
+                      style={{
+                        flex: 1,
+                        alignItems: "center",
+                        gap: 4,
+                        paddingVertical: 8,
+                        borderRadius: 11,
+                        backgroundColor: hasActivity
+                          ? "rgba(255,107,53,0.14)"
+                          : "#0E0E10",
+                        borderWidth: 1,
+                        borderColor: hasActivity
+                          ? "rgba(255,107,53,0.32)"
+                          : colors.border,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          fontFamily: FONT_UI,
+                          fontWeight: "700",
+                          fontSize: 8,
+                          letterSpacing: 0.1 * 8,
+                          color: hasActivity
+                            ? "rgba(255,255,255,0.6)"
+                            : "rgba(255,255,255,0.35)",
+                        }}
+                      >
+                        {d.day}
+                      </Text>
+                      <Text
+                        style={{
+                          fontFamily: FONT_MONO,
+                          fontWeight: "800",
+                          fontSize: 12,
+                          color: hasActivity
+                            ? colors.primary
+                            : "rgba(255,255,255,0.35)",
+                        }}
+                      >
+                        {d.km > 0 ? d.km.toFixed(0) : "–"}
+                      </Text>
+                    </View>
+                  );
+                })}
               </View>
             </View>
           )}
@@ -203,7 +218,7 @@ export default function HomeScreen() {
               />
             </View>
           )}
-          contentContainerStyle={{ paddingBottom: 40 }}
+          contentContainerStyle={{ paddingBottom: 92 }}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
