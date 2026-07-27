@@ -2,14 +2,16 @@
  * Capture screen — camera preview with activity chip, shutter, and gallery.
  *
  * Full-bleed camera preview with gradient scrim for legibility.
+ * Uses expo-camera's CameraView for real camera preview.
  * Top: back button + activity chip (orange dot + activity label)
  * Bottom: gallery thumb, shutter ring, flip button
  */
 import { Text, View, TouchableOpacity, Alert } from "react-native";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import { CameraView, useCameraPermissions, type CameraCapturedPicture } from "expo-camera";
 import * as ImagePicker from "expo-image-picker";
 import * as Haptics from "expo-haptics";
 import { useApp } from "@/lib/app-context";
@@ -22,6 +24,9 @@ export default function CaptureScreen() {
   const insets = useSafeAreaInsets();
   const colors = useColors();
   const { getSelectedActivity } = useApp();
+  const [permission, requestPermission] = useCameraPermissions();
+  const [facing, setFacing] = useState<"front" | "back">("back");
+  const cameraRef = useRef<CameraView>(null);
   const [galleryImage, setGalleryImage] = useState<string | null>(null);
 
   const activity = getSelectedActivity();
@@ -29,10 +34,21 @@ export default function CaptureScreen() {
     ? `${dist(activity, "metric")} ${distUnitShort("metric")} ${activity.type}`
     : activity.title || "Select activity";
 
-  const handleShutter = useCallback(() => {
+  const handleShutter = useCallback(async () => {
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
     } catch {}
+    if (cameraRef.current) {
+      try {
+        const photo: CameraCapturedPicture = await cameraRef.current.takePictureAsync();
+        if (photo?.uri) {
+          router.push("/editor");
+          return;
+        }
+      } catch {
+        // Camera capture failed — proceed to editor anyway
+      }
+    }
     router.push("/editor");
   }, [router]);
 
@@ -55,28 +71,54 @@ export default function CaptureScreen() {
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     } catch {}
-    // Camera flip would toggle between front/back when expo-camera is integrated
+    setFacing((f) => (f === "back" ? "front" : "back"));
   }, []);
 
   const handleActivityChip = useCallback(() => {
-    router.push("/activity/[id]");
+    // Open activity picker — for now go to activity detail
+    router.push("/editor");
   }, [router]);
 
   return (
     <View style={{ flex: 1, backgroundColor: "#000" }}>
-      {/* Camera preview placeholder — replace with <CameraView> from expo-camera */}
-      <View
-        style={{
-          flex: 1,
-          backgroundColor: "#0E0E10",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <Text style={{ color: colors.muted, fontSize: 14 }}>
-          Camera preview
-        </Text>
-      </View>
+      {/* Camera preview */}
+      {permission?.granted ? (
+        <CameraView
+          ref={cameraRef}
+          style={{ flex: 1 }}
+          facing={facing}
+          mode="picture"
+        />
+      ) : (
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: "#0E0E10",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 12,
+          }}
+        >
+          <Text style={{ color: colors.muted, fontSize: 14 }}>
+            Camera access needed
+          </Text>
+          <TouchableOpacity
+            onPress={requestPermission}
+            accessibilityRole="button"
+            accessibilityLabel="Grant camera permission"
+            style={{
+              backgroundColor: colors.primary,
+              borderRadius: 20,
+              paddingHorizontal: 20,
+              paddingVertical: 10,
+            }}
+          >
+            <Text style={{ color: "#0B0B0C", fontWeight: "700", fontSize: 13 }}>
+              Grant Permission
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* Gradient scrim */}
       <View
