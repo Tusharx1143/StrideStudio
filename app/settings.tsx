@@ -1,13 +1,8 @@
 /**
  * Settings Screen — app preferences, account, and about.
  *
- * Design spec: design.md §7 (lines 109-122)
- * - Theme toggle (light/dark)
- * - Notification preferences
- * - Connected services management
- * - Privacy and data sharing
- * - About and support
- * - Logout
+ * Restyled to match the design handoff tokens.
+ * Sections: Appearance, Notifications, Connected Services, Privacy, About, Account.
  */
 import {
   ScrollView,
@@ -22,12 +17,14 @@ import { useState, useCallback } from "react";
 import { useRouter } from "expo-router";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
-import { Typography } from "@/lib/_core/theme";
+import { FONT_UI, FONT_MONO } from "@/lib/_core/theme";
 import { useApp } from "@/lib/app-context";
 import { API_BASE } from "@/lib/config";
 import { StrideButton } from "@/components/stride-button";
 import { BackButton } from "@/components/back-button";
 import { useThemeContext } from "@/lib/theme-provider";
+
+// ── Row ────────────────────────────────────────────────────────
 
 interface SettingRowProps {
   label: string;
@@ -40,13 +37,14 @@ interface SettingRowProps {
 
 function SettingRow({ label, subtitle, right, onPress, last, danger }: SettingRowProps) {
   const colors = useColors();
+
   const content = (
     <View
       style={{
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "space-between",
-        paddingHorizontal: 16,
+        paddingHorizontal: 14,
         paddingVertical: 14,
         minHeight: 48,
         borderBottomWidth: last ? 0 : 1,
@@ -54,12 +52,29 @@ function SettingRow({ label, subtitle, right, onPress, last, danger }: SettingRo
       }}
     >
       <View style={{ flex: 1 }}>
-        <Text style={[Typography.bodySmall, { color: danger ? colors.error : colors.foreground, fontWeight: "500" }]}>
+        <Text
+          style={{
+            fontFamily: FONT_UI,
+            fontWeight: "500",
+            fontSize: 13,
+            color: danger ? colors.error : colors.foreground,
+          }}
+        >
           {label}
         </Text>
-        {subtitle && (
-          <Text style={[Typography.caption, { color: colors.muted, marginTop: 2 }]}>{subtitle}</Text>
-        )}
+        {subtitle ? (
+          <Text
+            style={{
+              fontFamily: FONT_MONO,
+              fontWeight: "500",
+              fontSize: 10.5,
+              color: "#8E8E93",
+              marginTop: 2,
+            }}
+          >
+            {subtitle}
+          </Text>
+        ) : null}
       </View>
       {right}
     </View>
@@ -75,22 +90,30 @@ function SettingRow({ label, subtitle, right, onPress, last, danger }: SettingRo
   return content;
 }
 
+// ── Group ──────────────────────────────────────────────────────
+
 function SettingGroup({ title, children }: { title: string; children: React.ReactNode }) {
   const colors = useColors();
   return (
     <View style={{ paddingHorizontal: 16, paddingVertical: 8 }}>
       <Text
-        style={[
-          Typography.statLabel,
-          { color: colors.muted, marginBottom: 8, paddingHorizontal: 4 },
-        ]}
+        style={{
+          fontFamily: FONT_UI,
+          fontWeight: "700",
+          fontSize: 9,
+          letterSpacing: 0.18 * 9,
+          textTransform: "uppercase",
+          color: "rgba(255,255,255,0.4)",
+          marginBottom: 9,
+          paddingHorizontal: 2,
+        }}
       >
         {title}
       </Text>
       <View
         style={{
-          backgroundColor: colors.surface,
-          borderRadius: 12,
+          backgroundColor: "#0E0E10",
+          borderRadius: 14,
           borderWidth: 1,
           borderColor: colors.border,
           overflow: "hidden",
@@ -101,6 +124,8 @@ function SettingGroup({ title, children }: { title: string; children: React.Reac
     </View>
   );
 }
+
+// ── Main Screen ─────────────────────────────────────────────────
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -115,7 +140,6 @@ export default function SettingsScreen() {
   const handleLogout = useCallback(() => {
     if (Platform.OS === "web") {
       if (confirm("Are you sure you want to log out?")) {
-        // Web: clear cookies and redirect
         document.cookie = "session=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
         window.location.href = "/";
       }
@@ -152,19 +176,27 @@ export default function SettingsScreen() {
   return (
     <ScreenContainer className="p-0">
       <View style={{ flex: 1, backgroundColor: colors.background }}>
-        {/* Header */}
+        {/* ── Header ────────────────────────────────────── */}
         <View
           style={{
             flexDirection: "row",
             alignItems: "center",
-            paddingHorizontal: 8,
-            paddingVertical: 4,
+            paddingHorizontal: 12,
+            paddingVertical: 8,
             borderBottomWidth: 1,
             borderBottomColor: colors.border,
+            gap: 10,
           }}
         >
           <BackButton />
-          <Text style={[Typography.h3, { color: colors.foreground, flex: 1 }]}>
+          <Text
+            style={{
+              fontFamily: FONT_UI,
+              fontWeight: "800",
+              fontSize: 15,
+              color: colors.foreground,
+            }}
+          >
             Settings
           </Text>
         </View>
@@ -231,7 +263,6 @@ export default function SettingsScreen() {
             <SettingRow
               label="Privacy Policy"
               onPress={() => {
-                // Placeholder — would open a webview or in-app doc
                 Alert.alert("Privacy Policy", "StrideStudio privacy policy will be available soon.");
               }}
             />
@@ -239,23 +270,27 @@ export default function SettingsScreen() {
               label="Clear Cached Data"
               subtitle="Remove locally stored activity cache"
               onPress={() => {
-                Alert.alert("Clear Cache", "Cached activity data will be removed. Fresh data will load on next refresh.", [
-                  { text: "Cancel", style: "cancel" },
-                  {
-                    text: "Clear",
-                    style: "destructive",
-                    onPress: async () => {
-                      try {
-                        const AsyncStorage = await import("@react-native-async-storage/async-storage");
-                        await AsyncStorage.default.removeItem("stride-cached-activities");
-                        await AsyncStorage.default.removeItem("stride-cached-athlete");
-                        Alert.alert("Done", "Cache cleared. Pull to refresh.");
-                      } catch {
-                        Alert.alert("Error", "Could not clear cache.");
-                      }
+                Alert.alert(
+                  "Clear Cache",
+                  "Cached activity data will be removed. Fresh data will load on next refresh.",
+                  [
+                    { text: "Cancel", style: "cancel" },
+                    {
+                      text: "Clear",
+                      style: "destructive",
+                      onPress: async () => {
+                        try {
+                          const AsyncStorage = await import("@react-native-async-storage/async-storage");
+                          await AsyncStorage.default.removeItem("stride-cached-activities");
+                          await AsyncStorage.default.removeItem("stride-cached-athlete");
+                          Alert.alert("Done", "Cache cleared. Pull to refresh.");
+                        } catch {
+                          Alert.alert("Error", "Could not clear cache.");
+                        }
+                      },
                     },
-                  },
-                ]);
+                  ],
+                );
               }}
               last
             />
@@ -279,12 +314,7 @@ export default function SettingsScreen() {
 
           {/* Account */}
           <SettingGroup title="Account">
-            <SettingRow
-              label="Log Out"
-              danger
-              onPress={handleLogout}
-              last
-            />
+            <SettingRow label="Log Out" danger onPress={handleLogout} last />
           </SettingGroup>
 
           <View style={{ height: 40 }} />
